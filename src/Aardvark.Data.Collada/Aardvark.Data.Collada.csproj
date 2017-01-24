@@ -49,6 +49,16 @@
     <None Include="paket.references" />
     <None Include="paket.template" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Aardvark.VRVis.Base\Aardvark.VRVis.Base.csproj">
+      <Project>{05166f50-6529-40b7-942b-5298521b163c}</Project>
+      <Name>Aardvark.VRVis.Base</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Aardvark.VRVis.Geometry\Aardvark.VRVis.Geometry.csproj">
+      <Project>{564efe81-1dc2-40c6-b9e1-6eaf2b0113ce}</Project>
+      <Name>Aardvark.VRVis.Geometry</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

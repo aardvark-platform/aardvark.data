@@ -1,0 +1,5 @@
+type project
+id Aardvark.Data.DGM
+authors VRVis Research Center
+description
+    DGM Importer
