@@ -48,6 +48,10 @@
     <None Include="paket.template" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Aardvark.Base.IO\Aardvark.Base.IO.csproj">
+      <Project>{c2c8ba0d-992b-4ba7-8a6a-ea7a3207bbe6}</Project>
+      <Name>Aardvark.Base.IO</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Aardvark.VRVis.Base\Aardvark.VRVis.Base.csproj">
       <Project>{05166f50-6529-40b7-942b-5298521b163c}</Project>
       <Name>Aardvark.VRVis.Base</Name>
