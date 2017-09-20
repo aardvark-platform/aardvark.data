@@ -1,11 +1,12 @@
 ﻿using Aardvark.Base;
+using Aardvark.Base.Coder;
 using Aardvark.Data.Vrml97;
+using Aardvark.VRVis;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Aardvark.VRVis;
 
 namespace Aardvark.Importer.Vrml97
 {
