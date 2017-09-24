@@ -39,6 +39,7 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="PolyMesh.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SceneLoader.cs" />
     <Compile Include="VrmlEntities.cs" />
@@ -48,6 +49,10 @@
     <None Include="paket.template" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Aardvark.Geometry.PolyMesh\Aardvark.Geometry.PolyMesh.csproj">
+      <Project>{4b129449-6746-4013-8aca-8417e8f7bd7e}</Project>
+      <Name>Aardvark.Geometry.PolyMesh</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Aardvark.VRVis.Base\Aardvark.VRVis.Base.csproj">
       <Project>{05166f50-6529-40b7-942b-5298521b163c}</Project>
       <Name>Aardvark.VRVis.Base</Name>

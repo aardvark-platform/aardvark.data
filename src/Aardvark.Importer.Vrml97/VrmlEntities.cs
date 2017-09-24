@@ -1,6 +1,7 @@
 ﻿using Aardvark.Base;
 using Aardvark.Base.Coder;
 using Aardvark.Data.Vrml97;
+using Aardvark.Geometry;
 using Aardvark.VRVis;
 using System;
 using System.Collections;
@@ -180,12 +181,11 @@ namespace Aardvark.Importer.Vrml97
 
     public abstract class VrmlGeometry : VrmlEntity
     {
-       
     }
 
     public class VrmlMesh : VrmlGeometry {
         
-        public PolyMesh Mesh;
+        public Geometry.PolyMesh Mesh;
 
         public VrmlMesh() { }
 
@@ -200,7 +200,7 @@ namespace Aardvark.Importer.Vrml97
             //    var ca = Mesh.InstanceAttributes.GetAs<float>(PolyMesh.Property.CreaseAngle);
             //    Mesh = Mesh.WithPerVertexIndexedNormals(ca);
             //}
-            if (!this.IsNamed()) Mesh.InstanceAttributes.Remove(PolyMesh.Property.Name);
+            if (!this.IsNamed()) Mesh.InstanceAttributes.Remove(Geometry.PolyMesh.Property.Name);
         }
 
         #region IFieldCodeable Members
@@ -1065,11 +1065,11 @@ namespace Aardvark.Importer.Vrml97
                 else if (shape.Geometry is VrmlCylinder)
                 {
                     var cylinder = (VrmlCylinder)shape.Geometry;
-                    mesh.Mesh = PolyMeshPrimitives.Cylinder2(20, cylinder.Height, cylinder.Radius, C4b.White, PolyMesh.Property.DiffuseColorCoordinates);
+                    mesh.Mesh = PolyMeshPrimitives.Cylinder2(20, cylinder.Height, cylinder.Radius, C4b.White, Geometry.PolyMesh.Property.DiffuseColorCoordinates);
                 }
                 else
                 {
-                    mesh.Mesh = new PolyMesh();
+                    mesh.Mesh = new Geometry.PolyMesh();
                 }
 
                 mesh.Mesh = mesh.Mesh.Transformed(Trafo3d.RotationXInDegrees(-90));

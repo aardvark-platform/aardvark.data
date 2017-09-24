@@ -1,10 +1,6 @@
 ﻿using Aardvark.Base;
-using System;
+using Aardvark.Geometry;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Aardvark.VRVis;
 
 namespace Aardvark.Data.Collada
 {

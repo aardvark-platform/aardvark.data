@@ -1,12 +1,11 @@
 ﻿using Aardvark.Base;
+using Aardvark.Geometry;
+using Aardvark.VRVis;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.IO;
-using Aardvark.VRVis;
 using System.Globalization;
+using System.IO;
+using System.Linq;
 
 namespace Aardvark.Data.Collada
 {
