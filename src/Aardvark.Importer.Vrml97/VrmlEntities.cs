@@ -73,7 +73,7 @@ namespace Aardvark.Importer.Vrml97
 
         public void Remove(VrmlEntity entity)
         {
-            Requires.NotNull(m_children);
+            if (m_children == null) throw new ArgumentNullException(nameof(entity));
             m_children.Remove(entity);
         }
 

@@ -598,9 +598,9 @@ namespace Aardvark.Data.Collada
                                             (p.PropertyType.IsArray ? (Array)p.GetValue(n).TrySelect(x => (Array)x, (Array)new object[0]) : (p.PropertyType.Namespace == "Aardvark.Data.Collada") ? (Array)p.GetValue(n).TrySelect(x => x.IntoArray(), (Array)new object[0]) : (Array)new object[0]).ToArrayOfT<object>().WhereNotNull())
                                         )
                                  .Select(n => 
-                                        Tup.Create(n.GetType().GetProperty("id").TrySelect(p => (string)p.GetValue(n)), n))
-                                 .Where(kv => !kv.E0.IsEmptyOrNull())
-                                 .Select(kv => KeyValuePairs.Create("#" + kv.E0, kv.E1)));
+                                        (n.GetType().GetProperty("id").TrySelect(p => (string)p.GetValue(n)), n))
+                                 .Where(kv => !kv.Item1.IsEmptyOrNull())
+                                 .Select(kv => KeyValuePairs.Create("#" + kv.Item1, kv.Item2)));
         }
 
         public static List<ColladaNode> GetSceneTree(COLLADA collada)
