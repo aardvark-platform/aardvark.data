@@ -1,5 +1,7 @@
 type project
 id Aardvark.Data.Collada
-authors VRVis Research Center
+authors Aardvark Platform Team
+owners Aardvark Platform Team
 description
     Aardvark.Data.Collada
+include-pdbs true
