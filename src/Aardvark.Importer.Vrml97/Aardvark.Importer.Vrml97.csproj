@@ -13,9 +13,9 @@
     <DocumentationFile>..\..\bin\Release\netstandard2.0\Aardvark.Importer.Vrml97.xml</DocumentationFile>
     <NoWarn>1701;1702;1705;1591</NoWarn>
   </PropertyGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
   <ItemGroup>
     <ProjectReference Include="..\Aardvark.Geometry.PolyMesh\Aardvark.Geometry.PolyMesh.csproj" />
     <ProjectReference Include="..\Aardvark.VRVis.Base\Aardvark.VRVis.Base.csproj" />
   </ItemGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
