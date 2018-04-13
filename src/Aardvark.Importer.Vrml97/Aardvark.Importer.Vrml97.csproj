@@ -57,7 +57,7 @@
       <Name>Aardvark.VRVis.Base</Name>
     </ProjectReference>
     <ProjectReference Include="..\Aardvark.VRVis.Geometry\Aardvark.VRVis.Geometry.csproj">
-      <Project>{564efe81-1dc2-40c6-b9e1-6eaf2b0113ce}</Project>
+      <Project>{ee6f9446-b81f-4134-a815-c46a3b7e78d2}</Project>
       <Name>Aardvark.VRVis.Geometry</Name>
     </ProjectReference>
   </ItemGroup>
