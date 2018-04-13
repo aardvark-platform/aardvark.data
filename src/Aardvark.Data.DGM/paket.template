@@ -1,5 +1,7 @@
 type project
 id Aardvark.Data.DGM
-authors VRVis Research Center
+authors Aardvark Platform Team
+owners Aardvark Platform Team
 description
     DGM Importer
+include-pdbs true
