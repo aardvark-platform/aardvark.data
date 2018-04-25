@@ -2,14 +2,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+	<AssemblyName>Aardvark.Data.DGM</AssemblyName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <OutputPath>..\..\bin\Debug</OutputPath>
-    <DocumentationFile>..\..\bin\Debug\netstandard2.0\Aardvark.Data.Dgm.xml</DocumentationFile>
+    <DocumentationFile>..\..\bin\Debug\netstandard2.0\Aardvark.Data.DGM.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <OutputPath>..\..\bin\Release</OutputPath>
-    <DocumentationFile>..\..\bin\Release\netstandard2.0\Aardvark.Data.Dgm.xml</DocumentationFile>
+    <DocumentationFile>..\..\bin\Release\netstandard2.0\Aardvark.Data.DGM.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Dgm.fs" />
