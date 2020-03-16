@@ -179,7 +179,7 @@ namespace Aardvark.VRVis
                     M44d mat = trafo.Forward;
                     for (int vi = 0; vi < vertexCount; vi++)
                         positionArray[vi]
-                            = M44d.TransformPos(mat, (V3d)vertexPositionList[vi]);
+                            = Mat.TransformPos(mat, (V3d)vertexPositionList[vi]);
                 }
                 else
                 {
@@ -500,7 +500,7 @@ namespace Aardvark.VRVis
 
                     for (int i = 0; i < imax; i++)
                     {
-                        normalList[i] = (V3f)(M44d.TransformDir(
+                        normalList[i] = (V3f)(Mat.TransformDir(
                             transposedInverse, (V3d)normalList[i]
                             ).Normalized);
                     }
@@ -658,7 +658,7 @@ namespace Aardvark.VRVis
                                                      Trafo2d.Identity);
                     if (preMultiplyTransform)
                     {
-                        texTrafo = v => (V2f)M33d.TransformPos(trafo.Forward, (V2d)v);
+                        texTrafo = v => (V2f)Mat.TransformPos(trafo.Forward, (V2d)v);
                     }
                     else
                     {
