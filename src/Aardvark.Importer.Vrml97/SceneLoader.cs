@@ -8,7 +8,7 @@ namespace Aardvark.Importer.Vrml97
 {
 	public class SceneLoader
 	{
-        Dictionary<SymMapBase, VrmlEntity> m_entities = new Dictionary<SymMapBase, VrmlEntity>();
+        Dictionary<SymMapBase, VrmlNode> m_nodes = new Dictionary<SymMapBase, VrmlNode>();
         HashSet<SymMapBase> m_traversedNodes = new HashSet<SymMapBase>();
 
         Dictionary<Type, int> m_unnamedNumber = new Dictionary<Type, int>();
@@ -106,7 +106,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    VrmlTransform t = GetEntity<VrmlTransform>(map);
+                    VrmlTransform t = GetNode<VrmlTransform>(map);
 
                     frameHierarchy.Peek().Add(t);
 
@@ -126,7 +126,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    VrmlGroup g = GetEntity<VrmlGroup>(map);
+                    VrmlGroup g = GetNode<VrmlGroup>(map);
 
                     frameHierarchy.Peek().Add(g);
 
@@ -146,7 +146,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    VrmlSwitch switchNode = GetEntity<VrmlSwitch>(map);
+                    VrmlSwitch switchNode = GetNode<VrmlSwitch>(map);
 
                     frameHierarchy.Peek().Add(switchNode);
 
@@ -167,7 +167,7 @@ namespace Aardvark.Importer.Vrml97
                     if (currentShape != null)
                         throw new Exception("invalid node placement: nested shape");
 
-                    currentShape = GetEntity<VrmlShape>(map);
+                    currentShape = GetNode<VrmlShape>(map);
 
                     frameHierarchy.Peek().Add(currentShape);
                 }
@@ -183,7 +183,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    var mesh = GetEntity<VrmlMesh>(map);
+                    var mesh = GetNode<VrmlMesh>(map);
 
                     if (currentShape == null)
                         throw new Exception("invalid node placement");
@@ -198,7 +198,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    var box = GetEntity<VrmlBox>(map);
+                    var box = GetNode<VrmlBox>(map);
                     
                     if (currentShape == null)
                         throw new Exception("invalid node placement");
@@ -213,7 +213,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    var sphere = GetEntity<VrmlSphere>(map);
+                    var sphere = GetNode<VrmlSphere>(map);
 
                     if (currentShape == null)
                         throw new Exception("invalid node placement");
@@ -228,7 +228,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    var cone = GetEntity<VrmlCone>(map);
+                    var cone = GetNode<VrmlCone>(map);
 
                     if (currentShape == null)
                         throw new Exception("invalid node placement");
@@ -244,7 +244,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    var cylinder = GetEntity<VrmlCylinder>(map);
+                    var cylinder = GetNode<VrmlCylinder>(map);
 
                     if (currentShape == null)
                         throw new Exception("invalid node placement");
@@ -259,7 +259,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    var light = GetEntity<VrmlPointLight>(map);
+                    var light = GetNode<VrmlPointLight>(map);
                     frameHierarchy.Peek().Add(light);
                 }
 
@@ -270,7 +270,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    var light = GetEntity<VrmlSpotLight>(map);
+                    var light = GetNode<VrmlSpotLight>(map);
                     frameHierarchy.Peek().Add(light);
                 }
 
@@ -281,7 +281,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    var light = GetEntity<VrmlDirectionalLight>(map);
+                    var light = GetNode<VrmlDirectionalLight>(map);
                     frameHierarchy.Peek().Add(light);
                 }
 
@@ -294,7 +294,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    VrmlAppearance appear = GetEntity<VrmlAppearance>(map);
+                    VrmlAppearance appear = GetNode<VrmlAppearance>(map);
 
                     if (currentShape == null)
                         throw new Exception("appearance not child of a shape");
@@ -309,7 +309,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    VrmlMaterial mat = GetEntity<VrmlMaterial>(map);
+                    VrmlMaterial mat = GetNode<VrmlMaterial>(map);
 
                     if (currentShape == null || currentShape.Appearance == null)
                         throw new Exception("invalid placing of material node");
@@ -326,7 +326,7 @@ namespace Aardvark.Importer.Vrml97
                 {
                     map["path"] = path;
 
-                    VrmlTexture tex = GetEntity<VrmlTexture>(map);
+                    VrmlTexture tex = GetNode<VrmlTexture>(map);
 
                     if (currentShape == null || currentShape.Appearance == null)
                         throw new Exception("invalid placing of node");
@@ -343,7 +343,7 @@ namespace Aardvark.Importer.Vrml97
                 {
                     //map["path"] = path;
 
-                    VrmlInline inl = GetEntity<VrmlInline>(map);
+                    VrmlInline inl = GetNode<VrmlInline>(map);
 
                     frameHierarchy.Peek().Add(inl);
                 }
@@ -355,7 +355,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    VrmlTextureTransform tex = GetEntity<VrmlTextureTransform>(map);
+                    VrmlTextureTransform tex = GetNode<VrmlTextureTransform>(map);
 
                     if (currentShape == null || currentShape.Appearance == null)
                         throw new Exception("invalid placing of node");
@@ -370,7 +370,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    scene.Routes.Add(GetEntity<VrmlRoute>(map));
+                    scene.Routes.Add(GetNode<VrmlRoute>(map));
                 }
 
                 return returnFunc(map, visit);
@@ -380,7 +380,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    scene.TimeSensors.Add(GetEntity<VrmlTimeSensor>(map));
+                    scene.TimeSensors.Add(GetNode<VrmlTimeSensor>(map));
                 }
 
                 return returnFunc(map, visit);
@@ -390,7 +390,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    scene.OrientationInterpolators.Add(GetEntity<VrmlOrientationInterpolator>(map));
+                    scene.OrientationInterpolators.Add(GetNode<VrmlOrientationInterpolator>(map));
                 }
 
                 return returnFunc(map, visit);
@@ -400,7 +400,7 @@ namespace Aardvark.Importer.Vrml97
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    scene.PositionInterpolators.Add(GetEntity<VrmlPositionInterpolator>(map));
+                    scene.PositionInterpolators.Add(GetNode<VrmlPositionInterpolator>(map));
                 }
 
                 return returnFunc(map, visit);
@@ -429,22 +429,22 @@ namespace Aardvark.Importer.Vrml97
             return name;
         }
 
-        T GetEntity<T>(SymMapBase map) where T: VrmlEntity, new()
+        T GetNode<T>(SymMapBase map) where T: VrmlNode, new()
         {
-            VrmlEntity entity;
-            if (!m_entities.TryGetValue(map, out entity))
+            VrmlNode node;
+            if (!m_nodes.TryGetValue(map, out node))
             {
-                entity = new T();
-                entity.Name = GetName(map, typeof(T));
-                entity.Init(map);
-                m_entities[map] = entity;
+                node = new T();
+                node.Name = GetName(map, typeof(T));
+                node.Init(map);
+                m_nodes[map] = node;
             }
-            else if (!(entity is T))
+            else if (!(node is T))
             {
-                throw new Exception(String.Format("invalid cast: {1} is {2}", typeof(T).Name, entity.GetType().Name));
+                throw new Exception(String.Format("invalid cast: {1} is {2}", typeof(T).Name, node.GetType().Name));
             }
 
-            return (T)entity;
+            return (T)node;
         }
 	}
 }

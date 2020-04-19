@@ -11,20 +11,20 @@ using System.Linq;
 
 namespace Aardvark.Importer.Vrml97
 {
-    public class VrmlEntity : IEquatable<VrmlEntity>, IFieldCodeable
+    public class VrmlNode : IEquatable<VrmlNode>, IFieldCodeable
     {
         public string Name;
 
-        public VrmlEntity() { }
+        public VrmlNode() { }
 
         internal virtual void Init(SymMapBase map)
         {
             Name = map.Get<string>((Symbol)"DEFname");
         }
 
-        #region IEquatable<VrmlEntity> Members
+        #region IEquatable<VrmlNode> Members
 
-        public bool Equals(VrmlEntity other)
+        public bool Equals(VrmlNode other)
         {
             return other == this;
         }
@@ -35,21 +35,21 @@ namespace Aardvark.Importer.Vrml97
 
         public virtual IEnumerable<FieldCoder> GetFieldCoders(int coderVersion)
         {
-            yield return new FieldCoder(0, "Name", (c, o) => c.CodeString(ref ((VrmlEntity)o).Name));
+            yield return new FieldCoder(0, "Name", (c, o) => c.CodeString(ref ((VrmlNode)o).Name));
         }
 
         #endregion
     }
 
-    public class VrmlGroup : VrmlEntity, INode, IEnumerable<VrmlEntity>
+    public class VrmlGroup : VrmlNode, INode, IEnumerable<VrmlNode>
     {
-        protected List<VrmlEntity> m_children;
+        protected List<VrmlNode> m_children;
 
         public VrmlGroup() { }
 
         public VrmlGroup(string name) { Name = name; }
 
-        public List<VrmlEntity> Children
+        public List<VrmlNode> Children
         {
             get { return m_children; }
             set { m_children = value; }
@@ -58,23 +58,23 @@ namespace Aardvark.Importer.Vrml97
         /// <summary>
         /// Note: null entities are ignored
         /// </summary>
-        public void Add(VrmlEntity entity)
+        public void Add(VrmlNode node)
         {
-            if (entity != null)
-                Insert(entity, int.MaxValue);
+            if (node != null)
+                Insert(node, int.MaxValue);
         }
 
-        public void Insert(VrmlEntity entity, int pos = Int32.MaxValue)
+        public void Insert(VrmlNode node, int pos = Int32.MaxValue)
         {
             if (m_children == null)
-                m_children = new List<VrmlEntity>();
-            m_children.Insert(pos.Clamp(0, m_children.Count), entity);
+                m_children = new List<VrmlNode>();
+            m_children.Insert(pos.Clamp(0, m_children.Count), node);
         }
 
-        public void Remove(VrmlEntity entity)
+        public void Remove(VrmlNode node)
         {
-            if (m_children == null) throw new ArgumentNullException(nameof(entity));
-            m_children.Remove(entity);
+            if (m_children == null) throw new ArgumentNullException(nameof(node));
+            m_children.Remove(node);
         }
 
         public void Clear()
@@ -111,11 +111,11 @@ namespace Aardvark.Importer.Vrml97
             }
         }
 
-        #region IEnumerable<VrmlEntity> Members
+        #region IEnumerable<VrmlNode> Members
 
-        public IEnumerator<VrmlEntity> GetEnumerator()
+        public IEnumerator<VrmlNode> GetEnumerator()
         {
-            return (m_children ?? Enumerable.Empty<VrmlEntity>()).GetEnumerator();
+            return (m_children ?? Enumerable.Empty<VrmlNode>()).GetEnumerator();
         }
 
         #endregion
@@ -124,7 +124,7 @@ namespace Aardvark.Importer.Vrml97
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return (m_children ?? Enumerable.Empty<VrmlEntity>()).GetEnumerator();
+            return (m_children ?? Enumerable.Empty<VrmlNode>()).GetEnumerator();
         }
 
         #endregion
@@ -159,7 +159,7 @@ namespace Aardvark.Importer.Vrml97
         #endregion
     }
 
-    public class VrmlShape : VrmlEntity
+    public class VrmlShape : VrmlNode
     {
         public VrmlAppearance Appearance;
         public VrmlGeometry Geometry;
@@ -179,13 +179,13 @@ namespace Aardvark.Importer.Vrml97
         #endregion
     }
 
-    public abstract class VrmlGeometry : VrmlEntity
+    public abstract class VrmlGeometry : VrmlNode
     {
     }
 
     public class VrmlMesh : VrmlGeometry {
         
-        public Geometry.PolyMesh Mesh;
+        public PolyMesh Mesh;
 
         public VrmlMesh() { }
 
@@ -200,7 +200,7 @@ namespace Aardvark.Importer.Vrml97
             //    var ca = Mesh.InstanceAttributes.GetAs<float>(PolyMesh.Property.CreaseAngle);
             //    Mesh = Mesh.WithPerVertexIndexedNormals(ca);
             //}
-            if (!this.IsNamed()) Mesh.InstanceAttributes.Remove(Geometry.PolyMesh.Property.Name);
+            if (!this.IsNamed()) Mesh.InstanceAttributes.Remove(PolyMesh.Property.Name);
         }
 
         #region IFieldCodeable Members
@@ -331,7 +331,7 @@ namespace Aardvark.Importer.Vrml97
 
     }
 
-    public abstract class VrmlLight : VrmlEntity
+    public abstract class VrmlLight : VrmlNode
     {
         public float AmbientIntensity;
         public C3f Color;
@@ -411,7 +411,7 @@ namespace Aardvark.Importer.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            Direction = map.Get<V3f>((Symbol)"direction", -V3f.OOI);
+            Direction = map.Get((Symbol)"direction", -V3f.OOI);
 
             base.Init(map);
         }
@@ -438,9 +438,9 @@ namespace Aardvark.Importer.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            Attenuation = map.Get<V3f>((Symbol)"attenuation", V3f.IOO);
-            Location = map.Get<V3f>((Symbol)"location", V3f.OOO);
-            Radius = map.Get<float>((Symbol)"radius", 1);
+            Attenuation = map.Get((Symbol)"attenuation", V3f.IOO);
+            Location = map.Get((Symbol)"location", V3f.OOO);
+            Radius = map.Get((Symbol)"radius", 1f);
 
             base.Init(map);
         }
@@ -514,7 +514,7 @@ namespace Aardvark.Importer.Vrml97
             base.Init(map);
         }
 
-        public VrmlEntity SelectedNode
+        public VrmlNode SelectedNode
         {
             get 
             {
@@ -535,7 +535,7 @@ namespace Aardvark.Importer.Vrml97
         #endregion
     }
 
-    public class VrmlAppearance : VrmlEntity
+    public class VrmlAppearance : VrmlNode
     {
         public VrmlMaterial Material;
         public VrmlTexture Textures;
@@ -557,7 +557,7 @@ namespace Aardvark.Importer.Vrml97
         #endregion
     }
 
-    public class VrmlMaterial : VrmlEntity
+    public class VrmlMaterial : VrmlNode
     {
         public C3f DiffuseColor;
         public C3f EmissiveColor;
@@ -597,7 +597,7 @@ namespace Aardvark.Importer.Vrml97
         #endregion
     }
 
-    public class VrmlPositionInterpolator : VrmlEntity
+    public class VrmlPositionInterpolator : VrmlNode
     {
         public List<float> Key;
         public List<V3f> KeyValue;
@@ -626,7 +626,7 @@ namespace Aardvark.Importer.Vrml97
         #endregion
     }
 
-    public class VrmlOrientationInterpolator : VrmlEntity
+    public class VrmlOrientationInterpolator : VrmlNode
     {
         public List<float> Key;
         public List<V4f> KeyValue;
@@ -655,7 +655,7 @@ namespace Aardvark.Importer.Vrml97
         #endregion
     }
 
-    public class VrmlTimeSensor : VrmlEntity
+    public class VrmlTimeSensor : VrmlNode
     {
         public float CycleInterval;
         public bool Enabled;
@@ -693,13 +693,13 @@ namespace Aardvark.Importer.Vrml97
         #endregion
     }
 
-    public class VrmlRoute : VrmlEntity
+    public class VrmlRoute : VrmlNode
     {
         private const string VrmlGetPrefix = "get_";
         private const string VrmlSetPrefix = "set_";
 
-        public string SourceEntity;
-        public string SinkEntity;
+        public string SourceNode;
+        public string SinkNode;
 
         public string SourceBinding;
         public string SinkBinding;
@@ -711,8 +711,8 @@ namespace Aardvark.Importer.Vrml97
             var inputIdentifiers = map.Get<string>((Symbol)"in").Split('.');
             var outputIdentifiers = map.Get<string>((Symbol)"out").Split('.');
 
-            SourceEntity = outputIdentifiers[0];
-            SinkEntity = inputIdentifiers[0];
+            SourceNode = outputIdentifiers[0];
+            SinkNode = inputIdentifiers[0];
             SourceBinding = RemovePrefix(outputIdentifiers[1], VrmlGetPrefix);
             SinkBinding = RemovePrefix(inputIdentifiers[1], VrmlSetPrefix);
 
@@ -726,8 +726,8 @@ namespace Aardvark.Importer.Vrml97
             foreach (var fc in base.GetFieldCoders(coderVersion))
                 yield return fc;
 
-            yield return new FieldCoder(2, "SourceEntity", (c, o) => c.CodeString(ref ((VrmlRoute)o).SourceEntity));
-            yield return new FieldCoder(3, "SinkEntity", (c, o) => c.CodeString(ref ((VrmlRoute)o).SinkEntity));
+            yield return new FieldCoder(2, "SourceNode", (c, o) => c.CodeString(ref ((VrmlRoute)o).SourceNode));
+            yield return new FieldCoder(3, "SinkNode", (c, o) => c.CodeString(ref ((VrmlRoute)o).SinkNode));
             yield return new FieldCoder(4, "SourceBinding", (c, o) => c.CodeString(ref ((VrmlRoute)o).SourceBinding));
             yield return new FieldCoder(5, "SinkBinding", (c, o) => c.CodeString(ref ((VrmlRoute)o).SinkBinding));
         }
@@ -741,7 +741,7 @@ namespace Aardvark.Importer.Vrml97
         }
     }
 
-    public class VrmlTexture : VrmlEntity
+    public class VrmlTexture : VrmlNode
     {
         List<string> m_filenames;
 
@@ -795,7 +795,7 @@ namespace Aardvark.Importer.Vrml97
         #endregion
     }
 
-    public class VrmlInline : VrmlEntity
+    public class VrmlInline : VrmlNode
     {
         public string Url;
 
@@ -821,7 +821,7 @@ namespace Aardvark.Importer.Vrml97
         #endregion
     }
 
-    public class VrmlTextureTransform : VrmlEntity
+    public class VrmlTextureTransform : VrmlNode
     {
         public V2f Center;
         public float Rotation;
@@ -861,20 +861,20 @@ namespace Aardvark.Importer.Vrml97
 
     public static class VrmlExtensions
     {
-        static EntityComparer s_entityComparer = new EntityComparer();
+        static VrmlNodeComparer s_nodeComparer = new VrmlNodeComparer();
 
-        public class EntityComparer : IEqualityComparer<VrmlEntity>
+        public class VrmlNodeComparer : IEqualityComparer<VrmlNode>
         {
             #region IEqualityComparer<Shape> Members
 
-            public bool Equals(VrmlEntity x, VrmlEntity y)
+            public bool Equals(VrmlNode x, VrmlNode y)
             {
                 if (x is VrmlShape && y is VrmlShape)
                     return ((VrmlShape)x).Geometry == ((VrmlShape)y).Geometry;
                 return x == y;
             }
 
-            public int GetHashCode(VrmlEntity obj)
+            public int GetHashCode(VrmlNode obj)
             {
                 if (obj is VrmlShape && ((VrmlShape)obj).Geometry != null)
                     return ((VrmlShape)obj).Geometry.GetHashCode();
@@ -889,7 +889,7 @@ namespace Aardvark.Importer.Vrml97
             if (self.ChildCount > 1)
             {
                 // also check if geometries are duplicated but wraped in non-instanced shapes (materials are ignored)
-                var filtered = self.Distinct(s_entityComparer).ToList();
+                var filtered = self.Distinct(s_nodeComparer).ToList();
                 var diff = self.Children.Count - filtered.Count;
                 if (diff != 0)
                 {
@@ -899,11 +899,11 @@ namespace Aardvark.Importer.Vrml97
             }
         }
 
-        public static void ReplaceChildNodes(this VrmlGroup node, Dictionary<string, VrmlEntity> replacements)
+        public static void ReplaceChildNodes(this VrmlGroup node, Dictionary<string, VrmlNode> replacements)
         {
             node.DepthFirst(x => x.GetFrames()).ForEach(g => g.Children = g.Select(n =>
             {
-                VrmlEntity e;
+                VrmlNode e;
                 if (replacements.TryGetValue(n.Name, out e))
                     return e;
                 return n;
@@ -936,7 +936,7 @@ namespace Aardvark.Importer.Vrml97
             return self.OfType<VrmlLight>();
         }
 
-        static public bool IsNamed(this VrmlEntity self)
+        static public bool IsNamed(this VrmlNode self)
         {
             return !self.Name.IsNullOrEmpty() && !self.Name.StartsWith(self.GetType().Name);
         }
@@ -995,7 +995,7 @@ namespace Aardvark.Importer.Vrml97
         /// <summary>
         /// resolves inline files, uses path to build absolute filenames
         /// </summary>
-        public static VrmlEntity ResolveInlines(this VrmlEntity vrmlNode, string path)
+        public static VrmlNode ResolveInlines(this VrmlNode vrmlNode, string path)
         {
             if (vrmlNode is VrmlGroup)
             {
@@ -1029,7 +1029,7 @@ namespace Aardvark.Importer.Vrml97
             return vrmlNode;
         }
 
-        public static void PrimitivesToMeshes(this VrmlEntity vrmlNode) {
+        public static void PrimitivesToMeshes(this VrmlNode vrmlNode) {
 
             if (vrmlNode is VrmlGroup)
             {
