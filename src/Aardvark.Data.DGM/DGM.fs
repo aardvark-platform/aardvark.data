@@ -2,6 +2,7 @@
 
 open System
 open Aardvark.Base
+open Aardvark.Rendering
 
 module DGM = 
 
