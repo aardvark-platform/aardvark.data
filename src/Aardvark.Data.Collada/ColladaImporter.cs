@@ -328,42 +328,50 @@ namespace Aardvark.Data.Collada
 
                 if (emission != null)
                 {
-                    var emissionColor = emission.Item as common_color_or_texture_typeColor;
-                    if (emissionColor != null) mat.Emission = ToColor(emissionColor);
+                    if (emission.Item is common_color_or_texture_typeColor emissionColor) 
+                        mat.Emission = ToColor(emissionColor);
                 }
 
                 if (ambient != null)
                 {
-                    var ambientColor = ambient.Item as common_color_or_texture_typeColor;
-                    if (ambientColor != null) mat.Ambient = ToColor(ambientColor);
+                    if (ambient.Item is common_color_or_texture_typeColor ambientColor) 
+                        mat.Ambient = ToColor(ambientColor);
                 }
 
                 if (diffuse != null)
                 {
-                    var diffuseTexture = diffuse.Item as common_color_or_texture_typeTexture;
-                    var diffuseColor = diffuse.Item as common_color_or_texture_typeColor;
-                    mat.DiffuseColorTexturePath = diffuseTexture.TrySelect(x => { var img = samplers.ContainsKey(x.texture) ? textureNames.Get(samplers[x.texture]) : x.texture; return images.Get(img, img); });
-                    if (diffuseColor != null) mat.Diffuse = ToColor(diffuseColor);
+                    if (diffuse.Item is common_color_or_texture_typeColor diffuseColor) 
+                        mat.Diffuse = ToColor(diffuseColor);
+
+                    if (diffuse.Item is common_color_or_texture_typeTexture diffuseTexture)
+                    {
+                        var img = samplers.ContainsKey(diffuseTexture.texture) ? textureNames.Get(samplers[diffuseTexture.texture]) : diffuseTexture.texture;
+                        mat.DiffuseColorTexturePath = images.Get(img, img);
+                    }
                 }
 
                 if (specular != null)
                 {
-                    var specularTexture = specular.Item as common_color_or_texture_typeTexture;
-                    var specularColor = specular.Item as common_color_or_texture_typeColor;
-                    mat.SpecularColorTexturePath = specularTexture.TrySelect(x => { var img = samplers.ContainsKey(x.texture) ? textureNames.Get(samplers[x.texture]) : x.texture; return images.Get(img, img); });
-                    if (specularColor != null) mat.Specular = ToColor(specularColor);
+                    if (specular.Item is common_color_or_texture_typeColor specularColor)
+                        mat.Specular = ToColor(specularColor);
+
+                    if (specular.Item is common_color_or_texture_typeTexture specularTexture)
+                    {
+                        var img = samplers.ContainsKey(specularTexture.texture) ? textureNames.Get(samplers[specularTexture.texture]) : specularTexture.texture;
+                        mat.SpecularColorTexturePath = images.Get(img, img);
+                    }
                 }
 
                 if (shininess != null)
                 {
-                    var shininessFloat = shininess.Item as common_float_or_param_typeFloat;
-                    if (shininessFloat != null) mat.Shininess = shininessFloat.Value;
+                    if (shininess.Item is common_float_or_param_typeFloat shininessFloat) 
+                        mat.Shininess = shininessFloat.Value;
                 }
 
                 if (transparency != null)
                 {
-                    var transparencyFloat = transparency.Item as common_float_or_param_typeFloat;
-                    if (transparencyFloat != null) mat.Alpha = transparencyFloat.Value;
+                    if (transparency.Item is common_float_or_param_typeFloat transparencyFloat) 
+                        mat.Alpha = transparencyFloat.Value;
                 }
 
                 result.Add("#" + m.id, mat);
