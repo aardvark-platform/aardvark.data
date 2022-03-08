@@ -1050,7 +1050,7 @@ namespace Aardvark.Importer.Vrml97
                 if (shape.Geometry is VrmlBox)
                 {
                     var box = (VrmlBox)shape.Geometry;
-                    mesh.Mesh = PolyMeshPrimitives.Box(Box3d.FromCenterAndSize(V3d.Zero, box.Size.XZY), C4b.White);
+                    mesh.Mesh = PolyMeshPrimitives.Box(Box3d.FromCenterAndSize(V3d.Zero, box.Size.XZY.ToV3d()), C4b.White);
                 }
                 else if (shape.Geometry is VrmlSphere)
                 {
