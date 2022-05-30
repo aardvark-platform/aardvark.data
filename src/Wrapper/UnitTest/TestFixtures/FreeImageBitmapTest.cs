@@ -140,18 +140,7 @@ namespace FreeImageNETUnitTest.TestFixtures
             Assert.AreEqual(PixelFormat.Format32bppArgb, fib.PixelFormat);
             Assert.AreEqual(100, fib.Width);
             Assert.AreEqual(100, fib.Height);
-
-            stream = new MemoryStream();
-            BinaryFormatter formatter = new BinaryFormatter();
-
-            formatter.Serialize(stream, fib);
-            Assert.Greater(stream.Length, 0);
-            stream.Position = 0;
-
-            fib2 = formatter.Deserialize(stream) as FreeImageBitmap;
-            stream.Dispose();
             fib.Dispose();
-            fib2.Dispose();
 
             fib = new FreeImageBitmap(filename);
             fib2 = new FreeImageBitmap(fib);
