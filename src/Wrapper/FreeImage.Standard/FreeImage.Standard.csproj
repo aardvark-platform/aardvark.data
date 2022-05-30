@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Copyright></Copyright>
+    <AssemblyTitle>FreeImage.Standard</AssemblyTitle>
+    <Version>4.3.9-beta4</Version>
+    <AssemblyVersion>4.3.9.0</AssemblyVersion>
+    <FileVersion>4.3.9.0</FileVersion>
+    <Authors>FreeImage contributors; matgr1; lordbenjamin</Authors>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>FreeImage.Standard</AssemblyName>
+    <PackageId>FreeImage.Standard</PackageId>
+    <PackageTags>FreeImage;netcore;dotnetcore;netstandard</PackageTags>
+    <PackageIconUrl>http://freeimage.sourceforge.net/images/logo.jpg</PackageIconUrl>
+    <PackageProjectUrl>https://github.com/LordBenjamin/FreeImage.Standard</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/LordBenjamin/FreeImage.Standard</RepositoryUrl>
+    <Description>
+      FreeImage (http://freeimage.sourceforge.net/) wrapper targetting .NET Standard 2.0.
+
+      FreeImage native binaries are included in the nuget package for Windows x86/x64 and Linux x64/armhf.
+
+      Linked to FreeImage version 3.18.0.
+    </Description>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\..\LICENSE" Link="license-fi.txt" Pack="true" PackagePath="LICENSE.txt" />
+  </ItemGroup>
+
+  <Import Project="..\..\..\.paket\Paket.Restore.targets" />
+</Project>

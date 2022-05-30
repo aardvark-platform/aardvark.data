@@ -1,0 +1,11 @@
+type project
+id Aardvark.PixImage.FreeImage
+authors Aardvark Platform Team
+owners Aardvark Platform Team
+projectUrl http://github.com/aardvark-platform
+licenseUrl https://freeimage.sourceforge.io/freeimage-license.txt
+repositoryType git
+repositoryUrl https://github.com/aardvark-platform/Aardvark.PixImage.FreeImage
+description
+    Aardvark is an open-source platform for visual computing, real-time graphics and visualization.
+include-pdbs true
