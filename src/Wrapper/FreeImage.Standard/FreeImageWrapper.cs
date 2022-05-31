@@ -37,7 +37,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
+#if SYSTEM_DRAWING_COMMON
 using System.Drawing.Imaging;
+#endif
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -581,6 +583,7 @@ namespace FreeImageAPI
             }
         }
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// Converts a FreeImage bitmap to a .NET <see cref="System.Drawing.Bitmap"/>.
         /// </summary>
@@ -840,6 +843,7 @@ namespace FreeImageAPI
             //}
             return result;
         }
+#endif
 
         /// <summary>
         /// Converts a raw bitmap to a FreeImage bitmap.
@@ -949,6 +953,7 @@ namespace FreeImageAPI
             return dib;
         }
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// Saves a .NET <see cref="System.Drawing.Bitmap"/> to a file.
         /// </summary>
@@ -1012,6 +1017,7 @@ namespace FreeImageAPI
             Unload(dib);
             return result;
         }
+#endif
 
         /// <summary>
         /// Loads a FreeImage bitmap.
@@ -1101,6 +1107,7 @@ namespace FreeImageAPI
             return dib;
         }
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// Loads a .NET <see cref="System.Drawing.Bitmap"/> from a file.
         /// </summary>
@@ -1120,6 +1127,7 @@ namespace FreeImageAPI
             Unload(dib);
             return result;
         }
+#endif
 
         /// <summary>
         /// Deletes a previously loaded FreeImage bitmap from memory and resets the handle to 0.
@@ -2512,6 +2520,7 @@ namespace FreeImageAPI
             return result;
         }
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// Returns the pixelformat of the bitmap.
         /// </summary>
@@ -2714,6 +2723,7 @@ namespace FreeImageAPI
 
             return FREE_IMAGE_FORMAT.FIF_UNKNOWN;
         }
+#endif
 
         /// <summary>
         /// Retrieves all parameters needed to create a new FreeImage bitmap from
@@ -4719,10 +4729,12 @@ namespace FreeImageAPI
             return result;
         }
 
+#if SYSTEM_DRAWING_COMMON
         internal static PropertyItem CreatePropertyItem()
         {
             return (PropertyItem)Activator.CreateInstance(typeof(PropertyItem), true);
         }
+#endif
 
         private static unsafe void CopyPalette(FIBITMAP src, FIBITMAP dst)
         {

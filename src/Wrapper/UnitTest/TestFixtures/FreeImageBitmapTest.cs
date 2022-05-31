@@ -9,6 +9,7 @@ using NUnit.Framework;
 
 namespace FreeImageNETUnitTest.TestFixtures
 {
+#if SYSTEM_DRAWING_COMMON
     [TestFixture]
     public class FreeImageBitmapTest
     {
@@ -711,4 +712,5 @@ namespace FreeImageNETUnitTest.TestFixtures
             fib2.Dispose();
         }
     }
+#endif
 }

@@ -1,6 +1,8 @@
 using System;
 using System.Drawing;
+#if SYSTEM_DRAWING_COMMON
 using System.Drawing.Imaging;
+#endif
 using System.IO;
 using System.Runtime.InteropServices;
 using FreeImageAPI;
@@ -70,6 +72,7 @@ namespace FreeImageNETUnitTest.TestFixtures
             Assert.DoesNotThrow(() => FreeImage.ValidateAvailability());
         }
 
+        #if SYSTEM_DRAWING_COMMON
         [Test]
         public void FreeImage_GetBitmap()
         {
@@ -142,6 +145,7 @@ namespace FreeImageNETUnitTest.TestFixtures
             Assert.IsFalse(File.Exists(@"test.png"));
             bitmap.Dispose();
         }
+#endif
 
         [Test]
         public void FreeImage_LoadEx()
@@ -699,6 +703,7 @@ namespace FreeImageNETUnitTest.TestFixtures
             FreeImage.UnloadEx(ref dib);
         }
 
+#if SYSTEM_DRAWING_COMMON
         [Test]
         public void FreeImage_GetPixelFormat()
         {
@@ -831,6 +836,7 @@ namespace FreeImageNETUnitTest.TestFixtures
             Assert.AreEqual(blue, 0);
             Assert.AreEqual(type, FREE_IMAGE_TYPE.FIT_BITMAP);
         }
+#endif
 
         [Test]
         public void FreeImage_Compare()

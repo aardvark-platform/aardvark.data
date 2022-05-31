@@ -38,7 +38,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Imaging;
+#if SYSTEM_DRAWING_COMMON
+using System.Drawing.Common;
+#endif
 using System.IO;
 using System.IO.Compression;
 using System.Reflection;
@@ -233,6 +235,7 @@ namespace FreeImageAPI
             AddMemoryPressure();
         }
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// Initializes a new instance of the <see cref="FreeImageBitmap"/> class
         /// bases on the specified image.
@@ -410,6 +413,7 @@ namespace FreeImageAPI
             originalFormat = FreeImage.GetFormat(original.RawFormat);
             AddMemoryPressure();
         }
+#endif
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FreeImageBitmap"/> class
@@ -615,6 +619,7 @@ namespace FreeImageAPI
         {
         }
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// Initializes a new instance of the <see cref="FreeImageBitmap"/> class bases on the specified size
         /// and with the resolution of the specified <see cref="System.Drawing.Graphics"/> object.
@@ -676,6 +681,7 @@ namespace FreeImageAPI
 
             AddMemoryPressure();
         }
+#endif
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FreeImageBitmap"/> class bases on the specified size and type.
@@ -716,6 +722,7 @@ namespace FreeImageAPI
             AddMemoryPressure();
         }
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// Initializes a new instance of the <see cref="FreeImageBitmap"/> class bases on the specified size,
         /// pixel format and pixel data.
@@ -837,6 +844,7 @@ namespace FreeImageAPI
 
             AddMemoryPressure();
         }
+#endif
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FreeImageBitmap"/> class bases on the specified size,
@@ -986,6 +994,7 @@ namespace FreeImageAPI
 
         #region Operators
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// Converts a <see cref="FreeImageBitmap"/> instance to a <see cref="Bitmap"/> instance.
         /// </summary>
@@ -1017,6 +1026,7 @@ namespace FreeImageAPI
         {
             return new FreeImageBitmap(value);
         }
+#endif
 
         /// <summary>
         /// Determines whether two specified <see cref="FreeImageBitmap"/> objects have the same value.
@@ -1444,6 +1454,7 @@ namespace FreeImageAPI
             }
         }
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// Gets attribute flags for the pixel data of this <see cref="FreeImageBitmap"/>.
         /// </summary>
@@ -1523,6 +1534,7 @@ namespace FreeImageAPI
                 return result;
             }
         }
+#endif
 
         /// <summary>
         /// Gets the width and height of this <see cref="FreeImageBitmap"/>.
@@ -1536,6 +1548,7 @@ namespace FreeImageAPI
             }
         }
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// Gets the pixel format for this <see cref="FreeImageBitmap"/>.
         /// </summary>
@@ -1547,6 +1560,7 @@ namespace FreeImageAPI
                 return FreeImage.GetPixelFormat(dib);
             }
         }
+#endif
 
         /// <summary>
         /// Gets IDs of the property items stored in this <see cref="FreeImageBitmap"/>.
@@ -1571,6 +1585,7 @@ namespace FreeImageAPI
             }
         }
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// Gets all the property items (pieces of metadata) stored in this <see cref="FreeImageBitmap"/>.
         /// </summary>
@@ -1611,6 +1626,7 @@ namespace FreeImageAPI
                     new ImageFormat(new Guid(((GuidAttribute)guidAttribute).Value));
             }
         }
+#endif
 
         /// <summary>
         /// Gets the width and height, in pixels, of this <see cref="FreeImageBitmap"/>.
@@ -1761,6 +1777,7 @@ namespace FreeImageAPI
 
         #region Methods
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// Gets the bounds of this <see cref="FreeImageBitmap"/> in the specified unit.
         /// </summary>
@@ -1824,6 +1841,7 @@ namespace FreeImageAPI
 
             return result;
         }
+#endif
 
         /// <summary>
         /// Returns a thumbnail for this <see cref="FreeImageBitmap"/>, keeping aspect ratio.
@@ -1847,6 +1865,7 @@ namespace FreeImageAPI
             return result;
         }
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// Converts this <see cref="FreeImageBitmap"/> instance to a <see cref="Bitmap"/> instance.
         /// </summary>
@@ -1856,6 +1875,7 @@ namespace FreeImageAPI
             EnsureNotDisposed();
             return FreeImage.GetBitmap(dib, true);
         }
+#endif
 
         /// <summary>
         /// Returns an instance of <see cref="Scanline&lt;T&gt;"/>, representing the scanline
@@ -2222,6 +2242,7 @@ namespace FreeImageAPI
             }
         }
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// This method rotates, flips, or rotates and flips this <see cref="FreeImageBitmap"/>.
         /// </summary>
@@ -2283,6 +2304,7 @@ namespace FreeImageAPI
 
             ReplaceDib(newDib);
         }
+#endif
 
         /// <summary>
         /// Copies the metadata from another <see cref="FreeImageBitmap"/>.
@@ -2819,6 +2841,7 @@ namespace FreeImageAPI
             FreeImage.SetResolutionY(dib, (uint)yDpi);
         }
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// This function is not yet implemented.
         /// </summary>
@@ -2848,6 +2871,7 @@ namespace FreeImageAPI
         {
             throw new NotImplementedException();
         }
+#endif
 
         /// <summary>
         /// Converts this <see cref="FreeImageBitmap"/> into a different color depth.
@@ -3884,6 +3908,7 @@ namespace FreeImageAPI
 
         #region Static functions
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// Returns a value that indicates whether the pixel format for this <see cref="FreeImageBitmap"/> contains alpha information.
         /// </summary>
@@ -3941,6 +3966,7 @@ namespace FreeImageAPI
                 return new FreeImageBitmap(bitmap);
             }
         }
+#endif
 
         /// <summary>
         /// Creates a <see cref="FreeImageBitmap"/> from the specified file.
@@ -4041,6 +4067,7 @@ namespace FreeImageAPI
             return new FreeImageBitmap(stream);
         }
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// Returns the color depth, in number of bits per pixel,
         /// of the specified pixel format.
@@ -4052,6 +4079,7 @@ namespace FreeImageAPI
         {
             return Bitmap.GetPixelFormatSize(pixfmt);
         }
+#endif
 
         /// <summary>
         /// Performs a lossless rotation or flipping on a JPEG file.
@@ -4351,6 +4379,7 @@ namespace FreeImageAPI
             }
         }
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// Returns a new instance of the <see cref="PropertyItem"/> class which
         /// has no public accessible constructor.
@@ -4360,6 +4389,7 @@ namespace FreeImageAPI
         {
             return FreeImage.CreatePropertyItem();
         }
+#endif
 
         #endregion
 

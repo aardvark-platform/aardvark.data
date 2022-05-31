@@ -632,6 +632,7 @@ namespace FreeImageAPI.Metadata
             return FreeImage.GetMetadata(_model, dib, _key, out tag);
         }
 
+#if SYSTEM_DRAWING_COMMON
         /// <summary>
         /// Gets a .NET PropertyItem for this metadata tag.
         /// </summary>
@@ -645,6 +646,7 @@ namespace FreeImageAPI.Metadata
             FreeImage.CopyMemory(item.Value = new byte[item.Len], FreeImage.GetTagValue(tag), item.Len);
             return item;
         }
+#endif
 
         /// <summary>
         /// Converts the value of the <see cref="MetadataTag"/> object
