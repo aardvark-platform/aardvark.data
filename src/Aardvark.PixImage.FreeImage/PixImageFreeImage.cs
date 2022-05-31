@@ -1,14 +1,6 @@
-﻿#if !__ANDROID__
-#define USE_FREEIMAGE
-#endif
-#if USE_FREEIMAGE
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using Aardvark.Base;
+using System.Collections.Generic;
 using FreeImageAPI;
 
 namespace Aardvark.Base
@@ -18,16 +10,12 @@ namespace Aardvark.Base
         [OnAardvarkInit]
         public static void Init()
         {
-            PixImage.RegisterLoadingLib(
-                streamLoad: (name, options) => PixImageFreeImage.CreateRawFreeImage(name, options),
-                streamSave: (name, options, format, quality, pi) => PixImageFreeImage.SaveAsImageFreeImage(pi, name, format, options, quality),
-                imageInfo: (name) => PixImageFreeImage.InfoFromFileNameFreeImage(name, PixLoadOptions.UseFreeImage)
-            );
+            PixImage.AddLoader(Loader);
         }
 
         #region Static Tables and Methods
 
-        private static Dictionary<PixFileFormat, FREE_IMAGE_FORMAT> s_fifImageFormatMap =
+        private static readonly Dictionary<PixFileFormat, FREE_IMAGE_FORMAT> s_fileFormats =
             new Dictionary<PixFileFormat, FREE_IMAGE_FORMAT>
         {
             { PixFileFormat.Unknown,    FREE_IMAGE_FORMAT.FIF_UNKNOWN   },
@@ -71,21 +59,9 @@ namespace Aardvark.Base
 
         #endregion
 
-        public static PixImage CreateRawFreeImage(
-                Stream stream,
-                PixLoadOptions loadFlags = PixLoadOptions.Default)
-        {
-            if ((loadFlags & PixLoadOptions.UseFreeImage) == 0)
-                return null;
+        #region Bitmap to PixImage
 
-            var dib = FreeImage.LoadFromStream(stream);
-            var pi = CreateFromFiBitMap(dib);
-            if (pi == null) return null;
-            FreeImage.Unload(dib);
-            return pi;
-        }
-
-        private static PixImage CreateFromFiBitMap(FIBITMAP dib)
+        private static PixImage BitmapToPixImage(FIBITMAP dib)
         {
             var sx = (int)FreeImage.GetWidth(dib);
             var sy = (int)FreeImage.GetHeight(dib);
@@ -111,7 +87,7 @@ namespace Aardvark.Base
                                 {
                                     for (var y = 0; y < sy; y++)
                                     {
-                                        bits = bits - delta;
+                                        bits -= delta;
                                         byte bit = 0x80; int bi = 0;
                                         unsafe
                                         {
@@ -128,7 +104,7 @@ namespace Aardvark.Base
                                 {
                                     for (var y = 0; y < sy; y++)
                                     {
-                                        bits = bits - delta;
+                                        bits -= delta;
                                         byte bit = 0x80; int bi = 0;
                                         unsafe
                                         {
@@ -150,7 +126,7 @@ namespace Aardvark.Base
                                 long i = 0;
                                 for (var y = 0; y < sy; y++)
                                 {
-                                    bits = bits - delta;
+                                    bits -= delta;
                                     unsafe
                                     {
                                         Byte* pixel = (Byte*)bits;
@@ -167,7 +143,7 @@ namespace Aardvark.Base
                                 long i = 0;
                                 for (var y = 0; y < sy; y++)
                                 {
-                                    bits = bits - delta;
+                                    bits -= delta;
                                     unsafe
                                     {
                                         Byte* pixel = (Byte*)bits;
@@ -189,7 +165,7 @@ namespace Aardvark.Base
                                 long i = 0;
                                 for (var y = 0; y < sy; y++)
                                 {
-                                    bits = bits - delta;
+                                    bits -= delta;
                                     unsafe
                                     {
                                         Byte* pixel = (Byte*)bits;
@@ -214,7 +190,7 @@ namespace Aardvark.Base
                         long i = 0;
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 ushort* pixel = (ushort*)bits;
@@ -231,7 +207,7 @@ namespace Aardvark.Base
                         long i = 0;
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 short* pixel = (short*)bits;
@@ -248,7 +224,7 @@ namespace Aardvark.Base
                         long i = 0;
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 uint* pixel = (uint*)bits;
@@ -265,7 +241,7 @@ namespace Aardvark.Base
                         long i = 0;
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 int* pixel = (int*)bits;
@@ -282,7 +258,7 @@ namespace Aardvark.Base
                         long i = 0;
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 float* pixel = (float*)bits;
@@ -299,7 +275,7 @@ namespace Aardvark.Base
                         long i = 0;
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 double* pixel = (double*)bits;
@@ -316,7 +292,7 @@ namespace Aardvark.Base
                         long i = 0;
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 FICOMPLEX* pixel = (FICOMPLEX*)bits;
@@ -336,7 +312,7 @@ namespace Aardvark.Base
                         long i = 0;
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 FIRGB16* pixel = (FIRGB16*)bits;
@@ -357,7 +333,7 @@ namespace Aardvark.Base
                         long i = 0;
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 FIRGBF* pixel = (FIRGBF*)bits;
@@ -378,7 +354,7 @@ namespace Aardvark.Base
                         long i = 0;
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 FIRGBA16* pixel = (FIRGBA16*)bits;
@@ -400,7 +376,7 @@ namespace Aardvark.Base
                         long i = 0;
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 FIRGBAF* pixel = (FIRGBAF*)bits;
@@ -416,54 +392,40 @@ namespace Aardvark.Base
                         return pi;
                     }
             }
-            return null;
+
+            throw new NotSupportedException($"Unsupported image type {ftype}");
         }
 
-        public static bool SaveAsImageFreeImage(this PixImage img,
-                Stream stream, PixFileFormat format,
-                PixSaveOptions options, int qualityLevel)
+        #endregion
+
+        #region PixImage to Bitmap
+
+        private static void CheckLayout(VolumeInfo vi)
         {
-            if ((options & PixSaveOptions.UseFreeImage) == 0)
-                return false;
+            if (vi.DZ != 1L)
+                throw new ArgumentException($"Volume must have DZ = 1 (is {vi.DZ}");
 
-            var dib = ToFiBitMap(img);
-
-            var flags = FREE_IMAGE_SAVE_FLAGS.DEFAULT;
-
-            switch (format)
-            {
-                case PixFileFormat.Jpeg: if (qualityLevel > 0) flags = (FREE_IMAGE_SAVE_FLAGS)qualityLevel; break;
-                case PixFileFormat.Exr: if (img.PixFormat.Type == typeof(float)) flags |= FREE_IMAGE_SAVE_FLAGS.EXR_FLOAT; break;
-                default: break;
-            }
-
-            var result = FreeImage.SaveToStream(dib, stream, s_fifImageFormatMap[format], flags);
-            FreeImage.UnloadEx(ref dib);
-            return result;
+            if (vi.SZ != vi.DX)
+                throw new ArgumentException($"Volume must have SZ = DX");
         }
 
-        private static void FreeImageCheck(VolumeInfo vi)
+        private static FIBITMAP PixImageToBitmap(PixImage<byte> pi)
         {
-            if (vi.DZ != 1L || vi.SZ != vi.DX) throw new ArgumentOutOfRangeException();
-        }
-
-        private static FIBITMAP NewFiBitMap(PixImage<byte> pi)
-        {
-            FreeImageCheck(pi.Volume.Info);
+            CheckLayout(pi.Volume.Info);
             var sx = pi.Size.X;
             var sy = pi.Size.Y;
             var bpp = pi.ChannelCount == 1 && pi.Format == Col.Format.BW ? 1 : pi.ChannelCount * 8;
-            var dib = FreeImage.Allocate(sx, sy, bpp);
-            var delta = (int)FreeImage.GetPitch(dib);
             var data = pi.Volume.Data;
             long i = pi.Volume.FirstIndex;
             long j = pi.Volume.JY;
-            var bits = FreeImage.GetBits(dib) + sy * delta;
 
             switch (bpp)
             {
                 case 1:
                     {
+                        var dib = FreeImage.Allocate(sx, sy, bpp);
+                        var delta = (int)FreeImage.GetPitch(dib);
+                        var bits = FreeImage.GetBits(dib) + sy * delta;
                         var palette = FreeImage.GetPaletteEx(dib);
                         if (palette != null) // should alway be != null
                         {
@@ -472,7 +434,7 @@ namespace Aardvark.Base
                         }
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             byte bit = 0x80;
                             int bi = 0;
                             unsafe
@@ -486,13 +448,18 @@ namespace Aardvark.Base
                             }
                             i += j;
                         }
+
+                        return dib;
                     }
-                    break;
                 case 8:
                     {
+                        var dib = FreeImage.Allocate(sx, sy, bpp);
+                        var delta = (int)FreeImage.GetPitch(dib);
+                        var bits = FreeImage.GetBits(dib) + sy * delta;
+
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 byte* pixel = (byte*)bits;
@@ -501,19 +468,23 @@ namespace Aardvark.Base
                             }
                             i += j;
                         }
+
+                        return dib;
                     }
-                    break;
                 case 24:
                     {
+                        var dib = FreeImage.Allocate(sx, sy, bpp);
+                        var delta = (int)FreeImage.GetPitch(dib);
+                        var bits = FreeImage.GetBits(dib) + sy * delta;
                         var channelOrder = new[] { FreeImage.FI_RGBA_BLUE, FreeImage.FI_RGBA_GREEN, FreeImage.FI_RGBA_RED };
-                        if(pi.Format == Col.Format.RGB) channelOrder = new[] { FreeImage.FI_RGBA_RED, FreeImage.FI_RGBA_GREEN, FreeImage.FI_RGBA_BLUE };
+                        if (pi.Format == Col.Format.RGB) channelOrder = new[] { FreeImage.FI_RGBA_RED, FreeImage.FI_RGBA_GREEN, FreeImage.FI_RGBA_BLUE };
 
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
-                                Byte* pixel = (Byte*)bits;
+                                byte* pixel = (byte*)bits;
                                 for (var x = 0; x < sx; x++)
                                 {
                                     pixel[channelOrder[0]] = data[i++];
@@ -524,19 +495,23 @@ namespace Aardvark.Base
                             }
                             i += j;
                         }
+
+                        return dib;
                     }
-                    break;
                 case 32:
                     {
+                        var dib = FreeImage.Allocate(sx, sy, bpp);
+                        var delta = (int)FreeImage.GetPitch(dib);
+                        var bits = FreeImage.GetBits(dib) + sy * delta;
                         var channelOrder = new[] { FreeImage.FI_RGBA_BLUE, FreeImage.FI_RGBA_GREEN, FreeImage.FI_RGBA_RED, FreeImage.FI_RGBA_ALPHA };
                         if (pi.Format == Col.Format.RGBA) channelOrder = new[] { FreeImage.FI_RGBA_RED, FreeImage.FI_RGBA_GREEN, FreeImage.FI_RGBA_BLUE, FreeImage.FI_RGBA_ALPHA };
 
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
-                                Byte* pixel = (Byte*)bits;
+                                byte* pixel = (byte*)bits;
                                 for (var x = 0; x < sx; x++)
                                 {
                                     pixel[channelOrder[0]] = data[i++];
@@ -548,15 +523,17 @@ namespace Aardvark.Base
                             }
                             i += j;
                         }
+
+                        return dib;
                     }
-                    break;
+                default:
+                    throw new ArgumentException($"Invalid channel count {pi.ChannelCount}");
             }
-            return dib;
         }
 
-        private static FIBITMAP NewFiBitMap(PixImage<ushort> pi)
+        private static FIBITMAP PixImageToBitmap(PixImage<ushort> pi)
         {
-            FreeImageCheck(pi.Volume.Info);
+            CheckLayout(pi.Volume.Info);
             var sx = pi.Size.X;
             var sy = pi.Size.Y;
             var data = pi.Volume.Data;
@@ -572,7 +549,7 @@ namespace Aardvark.Base
                         var bits = FreeImage.GetBits(dib) + sy * delta;
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 ushort* pixel = (ushort*)bits;
@@ -590,7 +567,7 @@ namespace Aardvark.Base
                         var bits = FreeImage.GetBits(dib) + sy * delta;
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 FIRGB16* pixel = (FIRGB16*)bits;
@@ -612,7 +589,7 @@ namespace Aardvark.Base
                         var bits = FreeImage.GetBits(dib) + sy * delta;
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 FIRGBA16* pixel = (FIRGBA16*)bits;
@@ -629,14 +606,13 @@ namespace Aardvark.Base
                         return dib;
                     }
                 default:
-                    break;
+                    throw new ArgumentException($"Invalid channel count {pi.ChannelCount}");
             }
-            throw new ArgumentException("cannot save PixImage");
         }
 
-        private static FIBITMAP NewFiBitMap(PixImage<float> pi)
+        private static FIBITMAP PixImageToBitmap(PixImage<float> pi)
         {
-            FreeImageCheck(pi.Volume.Info);
+            CheckLayout(pi.Volume.Info);
             var sx = pi.Size.X;
             var sy = pi.Size.Y;
             var data = pi.Volume.Data;
@@ -652,7 +628,7 @@ namespace Aardvark.Base
                         var bits = FreeImage.GetBits(dib) + sy * delta;
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 float* pixel = (float*)bits;
@@ -670,7 +646,7 @@ namespace Aardvark.Base
                         var bits = FreeImage.GetBits(dib) + sy * delta;
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 FIRGBF* pixel = (FIRGBF*)bits;
@@ -692,7 +668,7 @@ namespace Aardvark.Base
                         var bits = FreeImage.GetBits(dib) + sy * delta;
                         for (var y = 0; y < sy; y++)
                         {
-                            bits = bits - delta;
+                            bits -= delta;
                             unsafe
                             {
                                 FIRGBAF* pixel = (FIRGBAF*)bits;
@@ -709,34 +685,123 @@ namespace Aardvark.Base
                         return dib;
                     }
                 default:
-                    break;
+                    throw new ArgumentException($"Invalid channel count {pi.ChannelCount}");
             }
-            throw new ArgumentException("cannot save PixImage");
         }
 
-        private static Dictionary<Type, Func<PixImage, FIBITMAP>> s_createFiBitMap =
-            new Dictionary<Type, Func<PixImage, FIBITMAP>>
+        private static FIBITMAP PixImageToBitmap(PixImage image)
+        {
+            switch (image)
             {
-                { typeof(byte), pi => NewFiBitMap((PixImage<byte>)pi) },
-                { typeof(ushort), pi => NewFiBitMap((PixImage<ushort>)pi) },
-                { typeof(float), pi => NewFiBitMap((PixImage<float>)pi) },
-            };
+                case PixImage<byte> pi:
+                    return PixImageToBitmap(pi);
 
-        private static PixImageInfo InfoFromFileNameFreeImage(
-                string fileName, PixLoadOptions options)
+                case PixImage<ushort> pi:
+                    return PixImageToBitmap(pi);
+
+                case PixImage<float> pi:
+                    return PixImageToBitmap(pi);
+
+                default:
+                    throw new NotSupportedException($"Cannot save PixImage of type {image.PixFormat.Type}");
+            }
+        }
+
+        #endregion
+
+        #region Loader
+
+        private class PixLoader : IPixLoader
         {
-            if ((options & PixLoadOptions.UseFreeImage) == 0)
+            public string Name => "FreeImage";
+
+            #region Load
+
+            private static PixImage Load(Func<FIBITMAP> loadBitmap)
+            {
+                var bitmap = loadBitmap();
+                if (!bitmap.IsNull)
+                {
+                    try
+                    {
+                        return BitmapToPixImage(bitmap);
+                    }
+                    finally
+                    {
+                        FreeImage.Unload(bitmap);
+                    }
+                }
+
                 return null;
+            }
 
-            // TODO: return something if its possible
-            return null;
+            public PixImage LoadFromFile(string filename)
+                => Load(() => FreeImage.LoadEx(filename));
+
+            public PixImage LoadFromStream(Stream stream)
+                => Load(() => FreeImage.LoadFromStream(stream));
+
+            #endregion
+
+            #region Save
+
+            private static void Save(PixImage pi, PixSaveParams saveParams, string saveMethod, Func<FIBITMAP, FREE_IMAGE_FORMAT, FREE_IMAGE_SAVE_FLAGS, bool> saveBitmap)
+            {
+                if (!s_fileFormats.TryGetValue(saveParams.Format, out FREE_IMAGE_FORMAT format))
+                    throw new NotSupportedException($"Unsupported PixImage file format {saveParams.Format}.");
+
+                var bitmap = PixImageToBitmap(pi);
+
+                try
+                {
+                    var flags = FREE_IMAGE_SAVE_FLAGS.DEFAULT;
+
+                    if (saveParams is PixPngSaveParams png)
+                    {
+                        if (png.CompressionLevel > 0)
+                            flags = (FREE_IMAGE_SAVE_FLAGS)png.CompressionLevel;
+                        else
+                            flags = FREE_IMAGE_SAVE_FLAGS.PNG_Z_NO_COMPRESSION;
+                    }
+                    else if (saveParams is PixJpegSaveParams jpeg)
+                    {
+                        flags = (FREE_IMAGE_SAVE_FLAGS)jpeg.Quality;
+                    }
+                    else if (saveParams.Format == PixFileFormat.Exr && pi.PixFormat.Type == typeof(float))
+                    {
+                        flags = FREE_IMAGE_SAVE_FLAGS.EXR_FLOAT;
+                    }
+
+                    if (!saveBitmap(bitmap, format, flags))
+                        throw new ImageLoadException($"FreeImage.{saveMethod}() failed.");
+                }
+                finally
+                {
+                    FreeImage.UnloadEx(ref bitmap);
+                }
+            }
+
+            public void SaveToFile(string filename, PixImage image, PixSaveParams saveParams)
+                => Save(image, saveParams, "Save", (bitmap, format, flags) => FreeImage.Save(format, bitmap, filename, flags));
+
+            public void SaveToStream(Stream stream, PixImage image, PixSaveParams saveParams)
+                => Save(image, saveParams, "SaveToStream", (bitmap, format, flags) => FreeImage.SaveToStream(bitmap, stream, format, flags));
+
+            #endregion
+
+            #region GetInfo
+
+            public PixImageInfo GetInfoFromFile(string filename)
+                => throw new NotSupportedException($"{Name} loader does not support getting info.");
+
+            public PixImageInfo GetInfoFromStream(Stream stream)
+                => throw new NotSupportedException($"{Name} loader does not support getting info.");
+
+            #endregion
         }
 
-        private static FIBITMAP ToFiBitMap(PixImage image)
-        {
-            return s_createFiBitMap[image.PixFormat.Type](image);
-        }
+        public static readonly IPixLoader Loader = new PixLoader();
+
+        #endregion
     }
-
 }
-#endif
