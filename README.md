@@ -10,4 +10,4 @@ Windows build requires [Microsoft Visual C++ Runtime 2015](https://www.microsoft
 
 ## License
 
-The license is the same as the FreeImage license.
+FreeImage Public License - Version 1.0
