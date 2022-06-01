@@ -27,7 +27,7 @@ module PixLoaderTests =
 
     module private PixImage =
 
-        let checkerboard (format : Col.Format) (width : int) (height : int) =
+        let checkerboard (randomAlpha : bool) (format : Col.Format) (width : int) (height : int) =
             let mutable colors = HashMap.empty<V2l, C4b>
 
             let pi = PixImage<byte>(format, V2i(width, height))
@@ -41,7 +41,7 @@ module PixLoaderTests =
                         match colors |> HashMap.tryFind c with
                         | Some c -> c.[channel]
                         | _ ->
-                            let color = rnd.UniformC4d().ToC4b()
+                            let color = if randomAlpha then rnd.UniformC4d().ToC4b() else rnd.UniformC3d().ToC4b()
                             colors <- colors |> HashMap.add c color
                             color.[channel]
                 ) |> ignore
@@ -91,25 +91,12 @@ module PixLoaderTests =
             ]
             |> Gen.elements
 
-        let checkerboardPix (format : Col.Format) =
+        let checkerboardPix (randomAlpha : bool) (format : Col.Format) =
             gen {
                 let! w = Gen.choose (64, 513)
                 let! h = Gen.choose (64, 513)
-                return PixImage.checkerboard format w h
+                return PixImage.checkerboard randomAlpha format w h
             }
-
-        let colorAndImageFileFormat =
-            gen {
-                let! cf = colorFormat
-                let! iff = imageFileFormat
-
-                let isValid =
-                    iff = PixFileFormat.Png || cf = Col.Format.RGB || cf = Col.Format.BGR
-
-                return cf, iff, isValid
-            }
-            |> Gen.filter (fun (_, _, valid) -> valid)
-            |> Gen.map (fun (cf, iff, _) -> cf, iff)
 
     type SaveLoadInput =
         {
@@ -123,14 +110,15 @@ module PixLoaderTests =
         static member PixImage =
             gen {
                 let! format = Gen.colorFormat
-                return! Gen.checkerboardPix format
+                return! Gen.checkerboardPix true format
             }
             |> Arb.fromGen
 
         static member SaveLoadInput =
             gen {
-                let! cf, iff = Gen.colorAndImageFileFormat
-                let! pix = Gen.checkerboardPix cf
+                let! cf = Gen.colorFormat
+                let! iff = Gen.imageFileFormat
+                let! pix = Gen.checkerboardPix (iff <> PixFileFormat.Jpeg) cf
                 let! useStream = Gen.elements [false; true]
 
                 let saveParams =
@@ -173,7 +161,7 @@ module PixLoaderTests =
             match input.SaveParams.Format with
             | PixFileFormat.Jpeg | PixFileFormat.Gif ->
                 let psnr = PixImage.peakSignalToNoiseRatio input.Image output
-                Expect.isGreaterThan psnr 20.0 "Bad peak-signal-to-noise ratio"
+                Expect.isGreaterThan psnr 10.0 "Bad peak-signal-to-noise ratio"
 
             | _ ->
                 PixImage.compare input.Image output

@@ -18,44 +18,58 @@ namespace Aardvark.Base
         private static readonly Dictionary<PixFileFormat, FREE_IMAGE_FORMAT> s_fileFormats =
             new Dictionary<PixFileFormat, FREE_IMAGE_FORMAT>
         {
-            { PixFileFormat.Unknown,    FREE_IMAGE_FORMAT.FIF_UNKNOWN   },
-            { PixFileFormat.Bmp,        FREE_IMAGE_FORMAT.FIF_BMP       },
-            { PixFileFormat.Ico,        FREE_IMAGE_FORMAT.FIF_ICO       },
-            { PixFileFormat.Jpeg,       FREE_IMAGE_FORMAT.FIF_JPEG      },
-            { PixFileFormat.Jng,        FREE_IMAGE_FORMAT.FIF_JNG       },
-            { PixFileFormat.Koala,      FREE_IMAGE_FORMAT.FIF_KOALA     },
-            { PixFileFormat.Lbm,        FREE_IMAGE_FORMAT.FIF_LBM       },
-            { PixFileFormat.Iff,        FREE_IMAGE_FORMAT.FIF_IFF       },
-            { PixFileFormat.Mng,        FREE_IMAGE_FORMAT.FIF_MNG       },
-            { PixFileFormat.Pbm,        FREE_IMAGE_FORMAT.FIF_PBM       },
-            { PixFileFormat.PbmRaw,     FREE_IMAGE_FORMAT.FIF_PBMRAW    },
-            { PixFileFormat.Pcd,        FREE_IMAGE_FORMAT.FIF_PCD       },
-            { PixFileFormat.Pcx,        FREE_IMAGE_FORMAT.FIF_PCX       },
-            { PixFileFormat.Pgm,        FREE_IMAGE_FORMAT.FIF_PGM       },
-            { PixFileFormat.PgmRaw,     FREE_IMAGE_FORMAT.FIF_PGMRAW    },
-            { PixFileFormat.Png,        FREE_IMAGE_FORMAT.FIF_PNG       },
-            { PixFileFormat.Ppm,        FREE_IMAGE_FORMAT.FIF_PPM       },
-            { PixFileFormat.PpmRaw,     FREE_IMAGE_FORMAT.FIF_PPMRAW    },
-            { PixFileFormat.Ras,        FREE_IMAGE_FORMAT.FIF_RAS       },
-            { PixFileFormat.Targa,      FREE_IMAGE_FORMAT.FIF_TARGA     },
-            { PixFileFormat.Tiff,       FREE_IMAGE_FORMAT.FIF_TIFF      },
-            { PixFileFormat.Wbmp,       FREE_IMAGE_FORMAT.FIF_WBMP      },
-            { PixFileFormat.Psd,        FREE_IMAGE_FORMAT.FIF_PSD       },
-            { PixFileFormat.Cut,        FREE_IMAGE_FORMAT.FIF_CUT       },
-            { PixFileFormat.Xbm,        FREE_IMAGE_FORMAT.FIF_XBM       },
-            { PixFileFormat.Xpm,        FREE_IMAGE_FORMAT.FIF_XPM       },
-            { PixFileFormat.Dds,        FREE_IMAGE_FORMAT.FIF_DDS       },
-            { PixFileFormat.Gif,        FREE_IMAGE_FORMAT.FIF_GIF       },
-            { PixFileFormat.Hdr,        FREE_IMAGE_FORMAT.FIF_HDR       },
-            { PixFileFormat.Faxg3,      FREE_IMAGE_FORMAT.FIF_FAXG3     },
-            { PixFileFormat.Sgi,        FREE_IMAGE_FORMAT.FIF_SGI       },
-            { PixFileFormat.Exr,        FREE_IMAGE_FORMAT.FIF_EXR       },
-            { PixFileFormat.J2k,        FREE_IMAGE_FORMAT.FIF_J2K       },
-            { PixFileFormat.Jp2,        FREE_IMAGE_FORMAT.FIF_JP2       },
-            { PixFileFormat.Pfm,        FREE_IMAGE_FORMAT.FIF_PFM       },
-            { PixFileFormat.Pict,       FREE_IMAGE_FORMAT.FIF_PICT      },
-            { PixFileFormat.Raw,        FREE_IMAGE_FORMAT.FIF_RAW       },
+            { PixFileFormat.Unknown, FREE_IMAGE_FORMAT.FIF_UNKNOWN   },
+            { PixFileFormat.Bmp,     FREE_IMAGE_FORMAT.FIF_BMP       },
+            { PixFileFormat.Ico,     FREE_IMAGE_FORMAT.FIF_ICO       },
+            { PixFileFormat.Jpeg,    FREE_IMAGE_FORMAT.FIF_JPEG      },
+            { PixFileFormat.Jng,     FREE_IMAGE_FORMAT.FIF_JNG       },
+            { PixFileFormat.Koala,   FREE_IMAGE_FORMAT.FIF_KOALA     },
+            { PixFileFormat.Lbm,     FREE_IMAGE_FORMAT.FIF_LBM       },
+            { PixFileFormat.Iff,     FREE_IMAGE_FORMAT.FIF_IFF       },
+            { PixFileFormat.Mng,     FREE_IMAGE_FORMAT.FIF_MNG       },
+            { PixFileFormat.Pbm,     FREE_IMAGE_FORMAT.FIF_PBM       },
+            { PixFileFormat.PbmRaw,  FREE_IMAGE_FORMAT.FIF_PBMRAW    },
+            { PixFileFormat.Pcd,     FREE_IMAGE_FORMAT.FIF_PCD       },
+            { PixFileFormat.Pcx,     FREE_IMAGE_FORMAT.FIF_PCX       },
+            { PixFileFormat.Pgm,     FREE_IMAGE_FORMAT.FIF_PGM       },
+            { PixFileFormat.PgmRaw,  FREE_IMAGE_FORMAT.FIF_PGMRAW    },
+            { PixFileFormat.Png,     FREE_IMAGE_FORMAT.FIF_PNG       },
+            { PixFileFormat.Ppm,     FREE_IMAGE_FORMAT.FIF_PPM       },
+            { PixFileFormat.PpmRaw,  FREE_IMAGE_FORMAT.FIF_PPMRAW    },
+            { PixFileFormat.Ras,     FREE_IMAGE_FORMAT.FIF_RAS       },
+            { PixFileFormat.Targa,   FREE_IMAGE_FORMAT.FIF_TARGA     },
+            { PixFileFormat.Tiff,    FREE_IMAGE_FORMAT.FIF_TIFF      },
+            { PixFileFormat.Wbmp,    FREE_IMAGE_FORMAT.FIF_WBMP      },
+            { PixFileFormat.Psd,     FREE_IMAGE_FORMAT.FIF_PSD       },
+            { PixFileFormat.Cut,     FREE_IMAGE_FORMAT.FIF_CUT       },
+            { PixFileFormat.Xbm,     FREE_IMAGE_FORMAT.FIF_XBM       },
+            { PixFileFormat.Xpm,     FREE_IMAGE_FORMAT.FIF_XPM       },
+            { PixFileFormat.Dds,     FREE_IMAGE_FORMAT.FIF_DDS       },
+            { PixFileFormat.Gif,     FREE_IMAGE_FORMAT.FIF_GIF       },
+            { PixFileFormat.Hdr,     FREE_IMAGE_FORMAT.FIF_HDR       },
+            { PixFileFormat.Faxg3,   FREE_IMAGE_FORMAT.FIF_FAXG3     },
+            { PixFileFormat.Sgi,     FREE_IMAGE_FORMAT.FIF_SGI       },
+            { PixFileFormat.Exr,     FREE_IMAGE_FORMAT.FIF_EXR       },
+            { PixFileFormat.J2k,     FREE_IMAGE_FORMAT.FIF_J2K       },
+            { PixFileFormat.Jp2,     FREE_IMAGE_FORMAT.FIF_JP2       },
+            { PixFileFormat.Pfm,     FREE_IMAGE_FORMAT.FIF_PFM       },
+            { PixFileFormat.Pict,    FREE_IMAGE_FORMAT.FIF_PICT      },
+            { PixFileFormat.Raw,     FREE_IMAGE_FORMAT.FIF_RAW       },
         };
+
+        private static bool SupportsAlpha(PixFileFormat format)
+            => format switch
+            {
+                PixFileFormat.Jpeg => false,
+                PixFileFormat.Koala => false,
+                PixFileFormat.Ras => false,
+                PixFileFormat.Wbmp => false,
+                PixFileFormat.Cut => false,
+                PixFileFormat.Xbm => false,
+                PixFileFormat.Hdr => false,
+                PixFileFormat.Raw => false,
+                _ => true
+            };
 
         #endregion
 
@@ -400,6 +414,20 @@ namespace Aardvark.Base
 
         #region PixImage to Bitmap
 
+        private static PixImage<T> WithoutAlpha<T>(PixImage<T> pi)
+        {
+            if (pi.ChannelCount == 4)
+            {
+                // Trying to save an RGBA picture as JPEG fails because of the alpha channel
+                // => make sub volume and copy to dense layout again...
+                // Suboptimal but an easy workaround
+                var volume = pi.Volume.SubVolume(V3i.Zero, new V3i(pi.Size, 3)).CopyToImageWindow();
+                return new PixImage<T>(volume);
+            }
+            else
+                return pi;
+        }
+
         private static void CheckLayout(VolumeInfo vi)
         {
             if (vi.DZ != 1L)
@@ -689,22 +717,15 @@ namespace Aardvark.Base
             }
         }
 
-        private static FIBITMAP PixImageToBitmap(PixImage image)
+        private static FIBITMAP PixImageToBitmap(PixImage image, bool wantAlpha)
         {
-            switch (image)
+            return image switch
             {
-                case PixImage<byte> pi:
-                    return PixImageToBitmap(pi);
-
-                case PixImage<ushort> pi:
-                    return PixImageToBitmap(pi);
-
-                case PixImage<float> pi:
-                    return PixImageToBitmap(pi);
-
-                default:
-                    throw new NotSupportedException($"Cannot save PixImage of type {image.PixFormat.Type}");
-            }
+                PixImage<byte> pi => PixImageToBitmap(wantAlpha ? pi : WithoutAlpha(pi)),
+                PixImage<ushort> pi => PixImageToBitmap(wantAlpha ? pi : WithoutAlpha(pi)),
+                PixImage<float> pi => PixImageToBitmap(wantAlpha ? pi : WithoutAlpha(pi)),
+                _ => throw new NotSupportedException($"Cannot save PixImage of type {image.PixFormat.Type}"),
+            };
         }
 
         #endregion
@@ -750,7 +771,7 @@ namespace Aardvark.Base
                 if (!s_fileFormats.TryGetValue(saveParams.Format, out FREE_IMAGE_FORMAT format))
                     throw new NotSupportedException($"Unsupported PixImage file format {saveParams.Format}.");
 
-                var bitmap = PixImageToBitmap(pi);
+                var bitmap = PixImageToBitmap(pi, SupportsAlpha(saveParams.Format));
 
                 try
                 {
