@@ -1,7 +1,6 @@
-﻿namespace Aardvark.PixImage.FreeImage.Tests
+﻿namespace Tests
 
 open Aardvark.Base
-open System
 open System.IO
 
 open NUnit.Framework
@@ -25,7 +24,7 @@ module PixLoaderTests =
             if File.Exists filename then
                 File.Delete filename
 
-    module private PixImage =
+    module PixImage =
 
         let checkerboard (randomAlpha : bool) (format : Col.Format) (width : int) (height : int) =
             let mutable colors = HashMap.empty<V2l, C4b>

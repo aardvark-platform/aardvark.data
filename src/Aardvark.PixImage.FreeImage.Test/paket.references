@@ -1,5 +1,7 @@
 ﻿group Test
 
+Aardvark.PixImage.Devil
+BenchmarkDotNet
 FSharp.Core
 FsCheck
 FsCheck.NUnit
