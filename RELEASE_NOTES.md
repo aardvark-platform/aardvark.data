@@ -1,3 +1,6 @@
+### 5.3.2
+- removed System.Memory/Buffer dependency upper version limits
+
 ### 5.3.1
 - Added missing FreeImage.Standard.dll
 
