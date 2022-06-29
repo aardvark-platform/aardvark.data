@@ -58,9 +58,10 @@ module DGM =
 
     let loadDgm (fileName : string) = 
         let extract (tag : string)  (s : String) =
-            match s.SplitOnWhitespace() with
-                | [|t;value|] when t = tag -> value
-                | _ -> failwithf "could not parse tag: %s in file: %s" tag fileName
+            let tokens = s.SplitOnWhitespace()
+            if tokens.Length <> 2 || tokens.[0].ToUpperInvariant() <> tag then 
+                failwithf "could not parse tag: %s in file: %s" tag fileName
+            tokens.[1]                
 
         let inline pint (s : string) = 
             let mutable r = 0
