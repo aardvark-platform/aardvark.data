@@ -72,7 +72,7 @@ module DGM =
             if Double.TryParse(s,Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, &r) then r
             else failwithf "could not parse int double: %s in file: %s" s fileName
 
-        let txt        = IO.File.OpenText(fileName) 
+        use txt        = IO.File.OpenText(fileName) 
         let ncols      = txt.ReadLine() |> extract "NCOLS"     |> pint
         let nrows      = txt.ReadLine() |> extract "NROWS"     |> pint
         let xllcorner  = txt.ReadLine() |> extract "XLLCORNER" |> pfloat
