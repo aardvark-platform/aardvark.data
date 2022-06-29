@@ -98,9 +98,6 @@ module DGM =
                         cursor <- cursor + 1
                     last <- i + 1
                     i <- i + 1
-                elif i + 1 < cnt && buffer.[i+1] = '\r' || buffer.[i+1] = '\n' then
-                   i <- i + 2
-                   last <- i + 2
                 else i <- i + 1
         if cursor <> elementCnt then failwithf "element count: %d does not match expected: %d in file: %s" cursor elementCnt fileName
         {
@@ -136,7 +133,7 @@ module DGM =
             if S |> isNan then S <- v
 //            (W-O).Cross(N-S).Normalized
 
-            (V3f(W.Z - O.Z, N.Z - S.Z, 20.0f)).Normalized // 2*10m cell size
+            (V3f(W.Z - O.Z, N.Z - S.Z, float32 dgm.cellSize * 2.0f)).Normalized // 2*10m cell size
         )
 
     let createUVs (dgm : DGM) (o : Matrix<V3f>) =
