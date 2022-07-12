@@ -1,3 +1,6 @@
+### 5.3.3
+- Fixed Linux native binary
+
 ### 5.3.2
 - removed System.Memory/Buffer dependency upper version limits
 
