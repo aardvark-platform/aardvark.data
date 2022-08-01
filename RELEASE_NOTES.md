@@ -1,3 +1,6 @@
+### 5.3.4
+- Fixed color channel order for saving JPEG with alpha input
+
 ### 5.3.3
 - Fixed Linux native binary
 
