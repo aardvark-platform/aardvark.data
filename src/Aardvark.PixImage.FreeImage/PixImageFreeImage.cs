@@ -418,11 +418,18 @@ namespace Aardvark.Base
         {
             if (pi.ChannelCount == 4)
             {
+                var format = pi.Format switch
+                {
+                    Col.Format.BGRA => Col.Format.BGR,
+                    Col.Format.BGRP => Col.Format.BGR,
+                    _ => Col.Format.RGB
+                };
+
                 // Trying to save an RGBA picture as JPEG fails because of the alpha channel
                 // => make sub volume and copy to dense layout again...
                 // Suboptimal but an easy workaround
                 var volume = pi.Volume.SubVolume(V3i.Zero, new V3i(pi.Size, 3)).CopyToImageWindow();
-                return new PixImage<T>(volume);
+                return new PixImage<T>(format, volume);
             }
             else
                 return pi;
