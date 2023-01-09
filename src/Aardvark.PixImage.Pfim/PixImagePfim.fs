@@ -2,7 +2,6 @@
 
 open System
 open System.IO
-open FSharp.NativeInterop
 open Pfim
 
 #nowarn "9"
@@ -22,35 +21,34 @@ module private PixImagePfimImpl =
             if isNull x.MipMaps then 1
             else x.MipMaps.Length + 1
 
-    let private create<'T when 'T : unmanaged> (copy : MipMapOffset -> nativeint -> PixImage<'T> -> unit)
-                                               (format : Col.Format) (info : MipMapOffset) (data : nativeint) : PixImage =
-        let pi = PixImage<'T>(format, int64 info.Width, int64 info.Height)
-        copy info data pi
-        pi
+    // Note: The default allocator of Pfim just allocates a new array, so
+    // we can just use it without worrying about it being reused when the original
+    // IImage is disposed.
+    let private of8Bit (format : Col.Format) (info : MipMapOffset) (src : uint8[]) =
+        let channels =
+            format.ChannelCount()
 
-    let private copyDirect<'T when 'T : unmanaged> (info : MipMapOffset) (src : nativeint) (dst : PixImage<'T>) =
-        let srcVolume =
-            NativeVolume<'T>(
-                NativePtr.ofNativeInt (src + nativeint info.DataOffset),
+        let volume =
+            Volume<uint8>(
+                src,
                 VolumeInfo(
-                    0L,
-                    V3l(info.Width, info.Height, dst.ChannelCount),
-                    V3l(dst.ChannelCount, info.Stride, 1)
+                    int64 info.DataOffset,
+                    V3l(info.Width, info.Height, channels),
+                    V3l(channels, info.Stride, 1)
                 )
             )
 
-        PixImage.copyFromNativeVolume srcVolume dst
+        PixImage<uint8>(format, volume) :> PixImage
 
     // TODO: Implement missing formats
-    let private levelToPixImageTable : (ImageFormat -> (MipMapOffset -> nativeint -> PixImage) option) =
+    let private levelToPixImageTable : (ImageFormat -> (MipMapOffset -> uint8[] -> PixImage) option) =
         LookupTable.lookupTable' [
-            ImageFormat.Rgb8,     create copyDirect<uint8> Col.Format.Gray
-            ImageFormat.Rgb24,    create copyDirect<uint8> Col.Format.BGR
-            ImageFormat.Rgba32,   create copyDirect<uint8> Col.Format.BGRA
+            ImageFormat.Rgb8,     of8Bit Col.Format.Gray
+            ImageFormat.Rgb24,    of8Bit Col.Format.BGR
+            ImageFormat.Rgba32,   of8Bit Col.Format.BGRA
             //ImageFormat.R5g5b5
             //ImageFormat.R5g6b5
             //ImageFormat.R5g5b5a1
-            //ImageFormat.Rgba16
         ]
 
     let private levelToPixImage (format : ImageFormat) =
@@ -60,19 +58,15 @@ module private PixImagePfimImpl =
             raise <| NotSupportedException($"Format {format} not supported.")
 
     let toPixImage (image : IImage) =
-        pinned image.Data (
-            levelToPixImage image.Format image.TopLevel
-        )
+        levelToPixImage image.Format image.TopLevel image.Data
 
     let toPixImageMipmap (image : IImage) =
         let create = levelToPixImage image.Format
 
         let levels =
-            pinned image.Data (fun data ->
-                Array.init image.Levels (fun i ->
-                    let level = image.GetLevel i
-                    create level data
-                )
+            Array.init image.Levels (fun i ->
+                let level = image.GetLevel i
+                create level image.Data
             )
 
         PixImageMipMap(levels)
