@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <GenerateProgramFile>true</GenerateProgramFile>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="data\mipmap-a8.dds" />
+    <EmbeddedResource Include="data\mipmap-abgr8.dds" />
+    <EmbeddedResource Include="data\mipmap-bgr8.dds" />
+    <EmbeddedResource Include="data\mipmap-l8.dds" />
+    <EmbeddedResource Include="data\mipmap-l8a8.dds" />
+    <EmbeddedResource Include="data\mipmap-r3g3b2.dds" />
+    <EmbeddedResource Include="data\mipmap-r5g6b5.dds" />
+    <EmbeddedResource Include="data\mipmap-rgb10a2.dds" />
+    <EmbeddedResource Include="data\mipmap-rgb5a1.dds" />
+    <EmbeddedResource Include="data\mipmap-rgb8.dds" />
+    <EmbeddedResource Include="data\mipmap-rgba4.dds" />
+    <EmbeddedResource Include="data\mipmap-rgba8.dds" />
+    <EmbeddedResource Include="data\BC1_UNORM_SRGB-47.dds" />
+    <EmbeddedResource Include="data\bc2-simple-srgb.dds" />
+    <EmbeddedResource Include="data\bc3-simple-srgb.dds" />
+    <EmbeddedResource Include="data\bc4-simple.dds" />
+    <EmbeddedResource Include="data\bc5-simple-snorm.dds" />
+    <EmbeddedResource Include="data\bc5-simple.dds" />
+    <EmbeddedResource Include="data\bc6h-simple.dds" />
+    <EmbeddedResource Include="data\bc7-simple.dds" />
+    <EmbeddedResource Include="data\dxt1-alpha.dds" />
+    <EmbeddedResource Include="data\dxt1-simple.dds" />
+    <EmbeddedResource Include="data\dxt3-simple.dds" />
+    <EmbeddedResource Include="data\dxt5-simple-1x1.dds" />
+    <EmbeddedResource Include="data\dxt5-simple-odd.dds" />
+    <EmbeddedResource Include="data\dxt5-simple.dds" />
+    <EmbeddedResource Include="data\tiny-rect.tga" />
+    <EmbeddedResource Include="data\true-24-rle.tga" />
+    <EmbeddedResource Include="data\true-24.tga" />
+    <EmbeddedResource Include="data\true-32-mixed.tga" />
+    <EmbeddedResource Include="data\true-32-rle.tga" />
+    <EmbeddedResource Include="data\true-32.tga" />
+    <None Include="paket.references" />
+    <Compile Include="Utilities.fs" />
+    <Compile Include="Dds.fs" />
+    <Compile Include="Tga.fs" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\Aardvark.PixImage.Pfim\Aardvark.PixImage.Pfim.fsproj" />
+  </ItemGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
+</Project>
