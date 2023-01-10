@@ -43,16 +43,16 @@ module DdsTests =
                     [| 0; 28; 74 |]
                     [| 189; 0; 16 |]
                     [| 16; 174; 0 |]
-                    [| 172; 161; 0 |]
+                    [| 173; 162; 0 |]
                 |]
                 |> Array.map (Array.map uint8)
 
             let rgb5a1 =
                 [|
-                    [| 0; 32; 74; 255 |]
+                    [| 0; 33; 74; 255 |]
                     [| 189; 0; 16; 255 |]
-                    [| 16; 172; 0; 255 |]
-                    [| 172; 164; 0; 255 |]
+                    [| 16; 173; 0; 255 |]
+                    [| 173; 165; 0; 255 |]
                 |]
                 |> Array.map (Array.map uint8)
 
@@ -252,11 +252,9 @@ module DdsTests =
             // Broken: Pfim parses as grayscale
             // testCase "Dds.R3G3B2 mipmapped"                 Cases.r3g3b2Mipmapped
 
-            // TODO: Implement us!
-            //testCase "Dds.R5G6B5 mipmapped"                 Cases.r5g6b5Mipmapped
-            //testCase "Dds.RGB5A1 mipmapped"                 Cases.rgb5a1Mipmapped
-            //testCase "Dds.RGBA4 mipmapped"                  Cases.rgba4Mipmapped
-
+            testCase "Dds.R5G6B5 mipmapped"                 Cases.r5g6b5Mipmapped
+            testCase "Dds.RGB5A1 mipmapped"                 Cases.rgb5a1Mipmapped
+            testCase "Dds.RGBA4 mipmapped"                  Cases.rgba4Mipmapped
             testCase "Dds.L8 mipmapped"                     Cases.l8Mipmapped
 
             // Broken: Pfim parses as r5g5b5a1
