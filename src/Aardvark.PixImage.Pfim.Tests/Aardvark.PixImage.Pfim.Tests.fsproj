@@ -44,7 +44,6 @@
     <Compile Include="Dds.fs" />
     <Compile Include="Tga.fs" />
   </ItemGroup>
-  <ItemGroup />
   <ItemGroup>
     <ProjectReference Include="..\Aardvark.PixImage.Pfim\Aardvark.PixImage.Pfim.fsproj" />
   </ItemGroup>

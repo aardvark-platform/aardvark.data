@@ -216,14 +216,20 @@ type PixImagePfim private() =
 and private PfimPixLoader() =
     member x.Name = "Pfim"
 
-    interface IPixLoader with
+    interface IPixMipmapLoader with
         member x.Name = x.Name
 
         member x.LoadFromFile(filename) =
             PixImagePfim.Load(filename)
 
+        member x.LoadMipmapFromFile(filename) =
+            PixImagePfim.LoadWithMipmap(filename)
+
         member x.LoadFromStream(stream) =
             PixImagePfim.Load(stream)
+
+        member x.LoadMipmapFromStream(stream) =
+            PixImagePfim.LoadWithMipmap(stream)
 
         member x.SaveToFile(filename, image, saveParams) =
             raise <| NotSupportedException($"{x.Name} loader does not support saving.")
