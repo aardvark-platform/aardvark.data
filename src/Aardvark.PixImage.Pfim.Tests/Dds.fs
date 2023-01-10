@@ -9,14 +9,20 @@ module DdsTests =
 
     module Cases =
 
-        let private testMipmapped(format : Col.Format) (colors : 'T[][]) (file : string) =
+        let private testMipmapped (size : V2i) (format : Col.Format) (colors : 'T[][]) (file : string) =
             let mip = EmbeddedResource.loadPixImageMipmap file
             let pi = mip.ImageArray |> Array.map (fun pi -> pi.AsPixImage<'T>())
 
             for i = 0 to pi.Length - 1 do
                 pi.[i].Format |> should equal format
-                pi.[i].Size |> should equal (Fun.MipmapLevelSize(V2i(8, 8), i))
+                pi.[i].Size |> should equal (Fun.MipmapLevelSize(size, i))
                 pi.[i] |> PixImage.isColor colors.[i]
+
+        let private testMipmapped8x8 =
+            testMipmapped (V2i(8))
+
+        let private testMipmapped5x5 =
+            testMipmapped (V2i(5))
 
         module private MipmapColors =
 
@@ -84,37 +90,40 @@ module DdsTests =
                 |> Array.map (Array.map uint8)
 
         let rgb8Mipmapped() =
-            testMipmapped Col.Format.BGR MipmapColors.rgba8 "data/mipmap-rgb8.dds"
+            testMipmapped8x8 Col.Format.BGR MipmapColors.rgba8 "data/mipmap-rgb8.dds"
 
         let rgba8Mipmapped() =
-            testMipmapped Col.Format.BGRA MipmapColors.rgba8 "data/mipmap-rgba8.dds"
+            testMipmapped8x8 Col.Format.BGRA MipmapColors.rgba8 "data/mipmap-rgba8.dds"
 
         let bgr8Mipmapped() =
-            testMipmapped Col.Format.BGR MipmapColors.rgba8 "data/mipmap-bgr8.dds"
+            testMipmapped8x8 Col.Format.BGR MipmapColors.rgba8 "data/mipmap-bgr8.dds"
+
+        let bgr8MipmappedOdd() =
+            testMipmapped5x5 Col.Format.BGR MipmapColors.rgba8 "data/mipmap-bgr8-odd.dds"
 
         let abgr8Mipmapped() =
-            testMipmapped Col.Format.BGRA MipmapColors.rgba8 "data/mipmap-abgr8.dds"
+            testMipmapped8x8 Col.Format.BGRA MipmapColors.rgba8 "data/mipmap-abgr8.dds"
 
         let r3g3b2Mipmapped() =
-            testMipmapped Col.Format.BGR MipmapColors.r3g3b2 "data/mipmap-r3g3b2.dds"
+            testMipmapped8x8 Col.Format.BGR MipmapColors.r3g3b2 "data/mipmap-r3g3b2.dds"
 
         let r5g6b5Mipmapped() =
-            testMipmapped Col.Format.BGR MipmapColors.r5g6b5 "data/mipmap-r5g6b5.dds"
+            testMipmapped8x8 Col.Format.BGR MipmapColors.r5g6b5 "data/mipmap-r5g6b5.dds"
 
         let rgb5a1Mipmapped() =
-            testMipmapped Col.Format.BGRA MipmapColors.rgb5a1 "data/mipmap-rgb5a1.dds"
+            testMipmapped8x8 Col.Format.BGRA MipmapColors.rgb5a1 "data/mipmap-rgb5a1.dds"
 
         let rgba4Mipmapped() =
-            testMipmapped Col.Format.BGRA MipmapColors.rgba4 "data/mipmap-rgba4.dds"
+            testMipmapped8x8 Col.Format.BGRA MipmapColors.rgba4 "data/mipmap-rgba4.dds"
 
         let l8a8Mipmapped() =
-            testMipmapped Col.Format.GrayAlpha MipmapColors.l8a8 "data/mipmap-l8a8.dds"
+            testMipmapped8x8 Col.Format.GrayAlpha MipmapColors.l8a8 "data/mipmap-l8a8.dds"
 
         let l8Mipmapped() =
-            testMipmapped Col.Format.Gray MipmapColors.l8a8 "data/mipmap-l8.dds"
+            testMipmapped8x8 Col.Format.Gray MipmapColors.l8a8 "data/mipmap-l8.dds"
 
         let a8Mipmapped() =
-            testMipmapped Col.Format.Alpha MipmapColors.a8 "data/mipmap-a8.dds"
+            testMipmapped8x8 Col.Format.Alpha MipmapColors.a8 "data/mipmap-a8.dds"
 
         let uncompressed32bit() =
             let pi = EmbeddedResource.loadPixImage<uint8> "data/32-bit-uncompressed.dds"
@@ -246,6 +255,7 @@ module DdsTests =
 
             // Broken: Pfim throws "Do not know how to swap Rgb24"
             //testCase "Dds.BGR8 mipmapped"                   Cases.bgr8Mipmapped
+            //testCase "Dds.BGR8 mipmapped odd"               Cases.bgr8MipmappedOdd
 
             testCase "Dds.ABGR8 mipmapped"                  Cases.abgr8Mipmapped
 

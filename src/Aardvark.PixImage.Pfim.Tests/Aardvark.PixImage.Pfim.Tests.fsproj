@@ -9,6 +9,7 @@
     <EmbeddedResource Include="data\mipmap-a8.dds" />
     <EmbeddedResource Include="data\mipmap-abgr8.dds" />
     <EmbeddedResource Include="data\mipmap-bgr8.dds" />
+    <EmbeddedResource Include="data\mipmap-bgr8-odd.dds" />
     <EmbeddedResource Include="data\mipmap-l8.dds" />
     <EmbeddedResource Include="data\mipmap-l8a8.dds" />
     <EmbeddedResource Include="data\mipmap-r3g3b2.dds" />
