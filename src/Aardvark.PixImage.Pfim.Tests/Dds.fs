@@ -252,11 +252,8 @@ module DdsTests =
         testList "PixLoader" [
             testCase "Dds.RGB8 mipmapped"                   Cases.rgb8Mipmapped
             testCase "Dds.RGBA8 mipmapped"                  Cases.rgba8Mipmapped
-
-            // Broken: Pfim throws "Do not know how to swap Rgb24"
-            //testCase "Dds.BGR8 mipmapped"                   Cases.bgr8Mipmapped
-            //testCase "Dds.BGR8 mipmapped odd"               Cases.bgr8MipmappedOdd
-
+            testCase "Dds.BGR8 mipmapped"                   Cases.bgr8Mipmapped
+            testCase "Dds.BGR8 mipmapped odd"               Cases.bgr8MipmappedOdd
             testCase "Dds.ABGR8 mipmapped"                  Cases.abgr8Mipmapped
 
             // Broken: Pfim parses as grayscale
