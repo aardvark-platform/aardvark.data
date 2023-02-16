@@ -31,6 +31,14 @@ namespace Aardvark.Importer.Vrml97
             return new SceneLoader().Perform(vrmlParseTree);
 		}
 
+        public static VrmlScene Load(Vrml97Scene vrmlParseTree, out Dictionary<SymMapBase, VrmlNode> nodeMap)
+        {
+            var loader = new SceneLoader();
+            var res = loader.Perform(vrmlParseTree);
+            nodeMap = loader.m_nodes;
+            return res;
+        }
+
         VrmlScene Perform(Vrml97Scene root)
 		{
             SymMapBaseTraversal trav = new SymMapBaseTraversal(SymMapBaseTraversal.Mode.Modifying, SymMapBaseTraversal.Visit.PreAndPost);

@@ -1029,8 +1029,8 @@ namespace Aardvark.Importer.Vrml97
             return vrmlNode;
         }
 
-        public static void PrimitivesToMeshes(this VrmlNode vrmlNode) {
-
+        public static void PrimitivesToMeshes(this VrmlNode vrmlNode)
+        {
             if (vrmlNode is VrmlGroup)
             {
                 var g = ((VrmlGroup)vrmlNode);
