@@ -56,7 +56,7 @@ module DGM =
             noDataValue : float
         }
 
-    let loadDgm (fileName : string) = 
+    let loadDgmEx (fileName : string) (ci : System.Globalization.CultureInfo) = 
         let extract (tag : string)  (s : String) =
             let tokens = s.SplitOnWhitespace()
             if tokens.Length <> 2 || tokens.[0].ToUpperInvariant() <> tag then 
@@ -69,7 +69,7 @@ module DGM =
 
         let inline pfloat (s : String) =
             let mutable r = 0.0
-            if Double.TryParse(s,Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, &r) then r
+            if Double.TryParse(s, Globalization.NumberStyles.Float, ci, &r) then r
             else failwithf "could not parse int double: %s in file: %s" s fileName
 
         use txt        = IO.File.OpenText(fileName) 
@@ -107,6 +107,9 @@ module DGM =
             cellSize      = cellSize
             noDataValue   = noData
         }, result
+
+    let loadDgm (fileName : string) =
+        loadDgmEx fileName System.Globalization.CultureInfo.InvariantCulture
 
     let computeVertices (dgm : DGM) (arr : float[]) =
         Matrix<V3f>(V2i(dgm.ncols,dgm.nrows)).SetByCoord(fun (c : V2l) ->
