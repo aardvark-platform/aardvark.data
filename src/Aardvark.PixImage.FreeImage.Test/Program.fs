@@ -92,6 +92,9 @@ module Program =
     [<EntryPoint>]
     let main argv =
 
+        //TiffTests.``[PixImage] Load TIFFs``()
+        //exit 0
+
         let cfg =
             let job = Job.Default.WithToolchain(InProcess.Emit.InProcessEmitToolchain.Instance)
             ManualConfig.Create(DefaultConfig.Instance).WithOptions(ConfigOptions.DisableOptimizationsValidator).AddJob(job)
