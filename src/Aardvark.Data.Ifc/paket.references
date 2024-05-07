@@ -1,7 +1,15 @@
 Aardvark.Build
 Aardvark.Base
-//Aardvark.Base.Incremental
 Aardvark.Base.FSharp
 Aardvark.Geometry.PolyMesh
+Xbim.Ifc
+Xbim.Ifc2x3
+Xbim.Ifc4
+Xbim.IO.Esent
+Xbim.IO.MemoryModel
 Xbim.Essentials
+Xbim.Common
+Xbim.Tessellator
+Xbim.Geometry
+Xbim.Geometry.Engine.Interop
 Xbim.ModelGeometry.Scene
