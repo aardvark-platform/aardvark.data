@@ -10,11 +10,11 @@ namespace Aardvark.Data.Ifc
 {
     public class IFCData : IDisposable
     {
-        private IfcStore m_model;
+        private readonly IfcStore m_model;
 
-        private IInverseCache m_inversCache;
+        private readonly IInverseCache m_inversCache;
 
-        private IEntityCache m_entityCache;
+        private readonly IEntityCache m_entityCache;
 
         public Dict<IfcGloballyUniqueId, IFCContent> Content { get; private set; }
         public Dictionary<string, IFCMaterial> Materials { get; private set; }

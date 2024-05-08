@@ -11,28 +11,10 @@ namespace Aardvark.Data.Ifc
     {
         public static void PrintHierarchy(string file)
         {
-            using (var model = IfcStore.Open(file))
-            {
-                var project = model.Instances.FirstOrDefault<IIfcProject>();
-                Report.Line("HIRARCHY of file: {0}\n", file);
-
-                //var id = "0KelnfQvXE9ezzeXLdaQCA"; //"1EnsTGk0v3z8wGzu_Hm1Wa";
-                //var slab = model.Instances.FirstOrDefault<IIfcStair>(s => s.GlobalId == id);
-
-                //var hiliteProps = slab.GetHiliteProperties();
-
-                //foreach (var property in hiliteProps)
-                //    Console.WriteLine($"Hilite Property: {property.Name}, Value: {property.NominalValue}, Type {property.ExpressType}");
-
-                //var properties = slab.IsDefinedBy
-                //    .Where(r => r.RelatingPropertyDefinition is IIfcPropertySet)
-                //    .SelectMany(r => ((IIfcPropertySet)r.RelatingPropertyDefinition).HasProperties)
-                //    .OfType<IIfcPropertySingleValue>();
-                //foreach (var property in properties)
-                //    Console.WriteLine($"Property: {property.Name}, Value: {property.ExpressType}");
-
-                PrintHierarchy(project, 0);
-            }
+            using var model = IfcStore.Open(file);
+            var project = model.Instances.FirstOrDefault<IIfcProject>();
+            Report.Line("HIRARCHY of file: {0}\n", file);
+            PrintHierarchy(project, 0);
         }
 
         public static IEnumerable<IIfcPropertySingleValue> GetProperties(this IIfcObject o)
@@ -100,35 +82,24 @@ namespace Aardvark.Data.Ifc
         private static IFCNode CreateHierarchy(IIfcObjectDefinition obj)
         {
             return new IFCNode(obj, obj.GetChildren().Select(x => (IIFCNode)CreateHierarchy(x)).ToList());
-
-            //List<IIFCNode> subNodes = new List<IIFCNode>();
-
-            //var children = obj.GetChildren();
-
-            //foreach (var child in children)
-            //{
-            //    subNodes.Add(CreateHierarchy(child));
-            //}
-
-            //return new IFCNode(obj, subNodes);
         }
 
         public static void PrintHierarchy(IIfcObjectDefinition o, int level)
         {
-            Console.WriteLine(string.Format("{0}{1} [{2}]", GetIndent(level), o.Name, o.GetType().Name));
+            Report.Line(string.Format("{0}{1} [{2}]", GetIndent(level), o.Name, o.GetType().Name));
 
             var parent = o.GetParent();
-            if (parent != null) Console.WriteLine("parent: " + parent.ToString());
+            if (parent != null) Report.Line("parent: " + parent.ToString());
 
             var children = GetChildren(o);
-            Console.WriteLine("children count: {0}", children.Count());
-            children.ForEach(element => Console.WriteLine(string.Format("{0}    ->{1} [{2}]", GetIndent(level), element.Name, element.GetType().Name)));
+            Report.Line("children count: {0}", children.Count());
+            children.ForEach(element => Report.Line(string.Format("{0}    ->{1} [{2}]", GetIndent(level), element.Name, element.GetType().Name)));
 
             var siblings = o.GetSiblings();
-            Console.WriteLine("sibling count: {0}", siblings.Count());
-            siblings.ForEach(s => Console.WriteLine("siblings: "+s.ToString()));
+            Report.Line("sibling count: {0}", siblings.Count());
+            siblings.ForEach(s => Report.Line("siblings: "+s.ToString()));
 
-            Console.WriteLine();
+            Report.Line();
             
             ////only spatial elements can contain building elements
             //var spatialElement = o as IIfcSpatialStructureElement;

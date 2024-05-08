@@ -21,76 +21,51 @@ namespace Aardvark.Data.Ifc
 
         public static IFCData PreprocessIFC(string filePath, XbimEditorCredentials editor = null)
         {
-            //List<SceneObject> content = null;
             Dict<IfcGloballyUniqueId, IFCContent> content = null;
             Dictionary<string, IFCMaterial> materials = null;
 
-            IFCNode hierarchy = null;
+            var model = IfcStore.Open(filePath, editor);
 
+            model.BeginInverseCaching();
+            model.BeginEntityCaching();
+
+            if (model.GeometryStore.IsEmpty)
+            {
+                var context = new Xbim3DModelContext(model);
+                //upgrade to new geometry representation, uses the default 3D model
+                context.CreateContext();    // THIS IS COSTLY!
+            }
+
+            foreach (var modelReference in model.ReferencedModels)
+            {
+                // creates federation geometry contexts if needed
+                Report.Line(modelReference.Name);
+                if (modelReference.Model == null)
+                    continue;
+                if (!modelReference.Model.GeometryStore.IsEmpty)
+                    continue;
+                var context = new Xbim3DModelContext(modelReference.Model);
+                //upgrade to new geometry representation, uses the default 3D model
+                context.CreateContext();
+            }
+
+            var project = model.Instances.OfType<IIfcProject>().First().UnitsInContext;
             double projectScale = 1.0;
 
-            try
-            {
-                //Report.BeginTimed("open file");
-                var model = IfcStore.Open(filePath, editor);
-                //Report.EndTimed();
+            if (project is Xbim.Ifc2x3.MeasureResource.IfcUnitAssignment unitAssignment)
+                projectScale = unitAssignment.LengthUnitPower;
+            else if (project is Xbim.Ifc4.MeasureResource.IfcUnitAssignment unitAssignment4)
+                projectScale = unitAssignment4.LengthUnitPower;
+            else
+                Report.Line("Cannot retrieve Length Unit of IFC-Project. Use Default Unit (meters)");
 
-                model.BeginInverseCaching();
-                model.BeginEntityCaching();
+            var cacheInverse = model.BeginInverseCaching();
+            var cacheEntity = model.BeginEntityCaching();
 
-                if (model.GeometryStore.IsEmpty)
-                {
-                    //Report.BeginTimed("Create Context");
-                    var context = new Xbim3DModelContext(model);
-                    //upgrade to new geometry representation, uses the default 3D model
-                    context.CreateContext();    // THIS IS COSTLY!
-                                                //Report.EndTimed();
-                }
+            (content, materials) = ParseIFC(model);
+            var hierarchy = IFCHelper.CreateHierarchy(model);
 
-                foreach (var modelReference in model.ReferencedModels)
-                {
-                    // creates federation geometry contexts if needed
-                    Report.Line(modelReference.Name);
-                    if (modelReference.Model == null)
-                        continue;
-                    if (!modelReference.Model.GeometryStore.IsEmpty)
-                        continue;
-                    var context = new Xbim3DModelContext(modelReference.Model);
-                    //upgrade to new geometry representation, uses the default 3D model
-                    context.CreateContext();
-                }
-
-                var project = model.Instances.OfType<IIfcProject>().First().UnitsInContext;
-                if (project is Xbim.Ifc2x3.MeasureResource.IfcUnitAssignment)
-                    projectScale = ((Xbim.Ifc2x3.MeasureResource.IfcUnitAssignment)project).LengthUnitPower;
-                else if (project is Xbim.Ifc4.MeasureResource.IfcUnitAssignment)
-                {
-                    projectScale = ((Xbim.Ifc4.MeasureResource.IfcUnitAssignment)project).LengthUnitPower;
-                }
-                else
-                {
-                    Report.Line("Cannot retrieve Length Unit of IFC-Project. Use Default Unit (meters)");
-                }
-
-                var cacheInverse = model.BeginInverseCaching();
-                var cacheEntity = model.BeginEntityCaching();
-
-                //Report.BeginTimed("parse ifc");
-                (content, materials) = ParseIFC(model);
-                //Report.EndTimed();
-
-                //Report.BeginTimed("create hierarchy");
-                hierarchy = IFCHelper.CreateHierarchy(model);
-                //Report.EndTimed();
-
-                return new IFCData(model, cacheInverse, cacheEntity, content, materials, projectScale, hierarchy);
-            }
-            catch (Exception e)
-            {
-                Report.Error("Parsing of IFC-File {0} failed! {1}", filePath, e.ToString());
-            }
-
-            return null;
+            return new IFCData(model, cacheInverse, cacheEntity, content, materials, projectScale, hierarchy);
         }
 
         private static (Dict<IfcGloballyUniqueId, IFCContent>, Dictionary<string, IFCMaterial>) ParseIFC(IModel model)
@@ -98,7 +73,6 @@ namespace Aardvark.Data.Ifc
             var excludedTypes = DefaultExclusions(model);
 
             var output = new Dict<IfcGloballyUniqueId, IFCContent>(true);
-            //var output = new List<Tuple<IIfcObject, NamedPolyMesh, NamedMaterial>>();
 
             var materialsByName = new Dictionary<string, IFCMaterial>();
             var materialsByStyleId = new Dictionary<int, IFCMaterial>();
@@ -107,97 +81,94 @@ namespace Aardvark.Data.Ifc
 
             using (var geomStore = model.GeometryStore)
             {
-                using (var geomReader = geomStore.BeginRead())
+                using var geomReader = geomStore.BeginRead();
+                //get a list of all the unique style ids then build their style and mesh
+                var sstyleIds = geomReader.StyleIds;
+                foreach (var styleId in sstyleIds)
                 {
-                    //get a list of all the unique style ids then build their style and mesh
-                    var sstyleIds = geomReader.StyleIds;
-                    foreach (var styleId in sstyleIds)
+                    var material = GetMaterialByStyle(model, styleId);
+                    if (!materialsByStyleId.ContainsKey(styleId))
+                        materialsByStyleId.Add(styleId, material);
+                    if (!materialsByName.ContainsKey(material.Name))
+                        materialsByName.Add(material.Name, material);
+                }
+
+                var shapeInstances = geomReader.ShapeInstances.Where(s => !excludedTypes.Contains(s.IfcTypeId));
+
+                foreach (var shapeInstance in shapeInstances)
+                {
+                    var ifcObject = (IIfcObject)model.Instances[shapeInstance.IfcProductLabel];
+
+                    // work out style
+                    var styleId = shapeInstance.StyleLabel > 0 ? shapeInstance.StyleLabel : shapeInstance.IfcTypeId * -1;
+
+                    // Associated Materials
+                    var assocMaterials = ifcObject.HasAssociations.OfType<IIfcRelAssociatesMaterial>();
+                    List<IFCMaterial> assocOutput = new List<IFCMaterial>();
+
+                    if (!assocMaterials.IsEmptyOrNull())
                     {
-                        var material = GetMaterialByStyle(model, styleId);
-                        if (!materialsByStyleId.ContainsKey(styleId))
-                            materialsByStyleId.Add(styleId, material);
-                        if (!materialsByName.ContainsKey(material.Name))
-                            materialsByName.Add(material.Name, material);
+                        var assocMat = new List<IFCMaterial>();
+
+                        foreach (var matRel in assocMaterials)
+                            GetAssociatedMaterials(matRel.RelatingMaterial, assocMat);
+
+                        foreach (var m in assocMat)
+                        {
+                            assocOutput.Add(materialsByName.GetCreate(m.Name, name => m));
+                        }
                     }
 
-                    var shapeInstances = geomReader.ShapeInstances.Where(s => !excludedTypes.Contains(s.IfcTypeId));
-
-                    foreach (var shapeInstance in shapeInstances)
+                    if (!materialsByStyleId.ContainsKey(styleId))
                     {
-                        var ifcObject = (IIfcObject)model.Instances[shapeInstance.IfcProductLabel];
-
-                        // work out style
-                        var styleId = shapeInstance.StyleLabel > 0 ? shapeInstance.StyleLabel : shapeInstance.IfcTypeId * -1;
-
-                        // Associated Materials
-                        var assocMaterials = ifcObject.HasAssociations.OfType<IIfcRelAssociatesMaterial>();
-                        List<IFCMaterial> assocOutput = new List<IFCMaterial>();
-
-                        if (!assocMaterials.IsEmptyOrNull())
-                        {
-                            var assocMat = new List<IFCMaterial>();
-
-                            foreach (var matRel in assocMaterials)
-                                GetAssociatedMaterials(matRel.RelatingMaterial, assocMat);
-
-                            foreach (var m in assocMat)
-                            {
-                                assocOutput.Add(materialsByName.GetCreate(m.Name, name => m));
-                            }
-                        }
-
-                        if (!materialsByStyleId.ContainsKey(styleId))
-                        {
-                            // use default material of prodType
-                            var m = GetMaterialByExpressType(model, shapeInstance.IfcTypeId);
-                            materialsByStyleId.Add(styleId, m);
-                            materialsByName.Add(m.Name, m);
-                            nameToStyle.Add(m.Name, styleId);
-                        }
-
-                        //GET THE ACTUAL GEOMETRY 
-                        PolyMesh polyMesh;
-
-                        //see if we have already read it
-                        if (!repeatedShapeGeometries.TryGetValue(shapeInstance.ShapeGeometryLabel, out polyMesh))
-                        {
-                            IXbimShapeGeometryData shapeGeom = geomReader.ShapeGeometry(shapeInstance.ShapeGeometryLabel);
-
-                            if (shapeGeom.Format != (byte)XbimGeometryType.PolyhedronBinary)
-                                continue;
-                            try
-                            {
-                                polyMesh = CreatePolyMeshFromIFC(shapeGeom.ShapeData);
-                            }
-                            catch (Exception e)
-                            {
-                                Report.Error("Creating PolyMesh from IFC failed! {0}", e.ToString());
-                            }
-
-                            if (shapeGeom.ReferenceCount > 1) //only store if we are going to use again
-                                repeatedShapeGeometries.Add(shapeInstance.ShapeGeometryLabel, polyMesh);
-                        }
-
-                        //var prodTypeName = (model.Metadata.ExpressType(shapeInstance.IfcTypeId)).Name;
-
-                        var guid = ifcObject.GlobalId;
-                        IFCMaterial material;
-
-                        if (styleId > 0)
-                            material = materialsByStyleId[styleId]; // first try to use style
-                        else if (!assocOutput.IsEmptyOrNull())
-                            material = assocOutput.First();         // second try to use first Associated material
-                        else
-                            material = materialsByStyleId[styleId]; // otherwise use Default material
-
-                        if (material == null || material.Name == null || material.Texture == null)
-                            Report.Line("No valid material!");
-
-                        var instanceTrafo = shapeInstance.Transformation.ToTrafo3d();
-                        var representationType = shapeInstance.RepresentationType;
-
-                        output.Add(guid, new IFCContent(ifcObject, polyMesh, instanceTrafo, material, representationType));
+                        // use default material of prodType
+                        var m = GetMaterialByExpressType(model, shapeInstance.IfcTypeId);
+                        materialsByStyleId.Add(styleId, m);
+                        materialsByName.Add(m.Name, m);
+                        nameToStyle.Add(m.Name, styleId);
                     }
+
+                    //GET THE ACTUAL GEOMETRY 
+
+                    //see if we have already read it
+                    if (!repeatedShapeGeometries.TryGetValue(shapeInstance.ShapeGeometryLabel, out PolyMesh polyMesh))
+                    {
+                        IXbimShapeGeometryData shapeGeom = geomReader.ShapeGeometry(shapeInstance.ShapeGeometryLabel);
+
+                        if (shapeGeom.Format != (byte)XbimGeometryType.PolyhedronBinary)
+                            continue;
+                        try
+                        {
+                            polyMesh = CreatePolyMeshFromIFC(shapeGeom.ShapeData);
+                        }
+                        catch (Exception e)
+                        {
+                            Report.Error("Creating PolyMesh from IFC failed! {0}", e.ToString());
+                        }
+
+                        if (shapeGeom.ReferenceCount > 1) //only store if we are going to use again
+                            repeatedShapeGeometries.Add(shapeInstance.ShapeGeometryLabel, polyMesh);
+                    }
+
+                    //var prodTypeName = (model.Metadata.ExpressType(shapeInstance.IfcTypeId)).Name;
+
+                    var guid = ifcObject.GlobalId;
+                    IFCMaterial material;
+
+                    if (styleId > 0)
+                        material = materialsByStyleId[styleId]; // first try to use style
+                    else if (!assocOutput.IsEmptyOrNull())
+                        material = assocOutput.First();         // second try to use first Associated material
+                    else
+                        material = materialsByStyleId[styleId]; // otherwise use Default material
+
+                    if (material == null || material.Name == null || material.Texture == null)
+                        Report.Line("No valid material!");
+
+                    var instanceTrafo = shapeInstance.Transformation.ToTrafo3d();
+                    var representationType = shapeInstance.RepresentationType;
+
+                    output.Add(guid, new IFCContent(ifcObject, polyMesh, instanceTrafo, material, representationType));
                 }
             }
             return (output,materialsByName);
@@ -306,15 +277,13 @@ namespace Aardvark.Data.Ifc
 
             } catch (ArgumentException e)
             {
-                Report.Line(1, e.Message);
+                Report.Error("Associated Material Creation Failed! {0}", e.Message);
             }
         }
 
         public static IFCMaterial GetMaterial(IIfcMaterial mat)
         {
-            var matDefRep = mat.HasRepresentation.FirstOrDefault();
-            if (matDefRep == null) throw new ArgumentException("No repesentation");
-
+            var matDefRep = mat.HasRepresentation.FirstOrDefault() ?? throw new ArgumentException("No repesentation");
             var rep = matDefRep.Representations.First();
             var repItem = (IIfcStyledItem)rep.Items.First();
 
@@ -373,115 +342,113 @@ namespace Aardvark.Data.Ifc
         {
             var polymesh = new PolyMesh();
 
-            using (var ms = new MemoryStream(mesh))
+            using var ms = new MemoryStream(mesh);
+            using (var br = new BinaryReader(ms))
             {
-                using (var br = new BinaryReader(ms))
+                var version = br.ReadByte(); //stream format version
+                var numVertices = br.ReadInt32();
+                var numTriangles = br.ReadInt32();
+
+                var uniqueVertices = new V3d[numVertices];
+
+                for (var i = 0; i < numVertices; i++)
                 {
-                    var version = br.ReadByte(); //stream format version
-                    var numVertices = br.ReadInt32();
-                    var numTriangles = br.ReadInt32();
-
-                    var uniqueVertices = new V3d[numVertices];
-
-                    for (var i = 0; i < numVertices; i++)
-                    {
-                        double x = br.ReadSingle();
-                        double y = br.ReadSingle();
-                        double z = br.ReadSingle();
-                        uniqueVertices[i] = new V3d(x, y, z);
-                    }
-
-                    var numFaces = br.ReadInt32();
-
-                    var firstIndexArray = new int[numTriangles + 1];
-                    firstIndexArray.SetByIndex((x) => x * 3);
-
-                    // Vertex
-                    int faceVertexIndexIter = 0;
-                    var faceVertexIndexArray = new int[numTriangles * 3];
-                    
-                    // Normals
-                    var faceVertexNormalIndexIter = 0;
-                    var faceVertexNormalIndexArray = new int[numTriangles * 3];
-                    var faceVertexNormalArray = new V3f[numTriangles * 3];
-
-                    for (var i = 0; i < numFaces; i++)
-                    {
-                        var numTrianglesInFace = br.ReadInt32();
-                        if (numTrianglesInFace == 0) continue;
-                        var isPlanar = numTrianglesInFace > 0;
-                        numTrianglesInFace = Fun.Abs(numTrianglesInFace);
-                        if (isPlanar)
-                        {
-                            var xNormal = br.ReadPackedNormal().Normal;
-
-                            // Normal  - 1 normal per shape
-
-                            var normal = new V3f(xNormal.X, xNormal.Y, xNormal.Z);
-
-                            if (normal.Abs().AllSmallerOrEqual(1e-5f))
-                                Report.Line("zero!?!");
-
-                            faceVertexNormalArray[faceVertexNormalIndexIter] = normal;
-
-                            for (var j = 0; j < numTrianglesInFace; j++)
-                            {
-                                for (int k = 0; k < 3; k++)
-                                {
-                                    int idx = ReadIndex(br, numVertices);
-
-                                    // Vertex
-                                    faceVertexIndexArray[faceVertexIndexIter] = idx;
-
-                                    // Normal index - set to only face normal
-                                    faceVertexNormalIndexArray[faceVertexIndexIter] = faceVertexNormalIndexIter;
-
-                                    // Vertex - Iter
-                                    faceVertexIndexIter++;
-                                }
-                            }
-
-                            // Face - Iter
-                            faceVertexNormalIndexIter++;
-                        }
-                        else
-                        {
-                            var uniqueIndices = new Dictionary<int, int>();
-                            for (var j = 0; j < numTrianglesInFace; j++)
-                            {
-                                for (int k = 0; k < 3; k++)
-                                {
-                                    int idx = ReadIndex(br, numVertices);
-                                    var xNormal = br.ReadPackedNormal().Normal;
-
-                                    // Vertex
-                                    faceVertexIndexArray[faceVertexIndexIter] = idx;
-
-                                    var normal = new V3f(xNormal.X, xNormal.Y, xNormal.Z);
-
-                                    if (normal.Abs().AllSmallerOrEqual(1e-5f))
-                                        Report.Line("zero!?!");
-
-                                    // Normal
-                                    faceVertexNormalArray[faceVertexNormalIndexIter] = normal;
-                                    faceVertexNormalIndexArray[faceVertexIndexIter] = faceVertexNormalIndexIter;
-
-                                    // Iter
-                                    faceVertexIndexIter++;
-                                    faceVertexNormalIndexIter++;
-                                }
-                            }
-                        }
-                    }
-
-                    polymesh.PositionArray = uniqueVertices;
-                    polymesh.FirstIndexArray = firstIndexArray;
-                    polymesh.VertexIndexArray = faceVertexIndexArray;
-                    polymesh.FaceVertexAttributes[PolyMesh.Property.Normals] = faceVertexNormalIndexArray;
-                    polymesh.FaceVertexAttributes[-PolyMesh.Property.Normals] = faceVertexNormalArray.SubRange(0, faceVertexNormalIndexIter).ToArray();
+                    double x = br.ReadSingle();
+                    double y = br.ReadSingle();
+                    double z = br.ReadSingle();
+                    uniqueVertices[i] = new V3d(x, y, z);
                 }
-                return polymesh;
+
+                var numFaces = br.ReadInt32();
+
+                var firstIndexArray = new int[numTriangles + 1];
+                firstIndexArray.SetByIndex((x) => x * 3);
+
+                // Vertex
+                int faceVertexIndexIter = 0;
+                var faceVertexIndexArray = new int[numTriangles * 3];
+
+                // Normals
+                var faceVertexNormalIndexIter = 0;
+                var faceVertexNormalIndexArray = new int[numTriangles * 3];
+                var faceVertexNormalArray = new V3f[numTriangles * 3];
+
+                for (var i = 0; i < numFaces; i++)
+                {
+                    var numTrianglesInFace = br.ReadInt32();
+                    if (numTrianglesInFace == 0) continue;
+                    var isPlanar = numTrianglesInFace > 0;
+                    numTrianglesInFace = Fun.Abs(numTrianglesInFace);
+                    if (isPlanar)
+                    {
+                        var xNormal = br.ReadPackedNormal().Normal;
+
+                        // Normal  - 1 normal per shape
+
+                        var normal = new V3f(xNormal.X, xNormal.Y, xNormal.Z);
+
+                        if (normal.Abs().AllSmallerOrEqual(1e-5f))
+                            Report.Line("normal is invalid!");
+
+                        faceVertexNormalArray[faceVertexNormalIndexIter] = normal;
+
+                        for (var j = 0; j < numTrianglesInFace; j++)
+                        {
+                            for (int k = 0; k < 3; k++)
+                            {
+                                int idx = ReadIndex(br, numVertices);
+
+                                // Vertex
+                                faceVertexIndexArray[faceVertexIndexIter] = idx;
+
+                                // Normal index - set to only face normal
+                                faceVertexNormalIndexArray[faceVertexIndexIter] = faceVertexNormalIndexIter;
+
+                                // Vertex - Iter
+                                faceVertexIndexIter++;
+                            }
+                        }
+
+                        // Face - Iter
+                        faceVertexNormalIndexIter++;
+                    }
+                    else
+                    {
+                        var uniqueIndices = new Dictionary<int, int>();
+                        for (var j = 0; j < numTrianglesInFace; j++)
+                        {
+                            for (int k = 0; k < 3; k++)
+                            {
+                                int idx = ReadIndex(br, numVertices);
+                                var xNormal = br.ReadPackedNormal().Normal;
+
+                                // Vertex
+                                faceVertexIndexArray[faceVertexIndexIter] = idx;
+
+                                var normal = new V3f(xNormal.X, xNormal.Y, xNormal.Z);
+
+                                if (normal.Abs().AllSmallerOrEqual(1e-5f))
+                                    Report.Line("normal is invalid!!");
+
+                                // Normal
+                                faceVertexNormalArray[faceVertexNormalIndexIter] = normal;
+                                faceVertexNormalIndexArray[faceVertexIndexIter] = faceVertexNormalIndexIter;
+
+                                // Iter
+                                faceVertexIndexIter++;
+                                faceVertexNormalIndexIter++;
+                            }
+                        }
+                    }
+                }
+
+                polymesh.PositionArray = uniqueVertices;
+                polymesh.FirstIndexArray = firstIndexArray;
+                polymesh.VertexIndexArray = faceVertexIndexArray;
+                polymesh.FaceVertexAttributes[PolyMesh.Property.Normals] = faceVertexNormalIndexArray;
+                polymesh.FaceVertexAttributes[-PolyMesh.Property.Normals] = faceVertexNormalArray.SubRange(0, faceVertexNormalIndexIter).ToArray();
             }
+            return polymesh;
         }
 
         /// <summary>
