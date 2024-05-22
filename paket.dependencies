@@ -1,0 +1,40 @@
+framework: auto-detect
+storage: none
+source https://api.nuget.org/v3/index.json
+
+nuget Aardvark.Build                    ~> 1.0.22
+nuget FSharp.Core                       >= 5.0.1 lowest_matching: true
+
+// Aardvark Base
+nuget Aardvark.Base                     ~> 5.2.4
+
+// Aardvark Algodat
+nuget Aardvark.Geometry.PolyMesh        ~> 5.3.0
+
+// XBim does not have proper version constraints so we declare and reference everything explicitly
+nuget Xbim.Ifc                                              ~> 5.1.341
+nuget Xbim.Ifc2x3                                           ~> 5.1.341
+nuget Xbim.Ifc4                                             ~> 5.1.341
+nuget Xbim.IO.Esent                                         ~> 5.1.341
+nuget Xbim.IO.MemoryModel                                   ~> 5.1.341
+nuget Xbim.Essentials                                       ~> 5.1.341
+nuget Xbim.Common                                           ~> 5.1.341
+nuget Xbim.Tessellator                                      ~> 5.1.341
+nuget Xbim.Geometry                                         ~> 5.1.437
+nuget Xbim.Geometry.Engine.Interop                          ~> 5.1.437
+nuget Xbim.ModelGeometry.Scene                              ~> 5.1.437
+nuget Microsoft.Extensions.Logging                          >= 2.1.1 lowest_matching: true             
+nuget Microsoft.Extensions.Logging.Abstractions             >= 2.1.1 lowest_matching: true
+nuget Microsoft.Extensions.Configuration.Abstractions       >= 2.1.1 lowest_matching: true
+nuget Microsoft.Extensions.Configuration.Binder             >= 2.1.1 lowest_matching: true
+nuget Microsoft.Extensions.DependencyInjection.Abstractions >= 2.1.1 lowest_matching: true
+nuget Microsoft.Extensions.Options                          >= 2.1.1 lowest_matching: true
+nuget Microsoft.Extensions.Primitives                       >= 2.1.1 lowest_matching: true 
+
+group Test
+    framework: auto-detect
+    source https://api.nuget.org/v3/index.json
+
+    nuget NUnit                    ~> 3.13.3
+    nuget NUnit3TestAdapter        ~> 4.5.0
+    nuget Microsoft.NET.Test.Sdk   ~> 17.7.2
