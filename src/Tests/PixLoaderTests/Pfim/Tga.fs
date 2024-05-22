@@ -1,6 +1,7 @@
-﻿namespace Tests
+﻿namespace Aardvark.Data.Tests.PixLoader
 
 open Aardvark.Base
+open Aardvark.Data
 
 open FsUnit
 open Expecto
@@ -10,13 +11,13 @@ module TgaTests =
     module Cases =
 
         let true24() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/true-24.tga"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/true-24.tga"
             pi.Format |> should equal Col.Format.BGR
             pi.Size |> should equal (V2i(64, 64))
             pi |> PixImage.isColor [| 0uy; 176uy; 255uy; |]
 
         let true24rle() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/true-24-rle.tga"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/true-24-rle.tga"
             pi.Format |> should equal Col.Format.BGR
             pi.Size |> should equal (V2i(16, 4))
 
@@ -26,13 +27,13 @@ module TgaTests =
             pi.SubImage(Box2i.FromMinAndSize(V2i(8, 3), V2i(8, 1)))  |> PixImage.isColor [| 255uy; 0uy; 0uy |]
 
         let true32() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/true-32.tga"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/true-32.tga"
             pi.Format |> should equal Col.Format.BGRA
             pi.Size |> should equal (V2i(64, 64))
             pi |> PixImage.isColor [| 127uy; 0uy; 0uy; 255uy |]
 
         let true32rle() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/true-32-rle.tga"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/true-32-rle.tga"
             pi.Format |> should equal Col.Format.BGRA
             pi.Size |> should equal (V2i(16, 4))
             pi.SubImage(Box2i.FromMinAndSize(V2i(0, 0), V2i(16, 2))) |> PixImage.isColor [| 255uy; 216uy; 0uy; 255uy |]
@@ -41,13 +42,13 @@ module TgaTests =
             pi.SubImage(Box2i.FromMinAndSize(V2i(8, 3), V2i(8, 1)))  |> PixImage.isColor [| 255uy; 0uy; 0uy; 255uy |]
 
         let nonSquare() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/tiny-rect.tga"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/tiny-rect.tga"
             pi.Format |> should equal Col.Format.BGRA
             pi.Size |> should equal (V2i(20, 12))
             pi |> PixImage.isColor [| 255uy; 216uy; 0uy; 255uy |]
 
         let true32MixedEncoding() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/true-32-mixed.tga"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/true-32-mixed.tga"
             let mat = pi.GetMatrix<C4b>()
             pi.Format |> should equal Col.Format.BGRA
             pi.Size |> should equal (V2i(16, 4))
@@ -74,7 +75,7 @@ module TgaTests =
 
     [<Tests>]
     let tests =
-        testList "PixLoader" [
+        testList "Pfim" [
             testCase "Tga.True 24bit"                   Cases.true24
             testCase "Tga.True 24bit RLE"               Cases.true24rle
             testCase "Tga.True 32bit"                   Cases.true32

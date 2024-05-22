@@ -1,10 +1,10 @@
-﻿namespace Tests
+﻿namespace Aardvark.Data.Tests.PixLoader
 
 open Aardvark.Base
-
 open Expecto
 
 module EmbeddedResource =
+    open System
     open System.Reflection
     open System.Text.RegularExpressions
 
@@ -16,13 +16,18 @@ module EmbeddedResource =
         if stream <> null then stream
         else failwithf "Cannot open resource stream with name '%s'" path
 
-    let loadPixImage<'T> (path : string) =
+    let loadPixImage<'T> (loader : IPixLoader) (path : string) =
         use stream = get path
-        PixImagePfim.Load(stream).AsPixImage<'T>()
+        loader.LoadFromStream(stream).AsPixImage<'T>()
 
-    let loadPixImageMipmap (path : string) =
+    let loadPixImageMipmap (loader : IPixLoader) (path : string) =
+        let loader =
+            match loader with
+            | :? IPixMipmapLoader as l -> l
+            | _ -> raise <| NotSupportedException()
+
         use stream = get path
-        PixImagePfim.LoadWithMipmap(stream)
+        loader.LoadMipmapFromStream(stream)
 
 module PixImage =
 

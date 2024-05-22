@@ -1,6 +1,7 @@
-﻿namespace Tests
+﻿namespace Aardvark.Data.Tests.PixLoader
 
 open Aardvark.Base
+open Aardvark.Data
 
 open FsUnit
 open Expecto
@@ -10,7 +11,7 @@ module DdsTests =
     module Cases =
 
         let private testMipmapped (size : V2i) (format : Col.Format) (colors : 'T[][]) (file : string) =
-            let mip = EmbeddedResource.loadPixImageMipmap file
+            let mip = EmbeddedResource.loadPixImageMipmap PixImagePfim.Loader file
             let pi = mip.ImageArray |> Array.map (fun pi -> pi.AsPixImage<'T>())
 
             for i = 0 to pi.Length - 1 do
@@ -126,31 +127,31 @@ module DdsTests =
             testMipmapped8x8 Col.Format.Alpha MipmapColors.a8 "data/mipmap-a8.dds"
 
         let uncompressed32bit() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/32-bit-uncompressed.dds"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/32-bit-uncompressed.dds"
             pi.Format |> should equal Col.Format.BGRA
             pi.Size |> should equal (V2i(64, 64))
             pi |> PixImage.isColor [| 127uy; 0uy; 0uy; 255uy |]
 
         let uncompressed32bitOdd() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/32-bit-uncompressed-odd.dds"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/32-bit-uncompressed-odd.dds"
             pi.Format |> should equal Col.Format.BGRA
             pi.Size |> should equal (V2i(5, 9))
             pi |> PixImage.isColor [| 128uy; 0uy; 0uy; 255uy |]
 
         let uncompressed24bitOdd() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/24-bit-uncompressed-odd.dds"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/24-bit-uncompressed-odd.dds"
             pi.Format |> should equal Col.Format.BGR
             pi.Size |> should equal (V2i(1, 3))
             pi |> PixImage.isColor [| 128uy; 0uy; 0uy |]
 
         let compressedDxt1() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/dxt1-simple.dds"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/dxt1-simple.dds"
             pi.Format |> should equal Col.Format.BGRA
             pi.Size |> should equal (V2i(64, 64))
             pi |> PixImage.isColor [| 128uy; 0uy; 0uy; 255uy |]
 
         let compressedDxt1AlphaMipmapped() =
-            let pi = EmbeddedResource.loadPixImageMipmap "data/dxt1-alpha.dds"
+            let pi = EmbeddedResource.loadPixImageMipmap PixImagePfim.Loader "data/dxt1-alpha.dds"
             pi.PixFormat.Format |> should equal Col.Format.BGRA
 
             let expectedSizes =
@@ -174,55 +175,55 @@ module DdsTests =
             pi.ImageArray.[1].AsPixImage<uint8>().GetMatrix<C4b>().[28, 2] |> should equal (C4b(0, 77, 90))
 
         let compressedDxt3() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/dxt3-simple.dds"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/dxt3-simple.dds"
             pi.Format |> should equal Col.Format.BGRA
             pi.Size |> should equal (V2i(64, 64))
             pi |> PixImage.isColor [| 129uy; 0uy; 0uy; 255uy |]
 
         let compressedDxt5() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/dxt5-simple.dds"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/dxt5-simple.dds"
             pi.Format |> should equal Col.Format.BGRA
             pi.Size |> should equal (V2i(64, 64))
             pi |> PixImage.isColor [| 129uy; 0uy; 0uy; 255uy |]
 
         let compressedDxt5_1x1() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/dxt5-simple-1x1.dds"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/dxt5-simple-1x1.dds"
             pi.Format |> should equal Col.Format.BGRA
             pi.Size |> should equal (V2i(1, 1))
             pi |> PixImage.isColor [| 129uy; 0uy; 0uy; 255uy |]
 
         let compressedDxt5Odd() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/dxt5-simple-odd.dds"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/dxt5-simple-odd.dds"
             pi.Format |> should equal Col.Format.BGRA
             pi.Size |> should equal (V2i(5, 9))
             pi |> PixImage.isColor [| 129uy; 0uy; 0uy; 255uy |]
 
         let compressedBc1() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/BC1_UNORM_SRGB-47.dds"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/BC1_UNORM_SRGB-47.dds"
             pi.Format |> should equal Col.Format.BGRA
             pi.Size |> should equal (V2i(256, 256))
             pi |> PixImage.isColor [| 47uy; 47uy; 47uy; 255uy |]
 
         let compressedBc2() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/bc2-simple-srgb.dds"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/bc2-simple-srgb.dds"
             pi.Format |> should equal Col.Format.BGRA
             pi.Size |> should equal (V2i(64, 64))
             pi |> PixImage.isColor [| 189uy; 186uy; 255uy; 255uy |]
 
         let compressedBc3() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/bc3-simple-srgb.dds"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/bc3-simple-srgb.dds"
             pi.Format |> should equal Col.Format.BGRA
             pi.Size |> should equal (V2i(64, 64))
             pi |> PixImage.isColor [| 189uy; 186uy; 255uy; 255uy |]
 
         let compressedBc4() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/bc4-simple.dds"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/bc4-simple.dds"
             pi.Format |> should equal Col.Format.Gray
             pi.Size |> should equal (V2i(64, 64))
             pi |> PixImage.isColor [| 128uy; 128uy; 128uy; 128uy |]
 
         let compressedBc5u() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/bc5-simple.dds"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/bc5-simple.dds"
             pi.Format |> should equal Col.Format.BGR
             pi.Size |> should equal (V2i(64, 64))
             pi |> PixImage.isColor [| 128uy; 128uy; 0uy; |]
@@ -230,26 +231,26 @@ module DdsTests =
         // These tests are weird and broken?
         // Color doesn't match what NVIDIA texture tools or GIMP reports?
         let compressedBc5s() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/bc5-simple-snorm.dds"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/bc5-simple-snorm.dds"
             pi.Format |> should equal Col.Format.BGR
             pi.Size |> should equal (V2i(64, 64))
             pi |> PixImage.isColor [| 128uy; 64uy; 0uy; |]
 
         let compressedBc6h() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/bc6h-simple.dds"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/bc6h-simple.dds"
             pi.Format |> should equal Col.Format.BGRA
             pi.Size |> should equal (V2i(64, 64))
             pi |> PixImage.isColor [| 128uy; 128uy; 255uy; 255uy |]
 
         let compressedBc7() =
-            let pi = EmbeddedResource.loadPixImage<uint8> "data/bc7-simple.dds"
+            let pi = EmbeddedResource.loadPixImage<uint8> PixImagePfim.Loader "data/bc7-simple.dds"
             pi.Format |> should equal Col.Format.BGRA
             pi.Size |> should equal (V2i(64, 64))
             pi |> PixImage.isColor [| 129uy; 128uy; 255uy; 255uy |]
 
     [<Tests>]
     let tests =
-        testList "PixLoader" [
+        testList "Pfim" [
             testCase "Dds.RGB8 mipmapped"                   Cases.rgb8Mipmapped
             testCase "Dds.RGBA8 mipmapped"                  Cases.rgba8Mipmapped
             testCase "Dds.BGR8 mipmapped"                   Cases.bgr8Mipmapped

@@ -8,11 +8,49 @@
     <WarnOn>3389;3390;3395</WarnOn>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="data\mipmap-a8.dds" />
+    <EmbeddedResource Include="data\mipmap-abgr8.dds" />
+    <EmbeddedResource Include="data\mipmap-bgr8.dds" />
+    <EmbeddedResource Include="data\mipmap-bgr8-odd.dds" />
+    <EmbeddedResource Include="data\mipmap-l8.dds" />
+    <EmbeddedResource Include="data\mipmap-l8a8.dds" />
+    <EmbeddedResource Include="data\mipmap-r3g3b2.dds" />
+    <EmbeddedResource Include="data\mipmap-r5g6b5.dds" />
+    <EmbeddedResource Include="data\mipmap-rgb10a2.dds" />
+    <EmbeddedResource Include="data\mipmap-rgb5a1.dds" />
+    <EmbeddedResource Include="data\mipmap-rgb8.dds" />
+    <EmbeddedResource Include="data\mipmap-rgba4.dds" />
+    <EmbeddedResource Include="data\mipmap-rgba8.dds" />
+    <EmbeddedResource Include="data\BC1_UNORM_SRGB-47.dds" />
+    <EmbeddedResource Include="data\bc2-simple-srgb.dds" />
+    <EmbeddedResource Include="data\bc3-simple-srgb.dds" />
+    <EmbeddedResource Include="data\bc4-simple.dds" />
+    <EmbeddedResource Include="data\bc5-simple-snorm.dds" />
+    <EmbeddedResource Include="data\bc5-simple.dds" />
+    <EmbeddedResource Include="data\bc6h-simple.dds" />
+    <EmbeddedResource Include="data\bc7-simple.dds" />
+    <EmbeddedResource Include="data\dxt1-alpha.dds" />
+    <EmbeddedResource Include="data\dxt1-simple.dds" />
+    <EmbeddedResource Include="data\dxt3-simple.dds" />
+    <EmbeddedResource Include="data\dxt5-simple-1x1.dds" />
+    <EmbeddedResource Include="data\dxt5-simple-odd.dds" />
+    <EmbeddedResource Include="data\dxt5-simple.dds" />
+    <EmbeddedResource Include="data\tiny-rect.tga" />
+    <EmbeddedResource Include="data\true-24-rle.tga" />
+    <EmbeddedResource Include="data\true-24.tga" />
+    <EmbeddedResource Include="data\true-32-mixed.tga" />
+    <EmbeddedResource Include="data\true-32-rle.tga" />
+    <EmbeddedResource Include="data\true-32.tga" />
+    <Compile Include="Utilities.fs" />
+    <Compile Include="Pfim\Dds.fs" />
+    <Compile Include="Pfim\Tga.fs" />
     <Compile Include="PixLoaderTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Aardvark.PixImage.DevIL\Aardvark.PixImage.DevIL.csproj" />
+    <ProjectReference Include="..\..\Aardvark.PixImage.ImageSharp\Aardvark.PixImage.ImageSharp.fsproj" />
+    <ProjectReference Include="..\..\Aardvark.PixImage.Pfim\Aardvark.PixImage.Pfim.fsproj" />
     <ProjectReference Include="..\..\Aardvark.PixImage.WindowsMedia\Aardvark.PixImage.WindowsMedia.csproj" />
   </ItemGroup>
   <Import Project="..\..\..\.paket\Paket.Restore.targets" />

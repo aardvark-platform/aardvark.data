@@ -99,6 +99,7 @@ module PixLoaderTests =
                 PixFileFormat.Bmp
                 PixFileFormat.Jpeg
                 PixFileFormat.Gif
+                // TODO: PixFileFormat.Targa
             ]
             |> Gen.elements
 
@@ -109,17 +110,35 @@ module PixLoaderTests =
                 return PixImage.checkerboard format w h
             }
 
-        let pixLoader =
+        let private allPixLoaders =
             let loaders = PixImage.GetLoaders() |> Seq.filter (fun l -> l.Name <> "Aardvark PGM")
             Gen.elements loaders
 
-        let pixEncoder (useStream : bool) (format : PixFileFormat) =
-            pixLoader
-            |> Gen.filter (fun loader ->
-                not (loader.Name = "ImageSharp" && format = PixFileFormat.Tiff) &&      // ImageSharp support for TIFFs is buggy atm
-                not (loader.Name = "DevIL" && format = PixFileFormat.Gif) &&            // DevIL does not support saving GIFs
-                not (loader.Name = "DevIL" && format = PixFileFormat.Tiff && useStream) // DevIL does not support saving TIFFs to streams
+        let private filterEncoder (useStream : bool) (format : PixFileFormat) (gen : Gen<IPixLoader>) =
+            gen |> Gen.filter (fun loader ->
+                not (loader.Name = "ImageSharp" && format = PixFileFormat.Tiff) &&         // ImageSharp support for TIFFs is buggy atm
+                not (loader.Name = "DevIL" && format = PixFileFormat.Gif) &&               // DevIL does not support saving GIFs
+                not (loader.Name = "DevIL" && format = PixFileFormat.Tiff && useStream) && // DevIL does not support saving TIFFs to streams
+                not (loader.Name = "Pfim")                                                 // Pfim does not support saving
             )
+
+        let private filterDecoder (useStream : bool) (format : PixFileFormat) (gen : Gen<IPixLoader>) =
+            gen |> Gen.filter (fun loader ->
+                not (loader.Name = "Pfim" && format <> PixFileFormat.Dds && format <> PixFileFormat.Targa)
+            )
+
+        let pixEncoder (useStream : bool) (format : PixFileFormat) =
+            allPixLoaders
+            |> filterEncoder useStream format
+
+        let pixDecoder (useStream : bool) (format : PixFileFormat) =
+            allPixLoaders
+            |> filterDecoder useStream format
+
+        let pixLoader (useStream : bool) (format : PixFileFormat) =
+            allPixLoaders
+            |> filterEncoder useStream format
+            |> filterDecoder useStream format
 
         let colorAndImageFileFormat =
             gen {
@@ -135,6 +154,12 @@ module PixLoaderTests =
             |> Gen.map (fun (cf, iff, _) -> cf, iff)
 
 
+    type JPEGSaveLoadInput =
+        {
+            Image       : PixImage<byte>
+            Loader      : IPixLoader
+        }
+
     type SaveLoadInput =
         {
             Image       : PixImage<byte>
@@ -146,13 +171,23 @@ module PixLoaderTests =
 
     type Generator private () =
 
-        static member Loader =
-            Arb.fromGen Gen.pixLoader
-
         static member PixImage =
             gen {
                 let! format = Gen.colorFormat
                 return! Gen.checkerboardPix format
+            }
+            |> Arb.fromGen
+
+        static member JPEGSaveLoadInput =
+            gen {
+                let! format = Gen.colorFormat
+                let! pix = Gen.checkerboardPix format
+                let! loader = Gen.pixLoader false PixFileFormat.Jpeg
+
+                return {
+                    Image = pix
+                    Loader = loader
+                }
             }
             |> Arb.fromGen
 
@@ -162,7 +197,7 @@ module PixLoaderTests =
                 let! pix = Gen.checkerboardPix cf
                 let! useStream = Gen.elements [false; true]
                 let! encoder = Gen.pixEncoder useStream iff
-                let! decoder = Gen.pixLoader
+                let! decoder = Gen.pixDecoder useStream iff
 
                 let saveParams =
                     match iff with
@@ -228,7 +263,9 @@ module PixLoaderTests =
 
 
     [<Property(Arbitrary = [| typeof<Generator> |])>]
-    let ``[PixLoader] JPEG quality`` (loader : IPixLoader) (pi : PixImage<byte>) =
+    let ``[PixLoader] JPEG quality`` (input : JPEGSaveLoadInput) =
+        let pi = input.Image
+        let loader = input.Loader
         printfn "loader = %s, size = %A, format = %A" loader.Name pi.Size pi.Format
 
         tempFile (fun file50 ->
