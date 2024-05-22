@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Aardvark.Data.Ifc", "Aardva
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IfcTest", "Test\Ifc\IfcTest.csproj", "{A946E9F0-0D88-49C0-95DF-F0AB385B459D}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{CC8BC009-48FC-4E2C-A7C4-D2DBA184A638}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,6 +26,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A946E9F0-0D88-49C0-95DF-F0AB385B459D} = {CC8BC009-48FC-4E2C-A7C4-D2DBA184A638}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EC3469FF-BF00-4F6A-AA02-EAD006852FFE}

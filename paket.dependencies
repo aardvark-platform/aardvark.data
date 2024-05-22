@@ -33,6 +33,7 @@ nuget Microsoft.Extensions.Primitives                       >= 2.1.1 lowest_matc
 
 group Test
     framework: auto-detect
+    storage: none
     source https://api.nuget.org/v3/index.json
 
     nuget NUnit                    ~> 3.13.3
