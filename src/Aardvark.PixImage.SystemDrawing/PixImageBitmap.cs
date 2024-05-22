@@ -4,8 +4,9 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using Aardvark.Base;
 
-namespace Aardvark.Base
+namespace Aardvark.Data
 {
     /// <summary>
     /// Contains Windows-only extensions for converting to and from bitmaps, as well as saving images to files and streams.

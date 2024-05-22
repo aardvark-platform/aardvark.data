@@ -5,8 +5,6 @@ VisualStudioVersion = 17.9.34728.123
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Aardvark.Data.Ifc", "Aardvark.Data.Ifc\Aardvark.Data.Ifc.csproj", "{8BB583B6-37F8-41E4-BB12-8F549ACBC6EB}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IfcTest", "Test\Ifc\IfcTest.csproj", "{A946E9F0-0D88-49C0-95DF-F0AB385B459D}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{CC8BC009-48FC-4E2C-A7C4-D2DBA184A638}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Aardvark.Data.Vrml97", "Aardvark.Data.Vrml97\Aardvark.Data.Vrml97.csproj", "{47874098-32D1-489A-B21A-88D3D03678EC}"
@@ -16,6 +14,10 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Aardvark.PixImage.SystemDrawing", "Aardvark.PixImage.SystemDrawing\Aardvark.PixImage.SystemDrawing.csproj", "{BD71E5C3-060E-4C85-993E-7BBC8959EFEF}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Aardvark.PixImage.WindowsMedia", "Aardvark.PixImage.WindowsMedia\Aardvark.PixImage.WindowsMedia.csproj", "{F94CC033-E4DD-4B56-A781-5F7402C981B3}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "PixLoaderTests", "Tests\PixLoaderTests\PixLoaderTests.fsproj", "{012FAA3B-5A42-4B37-A30D-28D3E11D9115}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IfcTests", "Tests\IfcTests\IfcTests.csproj", "{C544096C-9798-4AD7-AFF2-6EB829A8B230}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,10 +29,6 @@ Global
 		{8BB583B6-37F8-41E4-BB12-8F549ACBC6EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8BB583B6-37F8-41E4-BB12-8F549ACBC6EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8BB583B6-37F8-41E4-BB12-8F549ACBC6EB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A946E9F0-0D88-49C0-95DF-F0AB385B459D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A946E9F0-0D88-49C0-95DF-F0AB385B459D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A946E9F0-0D88-49C0-95DF-F0AB385B459D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A946E9F0-0D88-49C0-95DF-F0AB385B459D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{47874098-32D1-489A-B21A-88D3D03678EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{47874098-32D1-489A-B21A-88D3D03678EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{47874098-32D1-489A-B21A-88D3D03678EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -47,12 +45,21 @@ Global
 		{F94CC033-E4DD-4B56-A781-5F7402C981B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F94CC033-E4DD-4B56-A781-5F7402C981B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F94CC033-E4DD-4B56-A781-5F7402C981B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{012FAA3B-5A42-4B37-A30D-28D3E11D9115}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{012FAA3B-5A42-4B37-A30D-28D3E11D9115}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{012FAA3B-5A42-4B37-A30D-28D3E11D9115}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{012FAA3B-5A42-4B37-A30D-28D3E11D9115}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C544096C-9798-4AD7-AFF2-6EB829A8B230}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C544096C-9798-4AD7-AFF2-6EB829A8B230}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C544096C-9798-4AD7-AFF2-6EB829A8B230}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C544096C-9798-4AD7-AFF2-6EB829A8B230}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{A946E9F0-0D88-49C0-95DF-F0AB385B459D} = {CC8BC009-48FC-4E2C-A7C4-D2DBA184A638}
+		{012FAA3B-5A42-4B37-A30D-28D3E11D9115} = {CC8BC009-48FC-4E2C-A7C4-D2DBA184A638}
+		{C544096C-9798-4AD7-AFF2-6EB829A8B230} = {CC8BC009-48FC-4E2C-A7C4-D2DBA184A638}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EC3469FF-BF00-4F6A-AA02-EAD006852FFE}

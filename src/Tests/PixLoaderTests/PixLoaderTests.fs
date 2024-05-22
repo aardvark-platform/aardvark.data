@@ -1,6 +1,7 @@
-﻿namespace Aardvark.Base.Windows.Tests
+﻿namespace Aardvark.Data.Tests.PixLoader
 
 open Aardvark.Base
+open Aardvark.Data
 open System
 open System.IO
 open System.IO.Compression

@@ -11,7 +11,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace IfcTest
+namespace Aardvark.Data.Tests.Ifc
 {
     [TestFixture]
     public static class LoadingTest

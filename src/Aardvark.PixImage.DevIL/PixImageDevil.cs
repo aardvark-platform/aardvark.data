@@ -6,8 +6,9 @@ using System.IO;
 using System.Runtime.InteropServices;
 using Devil = DevILSharp;
 using DevILSharp;
+using Aardvark.Base;
 
-namespace Aardvark.Base
+namespace Aardvark.Data
 {
     using I = DevILSharp.IL;
 

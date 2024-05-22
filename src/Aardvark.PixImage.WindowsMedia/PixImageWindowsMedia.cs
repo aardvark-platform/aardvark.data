@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Aardvark.Base;
 using SdiPixelFormat = System.Drawing.Imaging.PixelFormat;
 
-namespace Aardvark.Base
+namespace Aardvark.Data
 {
     public static class PixImageWindowsMedia
     {
