@@ -5,7 +5,7 @@ owners Aardvark Platform Team
 projectUrl http://github.com/aardvark-platform
 licenseUrl http://www.apache.org/licenses/LICENSE-2.0.txt
 repositoryType git
-repositoryUrl https://github.com/aardvark-platform/aardvark.base
+repositoryUrl https://github.com/aardvark-platform/aardvark.data
 description
     Aardvark is an open-source platform for visual computing, real-time graphics and visualization.
 include-pdbs true

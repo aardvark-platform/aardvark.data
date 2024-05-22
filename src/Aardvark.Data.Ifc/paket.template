@@ -5,7 +5,7 @@ owners Aardvark Platform Team
 projectUrl http://github.com/aardvark-platform
 licenseUrl http://www.apache.org/licenses/LICENSE-2.0.txt
 repositoryType git
-repositoryUrl https://github.com/aardvark-platform/aardvark.data.ifc
+repositoryUrl https://github.com/aardvark-platform/aardvark.data
 description
     Simple IFC loader for the Aardvark platform.
 include-pdbs true
