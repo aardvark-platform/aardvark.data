@@ -1,5 +1,6 @@
-﻿namespace Aardvark.Base
+﻿namespace Aardvark.Data
 
+open Aardvark.Base
 open Aardvark.Base.Monads
 open System
 open System.IO
