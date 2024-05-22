@@ -1,0 +1,7 @@
+type project
+id Aardvark.Importer.Vrml97
+authors Aardvark Platform Team
+owners Aardvark Platform Team
+description
+    VRML97 importer
+include-pdbs true
