@@ -14,6 +14,7 @@ nuget Aardvark.Geometry.PolyMesh        ~> 5.3.0
 
 nuget DevILSharp                        ~> 0.2.20
 nuget SixLabors.ImageSharp              ~> 2.1.8
+nuget Pfim                              ~> 0.11.2
 nuget System.Drawing.Common             >= 4.7.0 lowest_matching: true
 
 // XBim does not have proper version constraints so we declare and reference everything explicitly
