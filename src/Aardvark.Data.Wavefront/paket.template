@@ -2,10 +2,10 @@ type project
 id Aardvark.Data.Wavefront
 authors Aardvark Platform Team
 owners Aardvark Platform Team
-projectUrl https://github.com/aardvark-platform/aardvark.algodat
-licenseUrl http://www.gnu.org/licenses/agpl.txt
+projectUrl http://github.com/aardvark-platform
+licenseUrl http://www.apache.org/licenses/LICENSE-2.0.txt
 repositoryType git
-repositoryUrl https://github.com/aardvark-platform/aardvark.algodat
+repositoryUrl https://github.com/aardvark-platform/aardvark.data
 description
     A wavefront parser.
 include-pdbs true
