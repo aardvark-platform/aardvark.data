@@ -14,7 +14,7 @@
     <DocumentationFile>..\..\bin\Release\netstandard2.0\Aardvark.Data.DGM.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Dgm.fs" />
+    <Compile Include="DGM.fs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="paket.references" />
