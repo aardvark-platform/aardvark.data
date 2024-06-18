@@ -144,11 +144,11 @@ namespace Aardvark.Data.Collada
 
                         // init mesh from input and sources
                         var mesh = new PolyMesh();
-                        ProcessInputs(input.Map(i =>
+                        ProcessInputs(input.SelectMany(i =>
                             {
-                                if (i.semantic == "VERTEX") return m.vertices.input.First();
-                                else return new InputLocal() { semantic = i.semantic, source = i.source };
-                            }),
+                                if (i.semantic == "VERTEX") return m.vertices.input;
+                                else return new InputLocal() { semantic = i.semantic, source = i.source }.IntoArray();
+                            }).ToArray(),
                             mesh, m);
 
                         // convert input semantic to aardvark semantic
