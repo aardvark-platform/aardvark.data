@@ -115,17 +115,6 @@ namespace Aardvark.Data.Collada
                         var polygons = item as polygons;
                         var lines = item as lines;
 
-                        var count = triangles != null ? triangles.count :
-                                    polylist != null ? polylist.count :
-                                    polygons != null ? polygons.count :
-                                    0;
-
-                        if (count < 1)
-                        {
-                            Report.Warn("skipping empty mesh with {0} primitives", count);
-                            continue;
-                        }
-
                         var input = triangles != null ? triangles.input :
                                     polylist != null ? polylist.input :
                                     polygons != null ? polygons.input : 
@@ -140,6 +129,17 @@ namespace Aardvark.Data.Collada
 
                             continue;
                             //throw new NotImplementedException("since I had no example i could not implement this one properly (haaser@vrvis.at)");
+                        }
+
+                        var count = triangles != null ? triangles.count :
+                                    polylist != null ? polylist.count :
+                                    polygons != null ? polygons.count :
+                                    0;
+
+                        if (count < 1)
+                        {
+                            Report.Warn("skipping empty geometry with {0} primitives", count);
+                            continue;
                         }
 
                         // init mesh from input and sources
