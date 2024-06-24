@@ -6,8 +6,8 @@ nuget Aardvark.Build                    ~> 1.0.22
 nuget FSharp.Core                       >= 5.0.1 lowest_matching: true
 
 // Aardvark Base
-nuget Aardvark.Base                     ~> 5.2.4
-nuget Aardvark.Base.Tensors             ~> 5.2.4
+nuget Aardvark.Base                     ~> 5.2.32
+nuget Aardvark.Base.Tensors             ~> 5.2.32
 
 // Aardvark Algodat
 nuget Aardvark.Geometry.PolyMesh        ~> 5.3.0
