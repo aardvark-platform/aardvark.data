@@ -1,6 +1,5 @@
 ﻿using Aardvark.Base;
 using Aardvark.Base.Coder;
-using Aardvark.Data.Vrml97;
 using Aardvark.Geometry;
 using Aardvark.VRVis;
 using System;
@@ -9,7 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Aardvark.Importer.Vrml97
+namespace Aardvark.Data.Vrml97
 {
     public class VrmlNode : IEquatable<VrmlNode>, IFieldCodeable
     {

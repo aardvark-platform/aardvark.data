@@ -2,9 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Aardvark.Data.Vrml97;
 
-namespace Aardvark.Importer.Vrml97
+namespace Aardvark.Data.Vrml97
 {
 	public class SceneLoader
 	{

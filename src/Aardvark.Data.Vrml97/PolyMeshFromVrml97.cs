@@ -1,12 +1,11 @@
 ﻿using Aardvark.Base;
 using Aardvark.Geometry;
-using Aardvark.Importer.Vrml97;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Aardvark.VRVis
+namespace Aardvark.Data.Vrml97
 {
     public static class PolyMeshFromVrml97
     {

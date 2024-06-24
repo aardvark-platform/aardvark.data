@@ -1,7 +1,7 @@
 ﻿using Aardvark.Base;
 using System;
 
-namespace Aardvark.Importer.Vrml97
+namespace Aardvark.Data.Vrml97
 {
     public enum TexRepeatMode
     {
