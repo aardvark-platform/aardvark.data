@@ -114,17 +114,28 @@ module PixLoaderTests =
             let loaders = PixImage.GetLoaders() |> Seq.filter (fun l -> l.Name <> "Aardvark PGM")
             Gen.elements loaders
 
-        let private filterEncoder (useStream : bool) (format : PixFileFormat) (gen : Gen<IPixLoader>) =
+        // Loader restrictions for encoding or decoding
+        let private filterLoader (format : PixFileFormat) (gen : Gen<IPixLoader>) =
             gen |> Gen.filter (fun loader ->
-                not (loader.Name = "ImageSharp" && format = PixFileFormat.Tiff) &&         // ImageSharp support for TIFFs is buggy atm
+                not (loader.Name = "ImageSharp" && format = PixFileFormat.Tiff)             // ImageSharp support for TIFFs is buggy atm (2.X)
+            )
+
+        // Loader restrictions specifically for encoding
+        let private filterEncoder (useStream : bool) (format : PixFileFormat) (gen : Gen<IPixLoader>) =
+            gen
+            |> filterLoader format
+            |> Gen.filter (fun loader ->
                 not (loader.Name = "DevIL" && format = PixFileFormat.Gif) &&               // DevIL does not support saving GIFs
                 not (loader.Name = "DevIL" && format = PixFileFormat.Tiff && useStream) && // DevIL does not support saving TIFFs to streams
                 not (loader.Name = "Pfim")                                                 // Pfim does not support saving
             )
 
+        // Loader restrictions specifically for decoding
         let private filterDecoder (useStream : bool) (format : PixFileFormat) (gen : Gen<IPixLoader>) =
-            gen |> Gen.filter (fun loader ->
-                not (loader.Name = "Pfim" && format <> PixFileFormat.Dds && format <> PixFileFormat.Targa)
+            gen
+            |> filterLoader format
+            |> Gen.filter (fun loader ->
+                not (loader.Name = "Pfim" && format <> PixFileFormat.Dds && format <> PixFileFormat.Targa)  // Pfim only supports DDS and TGA
             )
 
         let pixEncoder (useStream : bool) (format : PixFileFormat) =
