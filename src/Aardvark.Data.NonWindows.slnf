@@ -7,7 +7,6 @@
       "Aardvark.Data.Photometry\\Aardvark.Data.Photometry.csproj",
       "Aardvark.Data.Vrml97\\Aardvark.Data.Vrml97.csproj",
       "Aardvark.Data.Wavefront\\Aardvark.Data.Wavefront.csproj",
-      "Aardvark.Importer.Vrml97\\Aardvark.Importer.Vrml97.csproj",
       "Aardvark.PixImage.DevIL\\Aardvark.PixImage.DevIL.csproj",
       "Aardvark.PixImage.ImageSharp\\Aardvark.PixImage.ImageSharp.fsproj",
       "Aardvark.PixImage.Pfim\\Aardvark.PixImage.Pfim.fsproj",
