@@ -73,8 +73,7 @@ namespace Aardvark.Data.Vrml97
         {
             get
             {
-                foreach (var x
-                    in SymMapBaseCollectionTraversal.Collect(ParseTree, "IndexedFaceSet"))
+                foreach (var x in SymMapBaseCollectionTraversal.Collect(ParseTree, Vrml97NodeName.IndexedFaceSet))
                     yield return new Vrml97Ifs(x);
             }
         }
@@ -86,8 +85,7 @@ namespace Aardvark.Data.Vrml97
         {
             get
             {
-                foreach (var x
-                    in SymMapBaseCollectionTraversal.Collect(ParseTree, "IndexedLineSet"))
+                foreach (var x in SymMapBaseCollectionTraversal.Collect(ParseTree, Vrml97NodeName.IndexedLineSet))
                     yield return new Vrml97Ils(x);
             }
         }
@@ -99,8 +97,7 @@ namespace Aardvark.Data.Vrml97
         {
             get
             {
-                foreach (var x
-                    in SymMapBaseCollectionTraversal.Collect(ParseTree, "PositionInterpolator"))
+                foreach (var x in SymMapBaseCollectionTraversal.Collect(ParseTree, Vrml97NodeName.PositionInterpolator))
                     yield return x;
             }
         }
@@ -112,8 +109,7 @@ namespace Aardvark.Data.Vrml97
         {
             get
             {
-                foreach (var x
-                    in SymMapBaseCollectionTraversal.Collect(ParseTree, "OrientationInterpolator"))
+                foreach (var x in SymMapBaseCollectionTraversal.Collect(ParseTree, Vrml97NodeName.OrientationInterpolator))
                     yield return x;
             }
         }
@@ -125,8 +121,7 @@ namespace Aardvark.Data.Vrml97
         {
             get
             {
-                foreach (var x
-                    in SymMapBaseCollectionTraversal.Collect(ParseTree, "PointSet"))
+                foreach (var x in SymMapBaseCollectionTraversal.Collect(ParseTree, Vrml97NodeName.PointSet))
                     yield return x;
             }
         }
@@ -138,8 +133,7 @@ namespace Aardvark.Data.Vrml97
         {
             get
             {
-                foreach (var x
-                    in SymMapBaseCollectionTraversal.Collect(ParseTree, "TimeSensor"))
+                foreach (var x in SymMapBaseCollectionTraversal.Collect(ParseTree, Vrml97NodeName.TimeSensor))
                     yield return x;
             }
         }
