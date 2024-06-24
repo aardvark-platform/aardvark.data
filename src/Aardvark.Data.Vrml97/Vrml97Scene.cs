@@ -18,19 +18,9 @@ namespace Aardvark.Data.Vrml97
         /// Supports text based and Gzip compressed files.
         /// Gzip is detected independent of the file extension by checking if the file contains a gzip header.
         /// </summary>
-        public static Vrml97Scene FromFile(string fileName) => FromFile(fileName, true, true);
-
-        /// <summary>
-        /// Creates a Vrml97Scene from given VRML97 file.
-        /// Supports text based and Gzip compressed files.
-        /// Gzip is detected independent of the file extension by checking if the file contains a gzip header.
-        /// </summary>
         /// <param name="fileName">file name</param>
-        /// <param name="resolveDefUse"></param>
-        /// <param name="annotate"></param>
-        /// <param name="duplicateDefUseMaps"></param>
         /// <returns>Parsed Vrml97 scene</returns>
-        public static Vrml97Scene FromFile(string fileName, bool resolveDefUse, bool annotate, bool duplicateDefUseMaps = true)
+        public static Vrml97Scene FromFile(string fileName)
         {
             if (fileName == null) return null;
             using var fileStream = new FileStream(
@@ -50,7 +40,7 @@ namespace Aardvark.Data.Vrml97
             fileStream.Position = 0;
 
             var inputStream = h1 == 0x1f && h2 == 0x8b ? (Stream)new GZipStream(fileStream, CompressionMode.Decompress, true) : fileStream;
-            return Parse(new Parser.State(inputStream, fileName), resolveDefUse, annotate, duplicateDefUseMaps);
+            return Parse(new Parser.State(inputStream, fileName));
         }
 
         /// <summary>
@@ -60,7 +50,7 @@ namespace Aardvark.Data.Vrml97
         /// <param name="fileName">Optional filename used to build absolute texture file paths</param>
         /// <returns>Parsed Vrml97 scene</returns>
         public static Vrml97Scene FromStream(Stream stream, string fileName)
-            => Parse(new Parser.State(stream, fileName), true, true);
+            => Parse(new Parser.State(stream, fileName));
 
         /// <summary>
         ///  Constructor.
@@ -159,15 +149,11 @@ namespace Aardvark.Data.Vrml97
         /// </summary>
         public Dictionary<string, SymMapBase> NamedNodes => m_namedNodes;
 
-        private static Vrml97Scene Parse(Parser.State parser, bool resolveDefUse, bool annotate, bool duplicateMaps = true)
+        private static Vrml97Scene Parse(Parser.State parser)
         {
             var root = parser.Perform();
 
-            if (resolveDefUse)
-                root = DefUseResolver.Resolve(root, out root.m_namedNodes, duplicateMaps);
-
-            if (annotate)
-                root = AttributeAnnotator.Annotate(root);
+            root = DefUseResolver.Resolve(root, out root.m_namedNodes);
 
             return root;
         }

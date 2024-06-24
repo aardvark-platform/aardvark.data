@@ -20,64 +20,21 @@ namespace Aardvark.Data.Vrml97
             SkipDegenerateFaces         = 0x08,
 
             PreMultiplyTransform        = 0x10,
-            PreMultiplyTextureTransform = 0x20,
 
             TryFixSpecViolations        = 0x100,
             IgnorePresentNormals        = 0x200,
-            FixTextureWrapping          = 0x400,
-            IgnoreTextures              = 0x800,
 
             NoVertexColorsFromMaterial  = 0x1000,
 
             AddPerFaceNormalsAndPreMultiplyTransform =
-                AddPerFaceNormals | PreMultiplyTransform | PreMultiplyTextureTransform,
+                AddPerFaceNormals | PreMultiplyTransform ,
 
             AddCreaseNormalsAndPreMultiplyTransform =
-                AddPerFaceNormals | PreMultiplyTransform | PreMultiplyTextureTransform,
+                AddPerFaceNormals | PreMultiplyTransform,
 
             StandardSettings = AddCreaseNormalsAndPreMultiplyTransform
                                 | SkipDegenerateFaces,
         }
-
-        public static partial class Vrml97Property
-        {
-            public static readonly Symbol ccw = "ccw";
-            public static readonly Symbol color = "color";
-            public static readonly Symbol colorIndex = "colorIndex";
-            public static readonly Symbol colorPerVertex = "colorPerVertex";
-            public static readonly Symbol convex = "convex";
-            public static readonly Symbol coord = "coord";
-            public static readonly Symbol coordIndex = "coordIndex";
-            public static readonly Symbol creaseAngle = "creaseAngle";
-            public static readonly Symbol DEFname = "DEFname";
-            public static readonly Symbol normal = "normal";
-            public static readonly Symbol normalIndex = "normalIndex";
-            public static readonly Symbol normalPerVertex = "normalPerVertex";
-            public static readonly Symbol diffuseColor = "diffuseColor";
-            public static readonly Symbol material = "material";
-            public static readonly Symbol point = "point";
-            public static readonly Symbol repeatS = "repeatS";
-            public static readonly Symbol repeatT = "repeatT";
-            public static readonly Symbol repeatU = "repeatU";
-            public static readonly Symbol repeatV = "repeatV";
-            public static readonly Symbol solid = "solid";
-            public static readonly Symbol texture = "texture";
-            public static readonly Symbol texCoord = "texCoord";
-            public static readonly Symbol texCoordIndex = "texCoordIndex";
-            public static readonly Symbol textureTransform = "textureTransform";
-            public static readonly Symbol transform = "transform";
-            public static readonly Symbol transparency = "transparency";
-            public static readonly Symbol url = "url";
-            public static readonly Symbol vector = "vector";
-        }
-
-        public static readonly Symbol[] Vrml97SingleAttributeNames = new[]
-        {
-            Vrml97Property.material,
-            Vrml97Property.texture,
-            // Vrml97Property.textureTransform,
-            // Vrml97Property.transform,
-        };
 
         public static PolyMesh CreateFromIfs(SymMapBase ifs)
         {
@@ -110,34 +67,28 @@ namespace Aardvark.Data.Vrml97
              *    MFInt32 texCoordIndex     []    # [-1,)
              *  }
              */
-            SymMapBase color = ifs.Get<SymMapBase>(Vrml97Property.color);
-            SymMapBase coord = ifs.Get<SymMapBase>(Vrml97Property.coord);
-            SymMapBase normal = ifs.Get<SymMapBase>(Vrml97Property.normal);
-            SymMapBase texCoord = ifs.Get<SymMapBase>(Vrml97Property.texCoord);
-            SymMapBase texture = ifs.Get<SymMapBase>(Vrml97Property.texture);
-            bool ccw = ifs.Get<bool>(Vrml97Property.ccw, true);
-            var colorIndex = ifs.Get<List<int>>(Vrml97Property.colorIndex);
-            bool colorPerVertex = ifs.Get<bool>(Vrml97Property.colorPerVertex, true);
-            bool convex = ifs.Get<bool>(Vrml97Property.convex, true);
-            var coordIndex = ifs.Get<List<int>>(Vrml97Property.coordIndex);
-            float creaseAngle = ifs.Get<float>(Vrml97Property.creaseAngle, 0.0f);
-            var normalIndex = ifs.Get<List<int>>(Vrml97Property.normalIndex);
-            bool normalPerVertex = ifs.Get<bool>(Vrml97Property.normalPerVertex, true);
-            bool solid = ifs.Get<bool>(Vrml97Property.solid, true);
-            var texCoordIndex = ifs.Get<List<int>>(Vrml97Property.texCoordIndex);
+            SymMapBase color = ifs.Get<SymMapBase>(Vrml97Sym.color);
+            SymMapBase coord = ifs.Get<SymMapBase>(Vrml97Sym.coord);
+            SymMapBase normal = ifs.Get<SymMapBase>(Vrml97Sym.normal);
+            SymMapBase texCoord = ifs.Get<SymMapBase>(Vrml97Sym.texCoord);
+            bool ccw = ifs.Get<bool>(Vrml97Sym.ccw, true);
+            var colorIndex = ifs.Get<List<int>>(Vrml97Sym.colorIndex);
+            bool colorPerVertex = ifs.Get<bool>(Vrml97Sym.colorPerVertex, true);
+            bool convex = ifs.Get<bool>(Vrml97Sym.convex, true);
+            var coordIndex = ifs.Get<List<int>>(Vrml97Sym.coordIndex);
+            float creaseAngle = ifs.Get<float>(Vrml97Sym.creaseAngle, 0.0f);
+            var normalIndex = ifs.Get<List<int>>(Vrml97Sym.normalIndex);
+            bool normalPerVertex = ifs.Get<bool>(Vrml97Sym.normalPerVertex, true);
+            bool solid = ifs.Get<bool>(Vrml97Sym.solid, true);
+            var texCoordIndex = ifs.Get<List<int>>(Vrml97Sym.texCoordIndex);
 
             bool skipDegenerates = (options & Options.SkipDegenerateFaces) != 0;
             bool addPerFaceNormals = (options & Options.AddPerFaceNormals) != 0;
             bool addCreaseNormals = (options & Options.AddCreaseNormals) != 0;
             bool ignorePresentNormals = (options & Options.IgnorePresentNormals) != 0;
-            bool fixTextureWrapping = (options & Options.FixTextureWrapping) != 0;
-            bool ignoreTextures = (options & Options.IgnoreTextures) != 0;
-            bool forceNoTextureWrapping = false;
             bool performCreateNormals = false;
             bool preMultiplyTransform
                     = (options & Options.PreMultiplyTransform) != 0;
-            bool preMultiplyTextureTransform
-                    = (options & Options.PreMultiplyTextureTransform) != 0;
 
             if ((options & Options.ReverseTriangles) != 0)
                 ccw = !ccw;
@@ -153,13 +104,13 @@ namespace Aardvark.Data.Vrml97
                     "Vrml97 spec violation!" +
                     "IndexedFaceSet node: field 'coord' MUST NOT be null."
                     );
-            if (!coord.Contains(Vrml97Property.point))
+            if (!coord.Contains(Vrml97Sym.point))
                 throw new Exception(
                     "Vrml97 spec violation!" +
                     "Coordinate node: field 'coord' MUST NOT be null."
                     );
 
-            List<V3f> vertexPositionList = coord.Get<List<V3f>>(Vrml97Property.point);
+            List<V3f> vertexPositionList = coord.Get<List<V3f>>(Vrml97Sym.point);
             int vertexCount = vertexPositionList.Count;
 
             if (vertexCount == 0)
@@ -170,9 +121,9 @@ namespace Aardvark.Data.Vrml97
 
             var positionArray = new V3d[vertexCount];
 
-            if (ifs.Contains(Vrml97Property.transform))
+            if (ifs.Contains(Vrml97Sym.transform))
             {
-                Trafo3d trafo = ifs.Get<Trafo3d>(Vrml97Property.transform, Trafo3d.Identity);
+                Trafo3d trafo = ifs.Get<Trafo3d>(Vrml97Sym.transform, Trafo3d.Identity);
                 if (preMultiplyTransform)
                 {
                     M44d mat = trafo.Forward;
@@ -348,7 +299,7 @@ namespace Aardvark.Data.Vrml97
                         "Color node: field 'color' MUST NOT be null."
                         );
 
-                List<C3f> colorList = color.Get<List<C3f>>(Vrml97Property.color);
+                List<C3f> colorList = color.Get<List<C3f>>(Vrml97Sym.color);
 
                 if (colorPerVertex == false)
                 {
@@ -489,11 +440,11 @@ namespace Aardvark.Data.Vrml97
                         "Normal node: field 'vector' MUST NOT be null."
                         );
 
-                List<V3f> normalList = normal.Get<List<V3f>>(Vrml97Property.vector);
+                List<V3f> normalList = normal.Get<List<V3f>>(Vrml97Sym.vector);
 
-                if (preMultiplyTransform && ifs.Contains(Vrml97Property.transform))
+                if (preMultiplyTransform && ifs.Contains(Vrml97Sym.transform))
                 {
-                    Trafo3d trafo = ifs.Get<Trafo3d>(Vrml97Property.transform, Trafo3d.Identity);
+                    Trafo3d trafo = ifs.Get<Trafo3d>(Vrml97Sym.transform, Trafo3d.Identity);
                     M44d transposedInverse = trafo.Backward.Transposed;
                     int imax = normalList.Count;
 
@@ -630,8 +581,8 @@ namespace Aardvark.Data.Vrml97
                  * creaseAngle to determine if and how normals are smoothed
                  * across shared vertices (see 4.6.3.5, Crease angle field).
                  */
-                // if (addPerFaceNormals || addCreaseNormals)
-                //     performCreateNormals = true;
+                if (addPerFaceNormals || addCreaseNormals)
+                     performCreateNormals = true;
             }
 
             #endregion
@@ -647,65 +598,20 @@ namespace Aardvark.Data.Vrml97
              * node are applied to the vertices of the IndexedFaceSet
              * as follows:
              */
-            if ((texCoord != null) && (ignoreTextures == false))
+            if (texCoord != null)
             {
-                Func<V2f, V2f> texTrafo = v => v;
-
-                if (ifs.Contains(Vrml97Property.textureTransform))
-                {
-                    Trafo2d trafo = ifs.Get<Trafo2d>(Vrml97Property.textureTransform,
-                                                     Trafo2d.Identity);
-                    if (preMultiplyTransform)
-                    {
-                        texTrafo = v => (V2f)Mat.TransformPos(trafo.Forward, (V2d)v);
-                    }
-                    else
-                    {
-                        m.InstanceAttributes[PolyMesh.Property.DiffuseColorTrafo2d] = trafo;
-                    }
-                }
-
-                if (!texCoord.Contains(Vrml97Property.point))
+                if (!texCoord.Contains(Vrml97Sym.point))
                     throw new Exception(
                         "Vrml97 spec violation!" +
                         "TextureCoordinate node: field 'point' MUST NOT be null."
                         );
 
                 // texCoord array (from texCoord node)
-                var texCoordList = texCoord.Get<List<V2f>>(Vrml97Property.point);
-
+                var texCoordList = texCoord.Get<List<V2f>>(Vrml97Sym.point);
                 int texCoordCount = texCoordList.Count;
-                // remap is only required if asked for. will be set to false if encountered triangles are incompatible.
-                bool remapTCs = fixTextureWrapping;
 
-                // clamp texture coordinates if we know repeatU/V is false
-                bool clampU = false;
-                bool clampV = false;
-                if (texture != null)
-                {
-                    if (!texture.Get<bool>(Vrml97Property.repeatU, true))
-                        clampU = true;
-                    if (!texture.Get<bool>(Vrml97Property.repeatV, true))
-                        clampV = true;
-                }
-                for (int i = 0; i < texCoordList.Count; i++)
-                {
-                    var tc = texCoordList[i];
-                    // clip precision
-                    tc.X = (float)(Fun.Floor(tc.X * (double)10000) / 10000);
-                    // clip precision
-                    tc.Y = (float)(Fun.Floor(tc.Y * (double)10000) / 10000);
-                    if (clampU) tc.X = Fun.Clamp(tc.X, 0.0f, 1.0f);
-                    if (clampV) tc.Y = Fun.Clamp(tc.Y, 0.0f, 1.0f);
-                    texCoordList[i] = tc;
-                }
-
-                var tcBounds = new Box2f(texCoordList);
-                var tcMin = tcBounds.Min;
-                var tcMax = tcBounds.Max;
-                tcMin = new V2f(Fun.Floor(tcMin.X), Fun.Floor(tcMin.Y));
-                if (!Box2f.Unit.Contains(tcMax - tcMin))
-                    remapTCs = false;
+                // map texture coordinates to Aardvark texture coordinate system (flip Y)
+                var texCoordArray = texCoordList.MapToArray(crd => new V2f(crd.X, 1 - crd.Y)).ToArray();
 
                 // if texCoordIndex is empty, then the coordIndex array is used to choose texture coordinates.
                 if (texCoordIndex == null)
@@ -746,8 +652,6 @@ namespace Aardvark.Data.Vrml97
                                     for (int xbi = xi - 1, i = 0; i < fvc; i++)
                                         texCoordIndexArray[vii++] = texCoordIndex[xbi - i];
                                 }
-                                remapTCs = remapTCs
-                                        && TexCoordsRemappable(texCoordList, texCoordIndex, xi - fvc, fvc);
                             }
                             ++vrmlFaceIndex;
                             fvc = 0;
@@ -756,7 +660,6 @@ namespace Aardvark.Data.Vrml97
                             ++fvc;
                     }
                     m.FaceVertexAttributes[PolyMesh.Property.DiffuseColorCoordinates] = texCoordIndexArray;
-
 
                     /*
                         * and shall contain end-of-face markers (-1) in exactly
@@ -810,34 +713,10 @@ namespace Aardvark.Data.Vrml97
                         }
                     }
 
-                    /* ..., then it is used to choose texture coordinates for
-                        * each vertex of the IndexedFaceSet in exactly the same
-                        * manner that the coordIndex field is used to choose
-                        * coordinates for each vertex from the Coordinate node.
-                        */
-                    forceNoTextureWrapping = remapTCs;
-
-                    Func<V2f, V2f> texFun;
-                    if (remapTCs)
-                        texFun = (V2f t) => texTrafo(new V2f(t.X - tcMin.X, 1.0f - t.Y - tcMin.Y));
-                    else
-                        texFun = (V2f t) => texTrafo(new V2f(t.X, 1.0f - t.Y));
-
-                    var texCoordArray = texCoordList.MapToArray(texCoordCount, texFun);
-
                     m.FaceVertexAttributes[-PolyMesh.Property.DiffuseColorCoordinates] = texCoordArray;
                 }
                 else
                 {
-                    forceNoTextureWrapping = remapTCs;
-
-                    Func<V2f, V2f> texFun;
-                    if (remapTCs)
-                        texFun = (V2f t) => texTrafo(new V2f(t.X - tcMin.X, 1.0f - t.Y - tcMin.Y));
-                    else
-                        texFun = (V2f t) => texTrafo(new V2f(t.X, 1.0f - t.Y));
-
-                    var texCoordArray = texCoordList.MapToArray(texCoordCount, texFun);
                     m.VertexAttributes[PolyMesh.Property.DiffuseColorCoordinates] = texCoordArray;
                 }
 
@@ -857,11 +736,9 @@ namespace Aardvark.Data.Vrml97
                  * the ratio of the second greatest dimension of the
                  * bounding box to the greatest dimension.
                  */
-                if (ifs.Contains("texture")) // texture annotation?
-                {
-                    // [future cleanup ISSUE 20080209 rft] unimplented VRML spec
-                    // throw new NotImplementedException();
-                }
+
+                // [TODO] unimplented VRML spec
+                // throw new NotImplementedException();
             }
 
             #endregion
@@ -872,101 +749,27 @@ namespace Aardvark.Data.Vrml97
             {
                 if ((options & Options.AddPerFaceNormals) != 0)
                 {
-                    // m.AddTriangleNormals<V3d>();
+                    m.AddPerFaceNormals();
                 }
 
                 if ((options & Options.AddCreaseNormals) != 0)
                 {
-                    // m.AddPerVertexIndexedNormals<V3d>(creaseAngle);
+                    m = m.WithPerVertexIndexedNormals(creaseAngle);
                 }
-            }
-
-            #endregion
-
-            #region Texture
-
-            // ------------------------------------ semantic texture creation
-            if ((texture != null) && (ignoreTextures == false))
-            {
-                string fileName = texture.Get<List<string>>(Vrml97Property.url)[0];
-
-                if (File.Exists(fileName))
-                {
-                    var repeatS = forceNoTextureWrapping ? TexRepeatMode.Clamped
-                        : texture.Get<bool>(Vrml97Property.repeatS) ? TexRepeatMode.Cyclic : TexRepeatMode.Clamped;
-                    var repeatT = forceNoTextureWrapping ? TexRepeatMode.Clamped
-                        : texture.Get<bool>(Vrml97Property.repeatT) ? TexRepeatMode.Cyclic : TexRepeatMode.Clamped;
-
-                    m.InstanceAttributes[PolyMesh.Property.DiffuseColorTexture]
-                            = new FileTexture2d(fileName, new TexInfo2d((repeatS, repeatT), true));
-                }
-                else
-                {
-                    Report.Warn("MeshFromVrml97: texture '{0}' not found", fileName);
-                }
-
-                #region check for normal map texture
-                string normalMapFileName = Path.Combine(Path.GetDirectoryName(fileName), Path.GetFileNameWithoutExtension(fileName) + "_n" + Path.GetExtension(fileName));
-                if (!File.Exists(normalMapFileName))
-                    normalMapFileName = Path.Combine(Path.GetDirectoryName(fileName), Path.GetFileNameWithoutExtension(fileName) + "_n.png");
-                if (File.Exists(normalMapFileName))
-                {
-                    Report.Line(5, "MeshFromVrml97: loading normal map texture '{0}'", normalMapFileName);
-
-                    var repeatS = forceNoTextureWrapping ? TexRepeatMode.Clamped
-                        : texture.Get<bool>(Vrml97Property.repeatS) ? TexRepeatMode.Cyclic : TexRepeatMode.Clamped;
-                    var repeatT = forceNoTextureWrapping ? TexRepeatMode.Clamped
-                        : texture.Get<bool>(Vrml97Property.repeatT) ? TexRepeatMode.Cyclic : TexRepeatMode.Clamped;
-
-                    m.InstanceAttributes[PolyMesh.Property.NormalMapTexture]
-                            = new FileTexture2d(fileName, new TexInfo2d((repeatS, repeatT), false));
-                    // TODO// copy texture coordinates for separate packing
-                    //m.AddAttributeSet(Mesh.Property.NormalMapCoordinates, m.GetAttributeSet(Mesh.Property.DiffuseColorCoordinates).Copy());
-
-                    //// normal map also requires tangent space vectors
-                    //IAttributeSet tan, bin;
-                    //Report.Line(5, "MeshFromVrml97: calculating tangent space for normal map ...");
-                    //if ((options & FromVrml97Options.FloatNormals) != 0)
-                    //    m.ComputePerVertexTangentsAndBiNormals<V3f>(m.DiffuseColorCoordinates, out tan, out bin);
-                    //else
-                    //    m.ComputePerVertexTangentsAndBiNormals<V3d>(m.DiffuseColorCoordinates, out tan, out bin);
-                }
-                #endregion
-
-                #region check for luminance map texture
-                string lightMapFileName = Path.Combine(Path.GetDirectoryName(fileName), Path.GetFileNameWithoutExtension(fileName) + "_i" + Path.GetExtension(fileName));
-                if (!File.Exists(lightMapFileName))
-                    lightMapFileName = Path.Combine(Path.GetDirectoryName(fileName), Path.GetFileNameWithoutExtension(fileName) + "_i.png");
-
-                if (File.Exists(lightMapFileName))
-                {
-                    Report.Line(5, "MeshFromVrml97: loading light map texture '{0}'", lightMapFileName);
-
-                    var repeatS = forceNoTextureWrapping ? TexRepeatMode.Clamped
-                        : texture.Get<bool>(Vrml97Property.repeatS) ? TexRepeatMode.Cyclic : TexRepeatMode.Clamped;
-                    var repeatT = forceNoTextureWrapping ? TexRepeatMode.Clamped
-                        : texture.Get<bool>(Vrml97Property.repeatT) ? TexRepeatMode.Cyclic : TexRepeatMode.Clamped;
-
-                    m.InstanceAttributes[PolyMesh.Property.LightMapTexture]
-                            = new FileTexture2d(lightMapFileName, new TexInfo2d((repeatS, repeatT), false));
-
-                    // TODO: Copy Attribute DiffuseColorCoordinates to LightMapCoordinates                    
-                }
-                #endregion
             }
 
             #endregion
 
             #region Instance Color from Material
 
-            var material = ifs.Get<SymMapBase>(Vrml97Property.material);
+            var material = ifs.Get<SymMapBase>(Vrml97Sym.material);
 
             if (material != null)
             {
                 if (!m.HasColors && (options & Options.NoVertexColorsFromMaterial) == 0)
                 {
-                    var opacity = 1 - material.Get<float>(Vrml97Property.transparency);
-                    var diffuse = material.Get<C3f>(Vrml97Property.diffuseColor);
+                    var opacity = 1 - material.Get<float>(Vrml97Sym.transparency);
+                    var diffuse = material.Get<C3f>(Vrml97Sym.diffuseColor);
                     m.InstanceAttributes[PolyMesh.Property.Colors]
                             = new C4f(diffuse.R, diffuse.G, diffuse.B, opacity);
                 }
@@ -976,35 +779,25 @@ namespace Aardvark.Data.Vrml97
 
             #region Instance Attributes
 
-            if (ifs.Contains(Vrml97Property.creaseAngle))
+            // store name, creaseAngle, windingOrder and solid attributes as PolyMesh instance attributes
+
+            if (ifs.Contains(Vrml97Sym.creaseAngle))
                 m.InstanceAttributes[PolyMesh.Property.CreaseAngle] = creaseAngle;
-                        
-            m.InstanceAttributes[PolyMesh.Property.WindingOrder] = !ifs.Contains(Vrml97Property.ccw) ? ccw ?
+
+            if (ifs.Contains(Vrml97Sym.solid))
+                m.InstanceAttributes[Vrml97Sym.solid] = solid;
+
+            m.InstanceAttributes[PolyMesh.Property.WindingOrder] = !ifs.Contains(Vrml97Sym.ccw) ? ccw ?
                         PolyMesh.WindingOrder.Undefined : PolyMesh.WindingOrder.CounterClockwise : PolyMesh.WindingOrder.Clockwise;
-            
+
             // add name for string definition of the vertex geometry
-            var DefName = ifs.Get<string>(Vrml97Property.DEFname);
+            var DefName = ifs.Get<string>(Vrml97Sym.DEFname);
             if (DefName != null)
                 m.InstanceAttributes[PolyMesh.Property.Name] = DefName;
-
-            // NOTE: copies material node as single attirbute
-            foreach (var name in Vrml97SingleAttributeNames)
-            {
-                if (ifs.Contains(name))
-                    m.InstanceAttributes[name] = ifs[name];
-            }
 
             #endregion
 
             return m;
-        }
-
-        static bool TexCoordsRemappable(List<V2f> tcl, List<int> il, int start, int count)
-        {
-            Box2f bb = Box2f.Invalid;
-            for (int i = start; i < start + count; i++) bb.ExtendBy(tcl[il[i]]);
-            bb = bb.Translated(new V2f(-Fun.Floor(bb.Min.X), -Fun.Floor(bb.Min.Y)));
-            return Box2f.Unit.Contains(bb.Max);
         }
     }
 }

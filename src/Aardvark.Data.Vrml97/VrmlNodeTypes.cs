@@ -212,7 +212,6 @@ namespace Aardvark.Data.Vrml97
         }
 
         #endregion
-    
     }
 
     public class VrmlBox : VrmlGeometry 
@@ -221,7 +220,7 @@ namespace Aardvark.Data.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            Size = map.Get<V3f>((Symbol)"size", new V3f(2, 2, 2));
+            Size = map.Get<V3f>(Vrml97Sym.size, new V3f(2, 2, 2));
                 
             base.Init(map);
         }
@@ -236,7 +235,6 @@ namespace Aardvark.Data.Vrml97
         }
 
         #endregion
-
     }
 
     public class VrmlSphere : VrmlGeometry
@@ -245,7 +243,7 @@ namespace Aardvark.Data.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            Radius = map.Get<float>((Symbol)"radius", 1.0f);
+            Radius = map.Get<float>(Vrml97Sym.radius, 1.0f);
 
             base.Init(map);
         }
@@ -260,7 +258,6 @@ namespace Aardvark.Data.Vrml97
         }
 
         #endregion
-
     }
 
     public class VrmlCone : VrmlGeometry
@@ -272,10 +269,10 @@ namespace Aardvark.Data.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            BottomRadius = map.Get<float>((Symbol)"bottomRadius", 1);
-            Height = map.Get<float>((Symbol)"height", 2);
-            Side = map.Get<bool>((Symbol)"side", true);
-            Bottom = map.Get<bool>((Symbol)"bottom", true);
+            BottomRadius = map.Get<float>(Vrml97Sym.bottomRadius, 1);
+            Height = map.Get<float>(Vrml97Sym.height, 2);
+            Side = map.Get<bool>(Vrml97Sym.side, true);
+            Bottom = map.Get<bool>(Vrml97Sym.bottom, true);
             base.Init(map);
         }
 
@@ -292,7 +289,6 @@ namespace Aardvark.Data.Vrml97
         }
 
         #endregion
-
     }
 
     public class VrmlCylinder : VrmlGeometry
@@ -305,11 +301,11 @@ namespace Aardvark.Data.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            Bottom = map.Get<bool>((Symbol)"bottom", true);
-            Height = map.Get<float>((Symbol)"height", 2);
-            Radius = map.Get<float>((Symbol)"radius", 1);
-            Side = map.Get<bool>((Symbol)"side", true);
-            Top = map.Get<bool>((Symbol)"top", true);
+            Bottom = map.Get<bool>(Vrml97Sym.bottom, true);
+            Height = map.Get<float>(Vrml97Sym.height, 2);
+            Radius = map.Get<float>(Vrml97Sym.radius, 1);
+            Side = map.Get<bool>(Vrml97Sym.side, true);
+            Top = map.Get<bool>(Vrml97Sym.top, true);
             base.Init(map);
         }
 
@@ -327,7 +323,6 @@ namespace Aardvark.Data.Vrml97
         }
 
         #endregion
-
     }
 
     public abstract class VrmlLight : VrmlNode
@@ -339,10 +334,10 @@ namespace Aardvark.Data.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            AmbientIntensity = map.Get<float>((Symbol)"ambientIntensity", 0.0f);
-            Color = map.Get<C3f>((Symbol)"color", C3f.White);
-            Intensity = map.Get<float>((Symbol)"intensity", 1);
-            IsOn = map.Get<bool>((Symbol)"on", true);
+            AmbientIntensity = map.Get<float>(Vrml97Sym.ambientIntensity, 0.0f);
+            Color = map.Get<C3f>(Vrml97Sym.color, C3f.White);
+            Intensity = map.Get<float>(Vrml97Sym.intensity, 1);
+            IsOn = map.Get<bool>(Vrml97Sym.on, true);
 
             base.Init(map);
         }
@@ -375,12 +370,12 @@ namespace Aardvark.Data.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            Attenuation = map.Get<V3f>((Symbol)"attenuation", V3f.IOO);
-            BeamWidth = map.Get<float>((Symbol)"beamWidth", (float)Constant.PiHalf);
-            CutOffAngle = map.Get<float>((Symbol)"cutOffAngle", (float)Constant.PiQuarter);
-            Direction = map.Get<V3f>((Symbol)"direction", -V3f.OOI);
-            Location = map.Get<V3f>((Symbol)"location", V3f.OOO);
-            Radius = map.Get<float>((Symbol)"radius", 1);
+            Attenuation = map.Get<V3f>(Vrml97Sym.attenuation, V3f.IOO);
+            BeamWidth = map.Get<float>(Vrml97Sym.beamWidth, (float)Constant.PiHalf);
+            CutOffAngle = map.Get<float>(Vrml97Sym.cutOffAngle, (float)Constant.PiQuarter);
+            Direction = map.Get<V3f>(Vrml97Sym.direction, -V3f.OOI);
+            Location = map.Get<V3f>(Vrml97Sym.location, V3f.OOO);
+            Radius = map.Get<float>(Vrml97Sym.radius, 1);
 
             base.Init(map);
         }
@@ -410,7 +405,7 @@ namespace Aardvark.Data.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            Direction = map.Get((Symbol)"direction", -V3f.OOI);
+            Direction = map.Get(Vrml97Sym.direction, -V3f.OOI);
 
             base.Init(map);
         }
@@ -437,9 +432,9 @@ namespace Aardvark.Data.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            Attenuation = map.Get((Symbol)"attenuation", V3f.IOO);
-            Location = map.Get((Symbol)"location", V3f.OOO);
-            Radius = map.Get((Symbol)"radius", 1f);
+            Attenuation = map.Get(Vrml97Sym.attenuation, V3f.IOO);
+            Location = map.Get(Vrml97Sym.location, V3f.OOO);
+            Radius = map.Get(Vrml97Sym.radius, 1f);
 
             base.Init(map);
         }
@@ -475,11 +470,11 @@ namespace Aardvark.Data.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            Center = map.Get<V3f>((Symbol)"center");
-            Rotation = map.Get<V4f>((Symbol)"rotation");
-            ScaleRotation = map.Get<V4f>((Symbol)"scaleOrientation");
-            Scale = map.Get<V3f>((Symbol)"scale");
-            Translation = map.Get<V3f>((Symbol)"translation");
+            Center = map.Get<V3f>(Vrml97Sym.center);
+            Rotation = map.Get<V4f>(Vrml97Sym.rotation);
+            ScaleRotation = map.Get<V4f>(Vrml97Sym.scaleOrientation);
+            Scale = map.Get<V3f>(Vrml97Sym.scale);
+            Translation = map.Get<V3f>(Vrml97Sym.translation);
 
             base.Init(map);
         }
@@ -509,7 +504,7 @@ namespace Aardvark.Data.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            SelectionIndex = map.Get<int>((Symbol)"whichChoice");
+            SelectionIndex = map.Get<int>(Vrml97Sym.whichChoice);
             base.Init(map);
         }
 
@@ -569,12 +564,12 @@ namespace Aardvark.Data.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            DiffuseColor = map.Get<C3f>((Symbol)"diffuseColor");
-            EmissiveColor = map.Get<C3f>((Symbol)"emissiveColor");
-            SpecularColor = map.Get<C3f>((Symbol)"specularColor");
-            AmbientIntensity = map.Get<float>((Symbol)"ambientIntensity");
-            Opacity = 1 - map.Get<float>((Symbol)"transparency");
-            Shininess = map.Get<float>((Symbol)"shininess");
+            DiffuseColor = map.Get<C3f>(Vrml97Sym.diffuseColor);
+            EmissiveColor = map.Get<C3f>(Vrml97Sym.emissiveColor);
+            SpecularColor = map.Get<C3f>(Vrml97Sym.specularColor);
+            AmbientIntensity = map.Get<float>(Vrml97Sym.ambientIntensity);
+            Opacity = 1 - map.Get<float>(Vrml97Sym.transparency);
+            Shininess = map.Get<float>(Vrml97Sym.shininess);
 
             base.Init(map);
         }
@@ -605,8 +600,8 @@ namespace Aardvark.Data.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            Key = map.Get<List<float>>((Symbol) "key");
-            KeyValue = map.Get<List<V3f>>((Symbol)"keyValue");
+            Key = map.Get<List<float>>(Vrml97Sym.key);
+            KeyValue = map.Get<List<V3f>>(Vrml97Sym.keyValue);
 
             base.Init(map);
         }
@@ -634,8 +629,8 @@ namespace Aardvark.Data.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            Key = map.Get<List<float>>((Symbol)"key");
-            KeyValue = map.Get<List<V4f>>((Symbol)"keyValue");
+            Key = map.Get<List<float>>(Vrml97Sym.key);
+            KeyValue = map.Get<List<V4f>>(Vrml97Sym.keyValue);
 
             base.Init(map);
         }
@@ -666,11 +661,11 @@ namespace Aardvark.Data.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            CycleInterval = map.Get<float>((Symbol)"cycleInterval");
-            Enabled = map.Get<bool>((Symbol)"enabled");
-            Loop = map.Get<bool>((Symbol)"loop");
-            StartTime = map.Get<float>((Symbol)"startTime");
-            StopTime = map.Get<float>((Symbol)"stopTime");
+            CycleInterval = map.Get<float>(Vrml97Sym.cycleInterval);
+            Enabled = map.Get<bool>(Vrml97Sym.enabled);
+            Loop = map.Get<bool>(Vrml97Sym.loop);
+            StartTime = map.Get<float>(Vrml97Sym.startTime);
+            StopTime = map.Get<float>(Vrml97Sym.stopTime);
 
             base.Init(map);
         }
@@ -707,8 +702,8 @@ namespace Aardvark.Data.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            var inputIdentifiers = map.Get<string>((Symbol)"in").Split('.');
-            var outputIdentifiers = map.Get<string>((Symbol)"out").Split('.');
+            var inputIdentifiers = map.Get<string>(Vrml97Sym.inSym).Split('.');
+            var outputIdentifiers = map.Get<string>(Vrml97Sym.outSym).Split('.');
 
             SourceNode = outputIdentifiers[0];
             SinkNode = inputIdentifiers[0];
@@ -732,6 +727,7 @@ namespace Aardvark.Data.Vrml97
         }
 
         #endregion
+
         private static string RemovePrefix(string identifier, string vrmlPropertyIdentifier)
         {
             return identifier.StartsWith(vrmlPropertyIdentifier) ?
@@ -757,7 +753,7 @@ namespace Aardvark.Data.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            var value = map.Get<object>((Symbol)"url");
+            var value = map.Get<object>(Vrml97Sym.url);
             if (value != null)
             {
                 IEnumerable<string> filenames;
@@ -769,15 +765,15 @@ namespace Aardvark.Data.Vrml97
                 else
                     throw new Exception("vrml texture node: invalid url type");
 
-                var path = map.Get<string>((Symbol)"path");
+                var path = map.Get<string>(Vrml97Sym.path);
                 if (!path.IsNullOrEmpty())
                     filenames = filenames.Select(fp => Path.Combine(path, fp));
                 
                 m_filenames = new List<string>(filenames);
             }
 
-            RepeatS = map.Get<bool>((Symbol)"repeatS");
-            RepeatT = map.Get<bool>((Symbol)"repeatT");
+            RepeatS = map.Get<bool>(Vrml97Sym.repeatS);
+            RepeatT = map.Get<bool>(Vrml97Sym.repeatT);
             
             base.Init(map);
         }
@@ -802,7 +798,7 @@ namespace Aardvark.Data.Vrml97
 
         internal override void Init(SymMapBase map)
         {
-            var x = map.Get<List<string>>((Symbol)"url");
+            var x = map.Get<List<string>>(Vrml97Sym.url);
             Url = x != null ? x.FirstOrDefault() : null;
 
             base.Init(map);

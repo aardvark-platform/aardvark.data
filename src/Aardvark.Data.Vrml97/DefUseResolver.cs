@@ -22,25 +22,24 @@ namespace Aardvark.Data.Vrml97
     internal class DefUseResolver
     {
         public static Vrml97Scene Resolve(Vrml97Scene vrmlParseTree,
-            out Dictionary<string, SymMapBase> namedNodes, bool duplicateMaps = true)
-            => new DefUseResolver().Perform(vrmlParseTree, out namedNodes, duplicateMaps);
+            out Dictionary<string, SymMapBase> namedNodes)
+            => new DefUseResolver().Perform(vrmlParseTree, out namedNodes);
 
         /// <summary>
         /// Takes a VRML97 parse tree (see also <seealso cref="Parser"/>)
         /// and resolves all DEF and USE nodes.
         /// </summary>
         /// <param name="root">Parse tree.</param>
-        /// <param name="duplicateMaps"></param>
         /// <param name="namedNodes"></param>
         /// <returns>Parse tree without DEF and USE nodes.</returns>
-        public Vrml97Scene Perform(Vrml97Scene root, out Dictionary<string, SymMapBase> namedNodes, bool duplicateMaps)
+        public Vrml97Scene Perform(Vrml97Scene root, out Dictionary<string, SymMapBase> namedNodes)
         {
             root.ParseTree["DefUseResolver.Performed"] = true; // leave hint
 
             m_defs = new Dictionary<string, SymMapBase>();
             SymMapBaseTraversal trav = new SymMapBaseTraversal();
 
-            trav.PerNameVisitors["USE"] = (map, visit) =>
+            trav.PerNameVisitors[Vrml97Sym.USE] = (map, visit) =>
             {
                 // Lookup USE name and return associated node.
                 var name = map.Get<string>(Vrml97Sym.name);
@@ -52,17 +51,17 @@ namespace Aardvark.Data.Vrml97
                     //throw new Exception("DefUseResolver: USE " + name + ": Unknown!");
                 }
 
-                return duplicateMaps ? new SymMapBase(node) : node;
+                return node;
             };
 
-            trav.PerNameVisitors["DEF"] = (map, visit) =>
+            trav.PerNameVisitors[Vrml97Sym.DEF] = (map, visit) =>
             {
                 // Register name/node pair.
                 string defName = map.Get<string>(Vrml97Sym.name);
                 SymMapBase node = map.Get<SymMapBase>(Vrml97Sym.node);
                 m_defs[defName] = node;
 
-                node["DEFname"] = defName;
+                node[Vrml97Sym.DEFname] = defName;
                 return node;
             };
 

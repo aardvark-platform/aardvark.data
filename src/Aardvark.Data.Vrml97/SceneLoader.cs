@@ -17,7 +17,7 @@ namespace Aardvark.Data.Vrml97
         public static VrmlScene Load(string filename)
         {
             Report.BeginTimed("parsing vrml");
-            var vrmlParseTree = Vrml97Scene.FromFile(filename, true, false, false);
+            var vrmlParseTree = Vrml97Scene.FromFile(filename);
             Report.End();
             Report.BeginTimed("creating scene graph");
             var scene = new SceneLoader().Perform(vrmlParseTree);
@@ -109,7 +109,7 @@ namespace Aardvark.Data.Vrml97
                     return returnFunc(map, visit);
                 };
 
-            trav.PerNameVisitors["Transform"] = (map, visit) =>
+            trav.PerNameVisitors[Vrml97NodeName.Transform] = (map, visit) =>
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
@@ -129,7 +129,7 @@ namespace Aardvark.Data.Vrml97
                 return returnFunc(map, visit);
             };
 
-            trav.PerNameVisitors["Group"] = trav.PerNameVisitors["Collision"] = (map, visit) =>
+            trav.PerNameVisitors[Vrml97NodeName.Group] = trav.PerNameVisitors[Vrml97NodeName.Collision] = (map, visit) =>
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
@@ -149,7 +149,7 @@ namespace Aardvark.Data.Vrml97
                 return returnFunc(map, visit);
             };
 
-            trav.PerNameVisitors["Switch"] = (map, visit) =>
+            trav.PerNameVisitors[Vrml97NodeName.Switch] = (map, visit) =>
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
@@ -167,7 +167,7 @@ namespace Aardvark.Data.Vrml97
                 return returnFunc(map, visit);
             };
 
-            trav.PerNameVisitors["Shape"] = (map, visit) =>
+            trav.PerNameVisitors[Vrml97NodeName.Shape] = (map, visit) =>
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
@@ -186,7 +186,7 @@ namespace Aardvark.Data.Vrml97
                 return returnFunc(map, visit);
             };
 
-            trav.PerNameVisitors["IndexedFaceSet"] = (map, visit) =>
+            trav.PerNameVisitors[Vrml97NodeName.IndexedFaceSet] = (map, visit) =>
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
@@ -201,7 +201,7 @@ namespace Aardvark.Data.Vrml97
                 return returnFunc(map, visit);
             };
 
-            trav.PerNameVisitors["Box"] = (map, visit) =>
+            trav.PerNameVisitors[Vrml97NodeName.Box] = (map, visit) =>
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
@@ -216,7 +216,7 @@ namespace Aardvark.Data.Vrml97
                 return returnFunc(map, visit);
             };
 
-            trav.PerNameVisitors["Sphere"] = (map, visit) =>
+            trav.PerNameVisitors[Vrml97NodeName.Sphere] = (map, visit) =>
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
@@ -231,7 +231,7 @@ namespace Aardvark.Data.Vrml97
                 return returnFunc(map, visit);
             };
 
-            trav.PerNameVisitors["Cone"] = (map, visit) =>
+            trav.PerNameVisitors[Vrml97NodeName.Cone] = (map, visit) =>
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
@@ -247,7 +247,7 @@ namespace Aardvark.Data.Vrml97
             };
 
 
-            trav.PerNameVisitors["Cylinder"] = (map, visit) =>
+            trav.PerNameVisitors[Vrml97NodeName.Cylinder] = (map, visit) =>
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
@@ -262,7 +262,7 @@ namespace Aardvark.Data.Vrml97
                 return returnFunc(map, visit);
             };
 
-            trav.PerNameVisitors["PointLight"] =  (map, visit) =>
+            trav.PerNameVisitors[Vrml97NodeName.PointLight] =  (map, visit) =>
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
@@ -273,7 +273,7 @@ namespace Aardvark.Data.Vrml97
                 return returnFunc(map, visit);
             };
 
-            trav.PerNameVisitors["SpotLight"] = (map, visit) =>
+            trav.PerNameVisitors[Vrml97NodeName.SpotLight] = (map, visit) =>
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
@@ -284,7 +284,7 @@ namespace Aardvark.Data.Vrml97
                 return returnFunc(map, visit);
             };
 
-            trav.PerNameVisitors["DirectionalLight"] = (map, visit) =>
+            trav.PerNameVisitors[Vrml97NodeName.DirectionalLight] = (map, visit) =>
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
