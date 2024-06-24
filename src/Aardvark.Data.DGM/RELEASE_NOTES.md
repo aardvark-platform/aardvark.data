@@ -1,2 +1,2 @@
 ### 5.2.7
-- Initial
+- Moved from Aardvark.Internal repository
