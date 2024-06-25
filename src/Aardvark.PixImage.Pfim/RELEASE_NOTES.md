@@ -1,3 +1,6 @@
+### 0.9.2
+- Updated Aardvark.Base packages
+
 ### 0.9.1
 - Loader implements IPixMipmapLoader interface
 - Updated to Pfim 0.11.2 (fixes BGR8 24bit issue)
