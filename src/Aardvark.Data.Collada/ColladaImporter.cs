@@ -64,27 +64,48 @@ namespace Aardvark.Data.Collada
                         data = fArray.Values;
                         break;
                     case 2:
-                        data = fArray.Values.UnsafeCoerce<V2d>();
+                        data = fArray.Values.AsCastSpan<double, V2d>().ToArray();
                         break;
                     case 3:
-                        var result = fArray.Values.UnsafeCoerce<V3d>();
+                        var result = fArray.Values.AsCastSpan<double, V3d>().ToArray();
                         data = result;
                         break;
                     case 4:
-                        data = fArray.Values.UnsafeCoerce<V4d>();
+                        data = fArray.Values.AsCastSpan<double, V4d>().ToArray();
                         break;
                     case 9:
-                        data = fArray.Values.UnsafeCoerce<M33d>();
+                        data = fArray.Values.AsCastSpan<double, M33d>().ToArray();
                         break;
                     case 16:
-                        data = fArray.Values.UnsafeCoerce<M44d>();
+                        data = fArray.Values.AsCastSpan<double, M44d>().ToArray();
                         break;
                     default:
                         throw new NotImplementedException();
                 }
-                if (sem == PolyMesh.Property.Positions) mesh.PositionArray = data.UnsafeCoerce<V3d>();
-                else mesh.VertexAttributes.Add(sem, data);
 
+                if (sem == PolyMesh.Property.Positions)
+                {
+                    V3d[] positions;
+                    switch (stride)
+                    {
+                        case 1:
+                            positions = ((double[])data).Map(x => new V3d(x, 0, 0));
+                            break;
+                        case 2:
+                            positions = ((V2d[])data).Map(v => new V3d(v.X, v.Y, 0));
+                            break;
+                        case 3:
+                            positions = (V3d[])data;
+                            break;
+                        default:
+                            throw new NotImplementedException();
+                    }
+                    mesh.PositionArray = positions;
+                }
+                else
+                {
+                    mesh.VertexAttributes.Add(sem, data);
+                }
             }
         }
 
