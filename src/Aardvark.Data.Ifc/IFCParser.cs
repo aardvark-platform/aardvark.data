@@ -162,7 +162,7 @@ namespace Aardvark.Data.Ifc
                     else
                         material = materialsByStyleId[styleId]; // otherwise use Default material
 
-                    if (material == null || material.Name == null || material.Texture == null)
+                    if (material == null || material.Name == null) // || material.Texture == null
                         Report.Line("No valid material!");
 
                     var instanceTrafo = shapeInstance.Transformation.ToTrafo3d();
@@ -171,7 +171,7 @@ namespace Aardvark.Data.Ifc
                     output.Add(guid, new IFCContent(ifcObject, polyMesh, instanceTrafo, material, representationType));
                 }
             }
-            return (output,materialsByName);
+            return (output, materialsByName);
         }
 
         public static HashSet<short> DefaultExclusions(IModel model)
@@ -213,8 +213,18 @@ namespace Aardvark.Data.Ifc
                 }
                 else if (matSel is IIfcMaterialLayer materialLayer)
                 {
-                    var thickness = Double.Parse(materialLayer.LayerThickness.Value.ToString());
-                    materials.Add(GetMaterial(materialLayer.Material));
+                    double thickness = materialLayer.LayerThickness;
+
+                    bool isVentilated = ((bool?)materialLayer.IsVentilated) ?? false;
+                    if (isVentilated)
+                    {
+                        var voidMaterial = new IFCMaterial(materialLayer.Name.ToString(), XbimTexture.Create(128, 128, 128, 128));
+                        materials.Add(voidMaterial);
+                    }
+                    else
+                    {
+                        materials.Add(GetMaterial(materialLayer.Material));
+                    }
                 }
                 else if (matSel is IIfcMaterialProfile profile)
                 {
@@ -275,15 +285,21 @@ namespace Aardvark.Data.Ifc
                 }
                 else Report.Warn("Unknown Associated Material Type!");
 
-            } catch (ArgumentException e)
+            }
+            catch (ArgumentException e)
             {
-                Report.Error("Associated Material Creation Failed! {0}", e.Message);
+                if (e is ArgumentException arg)
+                {
+                    materials.Add(new IFCMaterial(arg.ParamName, null)); // material name only - no visual description (Null)
+                }
+                else
+                    Report.Error("Associated Material Creation Failed! {0}", e.Message);
             }
         }
 
         public static IFCMaterial GetMaterial(IIfcMaterial mat)
         {
-            var matDefRep = mat.HasRepresentation.FirstOrDefault() ?? throw new ArgumentException("No repesentation");
+            var matDefRep = mat.HasRepresentation.FirstOrDefault() ?? throw new ArgumentException("No repesentation", mat.Name.ToString());
             var rep = matDefRep.Representations.First();
             var repItem = (IIfcStyledItem)rep.Items.First();
 
@@ -298,7 +314,7 @@ namespace Aardvark.Data.Ifc
                 surfStyle = presStyleAss.SurfaceStyles.FirstOrDefault();
             }
 
-            if (surfStyle == null) throw new ArgumentException("No surfStyle");
+            if (surfStyle == null) throw new ArgumentException("No surfStyle", mat.Name.ToString());
 
             var material = XbimTexture.Create(surfStyle);
 

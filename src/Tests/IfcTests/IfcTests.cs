@@ -48,5 +48,23 @@ namespace Aardvark.Data.Tests.Ifc
                 Assert.AreEqual(1, parsed.Materials.Count);
             });
         }
+
+        [Test]
+        public static void LoadWall()
+        {
+            LoadEmbeddedData(@"data\wall.ifc", (filePath) => {
+                var parsed = IFCParser.PreprocessIFC(filePath);
+                Assert.AreEqual(4, parsed.Materials.Count);
+            });
+        }
+
+        [Test]
+        public static void LoadSlab()
+        {
+            LoadEmbeddedData(@"data\slab.ifc", (filePath) => {
+                var parsed = IFCParser.PreprocessIFC(filePath);
+                Assert.AreEqual(2, parsed.Materials.Count);
+            });
+        }
     }
 }
