@@ -32,6 +32,7 @@ namespace Aardvark.Data.Ifc
             if (model.GeometryStore.IsEmpty)
             {
                 var context = new Xbim3DModelContext(model);
+                context.MaxThreads = 1;
                 //upgrade to new geometry representation, uses the default 3D model
                 context.CreateContext(null, true, false);    // THIS IS COSTLY!
             }

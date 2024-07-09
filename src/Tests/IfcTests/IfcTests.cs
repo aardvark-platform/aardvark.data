@@ -66,5 +66,19 @@ namespace Aardvark.Data.Tests.Ifc
                 Assert.AreEqual(2, parsed.Materials.Count);
             });
         }
+
+        [Test]
+        public static void MultiThreadKiller()
+        {
+            // NOTE: In IFCParser -> change MaxThreads!
+            //  var context = new Xbim3DModelContext(model);
+            //  context.MaxThreads = 1; <- SINGLE-Thread works!
+            //  context.CreateContext(null, true, false);
+
+            LoadEmbeddedData(@"data\simple_scene.ifc", (filePath) => {
+                var parsed = IFCParser.PreprocessIFC(filePath);
+                Assert.AreEqual(5, parsed.Materials.Count);
+            });
+        }
     }
 }
