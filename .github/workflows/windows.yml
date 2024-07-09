@@ -20,5 +20,7 @@ jobs:
       uses: actions/setup-dotnet@v3
       with:
         global-json-file: global.json
+    - name: Add Paket credentials
+      run: dotnet tool restore && dotnet paket config add-token https://nuget.pkg.github.com/aardvark-platform/index.json ${{ secrets.GITHUB_TOKEN }}       
     - name: Build
       run: .\build.cmd

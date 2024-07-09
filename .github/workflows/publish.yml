@@ -20,6 +20,8 @@ jobs:
           global-json-file: global.json
       - name: Restore Tools
         run: dotnet tool restore
+      - name: Add Paket credentials
+        run: dotnet paket config add-token https://nuget.pkg.github.com/aardvark-platform/index.json ${{ secrets.GITHUB_TOKEN }}           
       - name: Restore
         run: dotnet paket restore
       - name: Build

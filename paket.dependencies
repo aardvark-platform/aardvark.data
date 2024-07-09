@@ -1,6 +1,8 @@
 framework: auto-detect
 storage: none
 source https://api.nuget.org/v3/index.json
+source https://www.myget.org/F/xbim-develop/api/v3/index.json
+source https://nuget.pkg.github.com/aardvark-platform/index.json
 
 nuget Aardvark.Build                    ~> 1.0.22
 nuget FSharp.Core                       >= 5.0.1 lowest_matching: true
@@ -18,24 +20,24 @@ nuget Pfim                              ~> 0.11.2
 nuget System.Drawing.Common             >= 6.0.0 lowest_matching: true
 
 // XBim does not have proper version constraints so we declare and reference everything explicitly
-nuget Xbim.Ifc                                              ~> 5.1.341
-nuget Xbim.Ifc2x3                                           ~> 5.1.341
-nuget Xbim.Ifc4                                             ~> 5.1.341
-nuget Xbim.IO.Esent                                         ~> 5.1.341
-nuget Xbim.IO.MemoryModel                                   ~> 5.1.341
-nuget Xbim.Essentials                                       ~> 5.1.341
-nuget Xbim.Common                                           ~> 5.1.341
-nuget Xbim.Tessellator                                      ~> 5.1.341
-nuget Xbim.Geometry                                         ~> 5.1.437
-nuget Xbim.Geometry.Engine.Interop                          ~> 5.1.437
-nuget Xbim.ModelGeometry.Scene                              ~> 5.1.437
-nuget Microsoft.Extensions.Logging                          >= 3.1.3 lowest_matching: true             
-nuget Microsoft.Extensions.Logging.Abstractions             >= 3.1.3 lowest_matching: true
-nuget Microsoft.Extensions.Configuration.Abstractions       >= 3.1.3 lowest_matching: true
-nuget Microsoft.Extensions.Configuration.Binder             >= 3.1.3 lowest_matching: true
-nuget Microsoft.Extensions.DependencyInjection.Abstractions >= 3.1.3 lowest_matching: true
-nuget Microsoft.Extensions.Options                          >= 3.1.3 lowest_matching: true
-nuget Microsoft.Extensions.Primitives                       >= 3.1.3 lowest_matching: true 
+nuget Xbim.Ifc                                              ~> 6.0.0
+nuget Xbim.Ifc2x3                                           ~> 6.0.0
+nuget Xbim.Ifc4                                             ~> 6.0.0
+nuget Xbim.IO.Esent                                         ~> 6.0.0
+nuget Xbim.IO.MemoryModel                                   ~> 6.0.0
+nuget Xbim.Essentials                                       ~> 6.0.0
+nuget Xbim.Common                                           ~> 6.0.0
+nuget Xbim.Tessellator                                      ~> 6.0.0
+nuget Xbim.Geometry                                         ~> 6.0.0-dev
+nuget Xbim.Geometry.Engine.Interop                          ~> 6.0.0-dev
+nuget Xbim.ModelGeometry.Scene                              ~> 6.0.0-dev
+nuget Microsoft.Extensions.Logging                          >= 6.0.0 lowest_matching: true             
+nuget Microsoft.Extensions.Logging.Abstractions             >= 6.0.0 lowest_matching: true
+nuget Microsoft.Extensions.Configuration.Abstractions       >= 6.0.0 lowest_matching: true
+nuget Microsoft.Extensions.Configuration.Binder             >= 6.0.0 lowest_matching: true
+nuget Microsoft.Extensions.DependencyInjection.Abstractions >= 6.0.0 lowest_matching: true
+nuget Microsoft.Extensions.Options                          >= 6.0.0 lowest_matching: true
+nuget Microsoft.Extensions.Primitives                       >= 6.0.0 lowest_matching: true 
 
 group Test
     framework: auto-detect
