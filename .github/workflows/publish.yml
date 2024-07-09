@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - master
-      - ci-test
+      - ifc/xbim-dev-v6
     paths:
       - '**/RELEASE_NOTES.md'
       - .github/workflows/publish.yml

@@ -1,3 +1,10 @@
+### 1.1.0-prerelease0002
+- Enforce Single-Threading to avoid crashes
+- Enable Null-Texture for materials without representation
+
+### 1.1.0-prerelease0001
+- xBIM v6 dev packages
+
 ### 1.0.3
 - Updated Aardvark.Base packages
 
