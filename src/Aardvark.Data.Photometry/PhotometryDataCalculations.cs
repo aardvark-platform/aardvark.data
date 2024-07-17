@@ -70,9 +70,14 @@ namespace Aardvark.Data.Photometry
 
         /// <summary>
         /// Calculates the luminous flux from the measurement data.
+        /// 
+        /// NOTE/ISSUE: Only works of euqidistance measurement data !! -> throws NotImplementedException
         /// </summary>
         public double CalculateLumFlux()
         {
+            if (IsNonEquidistant(this.HorizontalAngles) || IsNonEquidistant(this.VerticalAngles))
+                throw new NotImplementedException();
+
             var lumFlux = 0.0;
 
             double segmentAreaFull = 0.0; // full sphere segment area till current angle when looping over data
@@ -108,7 +113,7 @@ namespace Aardvark.Data.Photometry
                 segmentAreaFull = segmentAreaPhi1;
 
                 // weight data points by circumference of measurement angle
-                var weight1 = a; // circumference is actually 2pi * r, but the constant factor can be omitted when calculating the weighed average
+                var weight1 = a; // circumference is actually 2pi * r, but the constant factor (2pi) can be omitted when calculating the weighed average
 
                 // if a weight is 0, this means we are the pole (0° or 180°) -> give half weight to pole sample
                 if (weight0 == 0) weight0 = weight1 * 0.5;

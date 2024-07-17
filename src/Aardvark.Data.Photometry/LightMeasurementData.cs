@@ -83,12 +83,14 @@ namespace Aardvark.Data.Photometry
         /// Symmetry across C0-C180 plane - [0, 180]
         /// Symmetry across C90-C270 plane - [270, 90] in LDT or [90, 270] in IES
         /// Symmetry across C0-C180 and C90-C270 planes - [0, 90]
+        /// NOTE: This is different to the angles in an LDT that always cover [0, 360)
         /// </summary>
         public double[] HorizontalAngles;
 
         /// <summary>
         /// Vertical angles of measurement in degree where 0 is pointing to the bottom and 180 to the top.
         /// Typical measurement angles ranges are [0, 180], [0, 90] and [90, 180].
+        /// NOTE: This is different to the angles in an LDT that always cover [0, 180]
         /// </summary>
         public double[] VerticalAngles;
 
@@ -305,7 +307,16 @@ namespace Aardvark.Data.Photometry
             var valuesPerPlane = data.SX;
             var planeCount = data.SY;
 
-            var angleRange = angles[angles.Length - 1] - angles[0];
+            // get angular range of measurement data
+            var first = angles[0];
+            var last = angles[angles.Length - 1];
+
+            // first might: 0, -90? or 270
+            // last might be 90, 180, 360
+            if (first > last)
+                last += 360;
+
+            var angleRange = last - first;
             var elementCount = (long)(angleRange / minStep) + 1;
 
             if (elementCount >= 4096)
