@@ -166,7 +166,7 @@ module DdsTests =
                     V2i(1, 1)
                 |]
 
-            pi.ImageCount |> should equal expectedSizes.Length
+            pi.LevelCount |> should equal expectedSizes.Length
 
             for i = 0 to expectedSizes.Length - 1 do
                 pi.ImageArray.[i].Size |> should equal expectedSizes.[i]

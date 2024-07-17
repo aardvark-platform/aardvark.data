@@ -359,7 +359,7 @@ namespace Aardvark.Data.Photometry
         /// The cubemap resolution will be approximately twice the sampling rate of the original data.
         /// The cubemap layout will be right-handed, z-up, with [XN YP XP YN ZP ZN]
         /// </summary>
-        public static PixCube GetCubeTexture(this IntensityProfileSampler sampler)
+        public static PixImageCube GetCubeTexture(this IntensityProfileSampler sampler)
         {
             var data = sampler.Data;
             var space = Fun.Min(data.MinVerticalMeasureDistance, data.MinHorizontalMeasureDistance);
@@ -379,7 +379,7 @@ namespace Aardvark.Data.Photometry
             // TODO: use monochrome CreateCubeMapSide function of next Aardvark.Base version
             var cubeFaces = new PixImage[6].SetByIndex(i => (PixImage)PixImage.CreateCubeMapSide<float, C4f>(i, cubeRes, 4, v => new C4f(sampler.GetIntensity(v))));
             var cubeFaces1Ch = cubeFaces.Map(p => (PixImage)new PixImage<float>(p.ToPixImage<float>().GetChannel(0L).AsVolume()));
-            return new PixCube(cubeFaces1Ch);
+            return new PixImageCube(cubeFaces1Ch);
         }
     }
 }

@@ -115,8 +115,8 @@ namespace Aardvark.Data
                 var bmp = BitmapSource.Create(
                     sx, sy,
                     (double)bitmap.VerticalResolution, (double)bitmap.HorizontalResolution, pixelFormat,
-                    null, bdata.Scan0, bitImage.Volume.Data.Length, bitImage.IntStride);
-                bmp.CopyPixels(bitImage.Array, bitImage.IntStride, 0);
+                    null, bdata.Scan0, bitImage.Volume.Data.Length, bitImage.Stride);
+                bmp.CopyPixels(bitImage.Array, bitImage.Stride, 0);
                 bitmap.UnlockBits(bdata);
                 PixImage.ExpandPixels(bitImage, pixImage.ToPixImage<byte>());
             }
@@ -130,7 +130,7 @@ namespace Aardvark.Data
                     (double)bitmap.VerticalResolution, (double)bitmap.HorizontalResolution,
                     pixelFormat,
                     null, bdata.Scan0, ch * sx * sy, ch * sx);
-                bmp.CopyPixels(pixImage.Array, pixImage.IntStride, 0);
+                bmp.CopyPixels(pixImage.Array, pixImage.Stride, 0);
                 bitmap.UnlockBits(bdata);
             }
 
@@ -212,7 +212,7 @@ namespace Aardvark.Data
             if (pixFormat.Format == Col.Format.BW)
             {
                 var bitImage = new PixImage<byte>(Col.Format.BW, 1 + (sx - 1) / 8, sy, channels);
-                fcBitmap.CopyPixels(bitImage.Array, bitImage.IntStride, 0);
+                fcBitmap.CopyPixels(bitImage.Array, bitImage.Stride, 0);
                 var pixImage = new PixImage<byte>(Col.Format.BW, sx, sy, 1);
                 PixImage.ExpandPixels(bitImage, pixImage);
                 return pixImage;
@@ -220,7 +220,7 @@ namespace Aardvark.Data
             else
             {
                 var pixImage = PixImage.Create(pixFormat, sx, sy, channels);
-                fcBitmap.CopyPixels(pixImage.Array, pixImage.IntStride, 0);
+                fcBitmap.CopyPixels(pixImage.Array, pixImage.Stride, 0);
                 return pixImage;
             }
         }
@@ -232,6 +232,10 @@ namespace Aardvark.Data
         private class PixLoader : IPixLoader
         {
             public string Name => "Windows Media";
+
+            public bool CanEncode => true;
+
+            public bool CanDecode => true;
 
             #region Load from File / Stream
 
@@ -349,7 +353,7 @@ namespace Aardvark.Data
 
                 return BitmapSource.Create(
                     (int)sx, (int)sy, dpi, dpi,
-                    storeFormats.Item1, null, bitData, bitImage.IntStride);
+                    storeFormats.Item1, null, bitData, bitImage.Stride);
             }
             else if (pi.Format != storeFormats.Item2)
             {
@@ -359,7 +363,7 @@ namespace Aardvark.Data
 
             return BitmapSource.Create(
                 (int)vol.SX, (int)vol.SY, 96, 96,
-                storeFormats.Item1, null, vol.Data, pi.IntStride);
+                storeFormats.Item1, null, vol.Data, pi.Stride);
         }
 
         #endregion

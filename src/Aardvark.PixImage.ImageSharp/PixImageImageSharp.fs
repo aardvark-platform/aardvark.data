@@ -304,6 +304,8 @@ type private ImageSharpPixLoader() =
 
     interface IPixLoader with
         member x.Name = x.Name
+        member x.CanEncode = true
+        member x.CanDecode = true
         member x.LoadFromFile(filename) = PixImageSharp.Create(filename)
         member x.LoadFromStream(stream) = PixImageSharp.Create(stream)
         member x.SaveToFile(filename, image, saveParams) = image.SaveImageSharp(filename, saveParams)
