@@ -220,6 +220,10 @@ and private PfimPixLoader() =
     interface IPixMipmapLoader with
         member x.Name = x.Name
 
+        member x.CanEncode = false
+
+        member x.CanDecode = true
+
         member x.LoadFromFile(filename) =
             PixImagePfim.Load(filename)
 

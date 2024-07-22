@@ -305,7 +305,8 @@ namespace Aardvark.Data.Photometry
             var valuesPerPlane = data.SX;
             var planeCount = data.SY;
 
-            var elementCount = (long)((AngleDifference(angles[angles.Length - 1], angles[0])) / minStep) + 1;
+            var angleRange = angles[angles.Length - 1] - angles[0];
+            var elementCount = (long)(angleRange / minStep) + 1;
 
             if (elementCount >= 4096)
             {

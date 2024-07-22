@@ -163,7 +163,7 @@ namespace Aardvark.Data
                 using (var bmp = new Bitmap(size.X, size.Y, pixelFormat))
                 {
                     var bdata = bmp.LockBits(new Rectangle(0, 0, size.X, size.Y), ImageLockMode.ReadOnly, pixelFormat);
-                    self.Data.CopyTo(bdata.Scan0);
+                    self.Array.CopyTo(bdata.Scan0);
                     bmp.UnlockBits(bdata);
 
                     int quality =

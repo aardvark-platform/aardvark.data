@@ -350,6 +350,8 @@ module PixLoaderTests =
         let brokenLoader =
             { new IPixLoader with
                 member x.Name = "Broken"
+                member x.CanEncode = true
+                member x.CanDecode = true
                 member x.GetInfoFromFile(filename) = null
                 member x.GetInfoFromStream(stream) = stream.ReadByte() |> ignore; null
                 member x.LoadFromFile(filename) = null

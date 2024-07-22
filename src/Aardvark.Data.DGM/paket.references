@@ -1,3 +1,4 @@
-Aardvark.Base
-Aardvark.Rendering
+Aardvark.Build
+Aardvark.Base.Tensors
+Aardvark.Rendering.Common
 FSharp.Core
