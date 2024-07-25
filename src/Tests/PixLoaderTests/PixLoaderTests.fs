@@ -27,7 +27,7 @@ module PixLoaderTests =
             if File.Exists filename then
                 File.Delete filename
 
-    module private PixImage =
+    module PixImage =
 
         let private desktopPath =
             Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop)

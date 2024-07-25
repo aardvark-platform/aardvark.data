@@ -2,8 +2,9 @@
 using System.IO;
 using System.Collections.Generic;
 using FreeImageAPI;
+using Aardvark.Base;
 
-namespace Aardvark.Base
+namespace Aardvark.Data
 {
     public static class PixImageFreeImage
     {
@@ -742,6 +743,10 @@ namespace Aardvark.Base
         private class PixLoader : IPixLoader
         {
             public string Name => "FreeImage";
+
+            public bool CanEncode => true;
+
+            public bool CanDecode => true;
 
             #region Load
 
