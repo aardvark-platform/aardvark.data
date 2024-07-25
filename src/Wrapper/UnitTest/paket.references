@@ -1,0 +1,6 @@
+﻿group Test
+
+Microsoft.NET.Test.Sdk
+Microsoft.TestPlatform.TestHost
+NUnit
+NUnit3TestAdapter

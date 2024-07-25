@@ -1,0 +1,14 @@
+﻿group Test
+
+Aardvark.PixImage.Devil
+BenchmarkDotNet
+FSharp.Core
+FsCheck
+FsCheck.NUnit
+Expecto
+Expecto.FsCheck
+FsUnit
+NUnit
+NUnit3TestAdapter
+Microsoft.NET.Test.Sdk
+YoloDev.Expecto.TestSdk
