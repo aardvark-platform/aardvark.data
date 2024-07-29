@@ -9,7 +9,7 @@ namespace Aardvark.Data.Photometry
     [TestFixture]
     public class PhotometryTest
     {
-        static readonly string PhotometryDataPath = @"C:\Users\luksch\Desktop\Photometry Test Files";
+        static readonly string PhotometryDataPath = @"\\euclid\Hilite\Data\IntensityProfileTestLights\Photometry UnitTest Files";
 
         [Test]
         public void GetCPlaneTest()
