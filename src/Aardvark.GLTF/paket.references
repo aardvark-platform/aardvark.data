@@ -1,6 +1,6 @@
 Aardvark.Build
-Aardvark.Base
+FSharp.Core
 Aardvark.Base.FSharp
-Aardvark.Rendering
-FSharp.Data.Adaptive
+Aardvark.Base.Tensors
+Aardvark.Rendering.Common
 glTF2Loader

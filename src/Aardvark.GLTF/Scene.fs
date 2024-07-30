@@ -3,9 +3,7 @@
 open System.Threading
 open Aardvark.Base
 open Aardvark.Rendering
-open FSharp.Data.Adaptive
 open System.Runtime.CompilerServices
-
 
 /// A unique Id used for Materials in the Scene
 [<Struct; StructuredFormatDisplay("{AsString}")>]
@@ -14,7 +12,7 @@ type MaterialId private (value : int) =
     static member New() = MaterialId(Interlocked.Increment(&currentId))
     override x.ToString() = string value
     member private x.AsString = x.ToString()
-   
+
 /// A unique Id used for Images in the Scene
 [<Struct; StructuredFormatDisplay("{AsString}")>]
 type ImageId private (value : int) =
@@ -30,8 +28,9 @@ type MeshId private (value : int) =
     static member New() = MeshId(Interlocked.Increment(&currentId))
     override x.ToString() = string value
     member private x.AsString = x.ToString()
-        
+
 /// A union-type for the different types of textures
+[<Struct; RequireQualifiedAccess>]
 type TextureSemantic =
     | BaseColor
     | Roughness
@@ -43,24 +42,24 @@ type TextureSemantic =
 type Material =
     {
         Name                            : option<string>
-                    
+
         DoubleSided                     : bool
-        Opaque                          : bool  
-                
+        Opaque                          : bool
+
         BaseColorTexture                : option<ImageId>
         BaseColor                       : C4f
-                
+
         Roughness                       : float
         RoughnessTexture                : option<ImageId>
         RoughnessTextureComponent       : int
-            
+
         Metallicness                    : float
         MetallicnessTexture             : option<ImageId>
         MetallicnessTextureComponent    : int
-        
+
         EmissiveColor                   : C4f
         EmissiveTexture                 : option<ImageId>
-                    
+
         NormalTexture                   : option<ImageId>
         NormalTextureScale              : float
     }
@@ -76,12 +75,12 @@ type Mesh =
         Positions       : V3f[]
         Normals         : option<V3f[]>
         Tangents        : option<V4f[]>
-        TexCoords       : list<V2f[] * HashSet<TextureSemantic>>
+        TexCoords       : list<V2f[] * Set<TextureSemantic>>
         Colors          : option<C4b[]>
     }
-    
+
     // custom-equality ensuring reference-equality for arrays
-    
+
     override x.Equals o =
         let inline opt a b =
             match a with
@@ -93,8 +92,8 @@ type Mesh =
                 match b with
                 | Some _ -> false
                 | None -> true
-                
-        let rec listEq (a : list<V2f[] * HashSet<TextureSemantic>>) (b : list<V2f[] * HashSet<TextureSemantic>>) =
+
+        let rec listEq (a : list<V2f[] * Set<TextureSemantic>>) (b : list<V2f[] * Set<TextureSemantic>>) =
             match a with
             | (a0, sa0) :: a ->
                 match b with
@@ -106,8 +105,8 @@ type Mesh =
                     false
             | [] ->
                 List.isEmpty b
-                
-                
+
+
         match o with
         | :? Mesh as o ->
             x.Name = o.Name &&
@@ -121,7 +120,7 @@ type Mesh =
             opt x.Colors o.Colors
         | _ ->
             false
-    
+
     override x.GetHashCode() =
         HashCode.Combine(
             hash x.Name,
@@ -133,11 +132,11 @@ type Mesh =
             (match x.Tangents with | Some a -> RuntimeHelpers.GetHashCode a | None -> 0),
             (x.TexCoords |> List.map (fun (arr, set) -> HashCode.Combine(RuntimeHelpers.GetHashCode arr, hash set)) |> List.fold (fun a b -> HashCode.Combine(a, b)) 0),
             (match x.Colors with | Some a -> RuntimeHelpers.GetHashCode a | None -> 0)
-            
+
         )
-    
+
     member private x.AsString = x.ToString()
-    
+
     override x.ToString() =
         sprintf "{ Name = %A; BoundingBox = %s; Mode = %A; Index = %A; Positions = %A; Normals = %A; Tangents = %A; TexCoords = %A; Colors = %A }"
             x.Name
@@ -149,13 +148,13 @@ type Mesh =
             (x.Tangents |> Option.map Array.length)
             (x.TexCoords |> List.map (fun (arr, sem) -> (arr.Length, sem)))
             (x.Colors |> Option.map Array.length)
- 
+
 type MeshInstance =
     {
         Mesh          : MeshId
         Material      : option<MaterialId>
     }
- 
+
 type Node =
     {
         Name            : option<string>
@@ -169,33 +168,33 @@ type ImageData =
         Name        : option<string>
         Data        : byte[]
         MimeType    : option<string>
-        Semantics   : HashSet<TextureSemantic>
+        Semantics   : Set<TextureSemantic>
     }
 
 type Scene =
     {
-        Materials   : HashMap<MaterialId, Material>
-        Meshes      : HashMap<MeshId, Mesh>
-        ImageData   : HashMap<ImageId, ImageData>
+        Materials   : Map<MaterialId, Material>
+        Meshes      : Map<MeshId, Mesh>
+        ImageData   : Map<ImageId, ImageData>
         RootNode    : Node
     }
     member x.BoundingBox =
         let rec traverse (n : Node) : Box3d =
             let mutable box = n.Children |> List.map traverse |> Box3d
             for mi in n.Meshes do
-                match HashMap.tryFind mi.Mesh x.Meshes with
+                match Map.tryFind mi.Mesh x.Meshes with
                 | Some m -> box.ExtendBy m.BoundingBox
                 | None -> ()
-            
+
             match n.Trafo with
             | Some t -> box.Transformed t
             | None -> box
 
         traverse x.RootNode
 
-    
+
 module Node =
-    
+
     let empty =
         {
             Name = None
@@ -211,13 +210,13 @@ module Node =
             Meshes = []
             Children = children
         }
-        
+
     let ofSeq (children : seq<Node>) =
         children |> Seq.toList |> ofList
-    
+
     let ofArray (children : Node[]) =
         children |> Array.toList |> ofList
-    
+
     let ofMeshes (meshes : list<MeshInstance>) =
         {
             Name = None
@@ -225,11 +224,10 @@ module Node =
             Meshes = meshes
             Children = []
         }
-    
+
     let trafo (t : Trafo3d) (n : Node) =
         match n.Trafo with
         | Some o ->
             { n with Trafo = Some (t * o) }
         | None ->
             { n with Trafo = Some t }
-    

@@ -1,0 +1,8 @@
+group Test
+
+FsUnit
+FsCheck
+FsCheck.NUnit
+Microsoft.NET.Test.Sdk
+NUnit
+NUnit3TestAdapter
