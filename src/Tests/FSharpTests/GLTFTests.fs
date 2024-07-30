@@ -1,8 +1,9 @@
-module Aardvark.GLTF.Tests
+module Aardvark.Data.Tests.GLTF
 
 open NUnit.Framework
 open Aardvark.Base
 open Aardvark.Rendering
+open Aardvark.Data.GLTF
 open System.IO
 open System.IO.Compression
 

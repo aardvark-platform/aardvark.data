@@ -1,4 +1,4 @@
-﻿namespace Aardvark.GLTF
+﻿namespace Aardvark.Data.GLTF
 
 open System.Threading
 open Aardvark.Base

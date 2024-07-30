@@ -9,11 +9,11 @@
     <EmbeddedResource Include="data\Avocado.zip" />
     <EmbeddedResource Include="data\Avocado.glb" />
     <EmbeddedResource Include="data\2CylinderEngine.gltf" />
-    <Compile Include="Tests.fs" />
+    <Compile Include="GLTFTests.fs" />
     <Content Include="paket.references" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Aardvark.GLTF\Aardvark.GLTF.fsproj" />
+    <ProjectReference Include="..\..\Aardvark.Data.GLTF\Aardvark.Data.GLTF.fsproj" />
   </ItemGroup>
   <Import Project="..\..\..\.paket\Paket.Restore.targets" />
 </Project>

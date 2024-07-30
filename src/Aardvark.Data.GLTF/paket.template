@@ -1,5 +1,5 @@
 type project
-id Aardvark.GLTF
+id Aardvark.Data.GLTF
 authors Aardvark Platform Team
 owners Aardvark Platform Team
 projectUrl http://github.com/aardvark-platform

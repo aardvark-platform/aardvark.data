@@ -1,4 +1,4 @@
-namespace Aardvark.GLTF
+namespace Aardvark.Data.GLTF
 
 open System
 open glTFLoader
@@ -6,7 +6,7 @@ open glTFLoader.Schema
 open Aardvark.Base
 open Aardvark.Rendering
 open Microsoft.FSharp.NativeInterop
-open Aardvark.GLTF
+open Aardvark.Data.GLTF
 open System.Text.RegularExpressions
 
 #nowarn "9"

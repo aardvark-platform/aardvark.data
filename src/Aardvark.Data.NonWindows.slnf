@@ -4,6 +4,7 @@
     "projects": [
       "Aardvark.Data.Collada\\Aardvark.Data.Collada.csproj",
       "Aardvark.Data.DGM\\Aardvark.Data.DGM.fsproj",
+      "Aardvark.Data.GLTF\\Aardvark.Data.GLTF.fsproj",
       "Aardvark.Data.Photometry\\Aardvark.Data.Photometry.csproj",
       "Aardvark.Data.Vrml97\\Aardvark.Data.Vrml97.csproj",
       "Aardvark.Data.Wavefront\\Aardvark.Data.Wavefront.csproj",
@@ -14,6 +15,7 @@
       "Aardvark.PixImage.SystemDrawing\\Aardvark.PixImage.SystemDrawing.csproj",
       "FreeImage.Standard\\FreeImage.Standard.csproj",
       "Tests\\CSharpTests\\CSharpTests.csproj",
+      "Tests\\FSharpTests\\FSharpTests.fsproj",
       "Tests\\FreeImageTests\\Benchmarking\\Benchmarking.csproj",
       "Tests\\FreeImageTests\\UnitTest\\UnitTest.csproj"
     ]
