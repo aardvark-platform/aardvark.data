@@ -1,3 +1,6 @@
+### 0.9.3
+- Updated to NET 8 and Aardvark.Base 5.3
+
 ### 0.9.2
 - Updated Aardvark.Base packages
 

@@ -37,12 +37,12 @@ namespace Aardvark.Data.Photometry
             // 6-10
             ldt.ValuesPerPlane = ReadIntLine(sr);
             ldt.VertAngleStep = ReadDoubleLine(sr);
-            var measurementReportNumber = sr.ReadLine();
+            ldt.MeasurementReportNumber = sr.ReadLine();
             ldt.LuminaireName = sr.ReadLine();
             ldt.LuminaireNumber = sr.ReadLine();
             // 11-15
             ldt.FileName = sr.ReadLine();
-            var dateUser = sr.ReadLine();
+            ldt.DateUser = sr.ReadLine();
             ldt.LengthLuminaire = ReadIntLine(sr);
             ldt.WidthLuminaire = ReadIntLine(sr);
             ldt.HeightLuminare = ReadIntLine(sr);

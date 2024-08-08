@@ -1,0 +1,6 @@
+Aardvark.Build
+FSharp.Core
+Aardvark.Base.FSharp
+Aardvark.Base.Tensors
+Aardvark.Rendering.Common
+glTF2Loader

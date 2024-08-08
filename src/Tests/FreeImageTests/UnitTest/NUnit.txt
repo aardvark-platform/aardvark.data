@@ -1,0 +1,5 @@
+The tests can be run by invoking "dotnet test" from the UnitTest project folder
+
+Alternatively, the test explorer can be used in Visual Studio
+
+If either of these don't work, please open an issue!

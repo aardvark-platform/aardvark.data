@@ -70,9 +70,14 @@ namespace Aardvark.Data.Photometry
 
         /// <summary>
         /// Calculates the luminous flux from the measurement data.
+        /// 
+        /// NOTE/ISSUE: Only works of euqidistance measurement data !! -> throws NotImplementedException
         /// </summary>
         public double CalculateLumFlux()
         {
+            if (IsNonEquidistant(this.HorizontalAngles) || IsNonEquidistant(this.VerticalAngles))
+                throw new NotImplementedException();
+
             var lumFlux = 0.0;
 
             double segmentAreaFull = 0.0; // full sphere segment area till current angle when looping over data
@@ -108,7 +113,7 @@ namespace Aardvark.Data.Photometry
                 segmentAreaFull = segmentAreaPhi1;
 
                 // weight data points by circumference of measurement angle
-                var weight1 = a; // circumference is actually 2pi * r, but the constant factor can be omitted when calculating the weighed average
+                var weight1 = a; // circumference is actually 2pi * r, but the constant factor (2pi) can be omitted when calculating the weighed average
 
                 // if a weight is 0, this means we are the pole (0° or 180°) -> give half weight to pole sample
                 if (weight0 == 0) weight0 = weight1 * 0.5;
@@ -359,7 +364,7 @@ namespace Aardvark.Data.Photometry
         /// The cubemap resolution will be approximately twice the sampling rate of the original data.
         /// The cubemap layout will be right-handed, z-up, with [XN YP XP YN ZP ZN]
         /// </summary>
-        public static PixImageCube GetCubeTexture(this IntensityProfileSampler sampler)
+        public static PixCube GetCubeTexture(this IntensityProfileSampler sampler)
         {
             var data = sampler.Data;
             var space = Fun.Min(data.MinVerticalMeasureDistance, data.MinHorizontalMeasureDistance);
@@ -379,7 +384,7 @@ namespace Aardvark.Data.Photometry
             // TODO: use monochrome CreateCubeMapSide function of next Aardvark.Base version
             var cubeFaces = new PixImage[6].SetByIndex(i => (PixImage)PixImage.CreateCubeMapSide<float, C4f>(i, cubeRes, 4, v => new C4f(sampler.GetIntensity(v))));
             var cubeFaces1Ch = cubeFaces.Map(p => (PixImage)new PixImage<float>(p.ToPixImage<float>().GetChannel(0L).AsVolume()));
-            return new PixImageCube(cubeFaces1Ch);
+            return new PixCube(cubeFaces1Ch);
         }
     }
 }

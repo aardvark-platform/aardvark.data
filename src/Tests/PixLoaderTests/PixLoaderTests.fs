@@ -27,7 +27,7 @@ module PixLoaderTests =
             if File.Exists filename then
                 File.Delete filename
 
-    module private PixImage =
+    module PixImage =
 
         let private desktopPath =
             Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop)
@@ -127,6 +127,7 @@ module PixLoaderTests =
             |> Gen.filter (fun loader ->
                 not (loader.Name = "DevIL" && format = PixFileFormat.Gif) &&               // DevIL does not support saving GIFs
                 not (loader.Name = "DevIL" && format = PixFileFormat.Tiff && useStream) && // DevIL does not support saving TIFFs to streams
+                not (loader.Name = "FreeImage" && format = PixFileFormat.Gif) &&           // FreeImage does not support saving GIFs
                 not (loader.Name = "Pfim")                                                 // Pfim does not support saving
             )
 
@@ -135,6 +136,7 @@ module PixLoaderTests =
             gen
             |> filterLoader format
             |> Gen.filter (fun loader ->
+                not (loader.Name = "FreeImage" && format = PixFileFormat.Gif) &&
                 not (loader.Name = "Pfim" && format <> PixFileFormat.Dds && format <> PixFileFormat.Targa)  // Pfim only supports DDS and TGA
             )
 
@@ -165,10 +167,16 @@ module PixLoaderTests =
             |> Gen.map (fun (cf, iff, _) -> cf, iff)
 
 
-    type JPEGSaveLoadInput =
+    type SaveLoadInputJpeg =
         {
             Image       : PixImage<byte>
-            Loader      : IPixLoader
+            JpegLoader  : IPixLoader
+        }
+
+    type SaveLoadInputPng =
+        {
+            Image       : PixImage<byte>
+            PngLoader   : IPixLoader
         }
 
     type SaveLoadInput =
@@ -189,7 +197,7 @@ module PixLoaderTests =
             }
             |> Arb.fromGen
 
-        static member JPEGSaveLoadInput =
+        static member SaveLoadInputJpeg =
             gen {
                 let! format = Gen.colorFormat
                 let! pix = Gen.checkerboardPix format
@@ -197,7 +205,23 @@ module PixLoaderTests =
 
                 return {
                     Image = pix
-                    Loader = loader
+                    JpegLoader = loader
+                }
+            }
+            |> Arb.fromGen
+
+        static member SaveLoadInputPng =
+            gen {
+                let! format = Gen.colorFormat
+                let! pix = Gen.checkerboardPix format
+                let! loader =
+                    Gen.pixLoader false PixFileFormat.Png
+                    |> Gen.filter (fun l -> l.Name <> PixImageDevil.Loader.Name)        // DevIL does not support compression levels
+                    |> Gen.filter (fun l -> l.Name <> PixImageWindowsMedia.Loader.Name) // Windows Media does not support compression levels
+
+                return {
+                    Image = pix
+                    PngLoader = loader
                 }
             }
             |> Arb.fromGen
@@ -274,9 +298,9 @@ module PixLoaderTests =
 
 
     [<Property(Arbitrary = [| typeof<Generator> |])>]
-    let ``[PixLoader] JPEG quality`` (input : JPEGSaveLoadInput) =
+    let ``[PixLoader] JPEG quality`` (input : SaveLoadInputJpeg) =
         let pi = input.Image
-        let loader = input.Loader
+        let loader = input.JpegLoader
         printfn "loader = %s, size = %A, format = %A" loader.Name pi.Size pi.Format
 
         tempFile (fun file50 ->
@@ -300,17 +324,19 @@ module PixLoaderTests =
 
 
     [<Property(Arbitrary = [| typeof<Generator> |])>]
-    let ``[PixLoader] PNG compression level`` (pi : PixImage<byte>) =
-        printfn "size = %A, format = %A" pi.Size pi.Format
+    let ``[PixLoader] PNG compression level`` (input : SaveLoadInputPng) =
+        let pi = input.Image
+        let loader = input.PngLoader
+        printfn "loader = %s, size = %A, format = %A" loader.Name pi.Size pi.Format
 
         tempFile (fun file0 ->
             tempFile (fun file9 ->
-                pi.SaveAsPng(file0, 0, false, PixImageSharp.Loader)
-                pi.SaveAsPng(file9, 6, false, PixImageSharp.Loader)
+                pi.SaveAsPng(file0, 0, false, loader)
+                pi.SaveAsPng(file9, 6, false, loader)
 
                 // check equal
-                let pi0 = PixImage<uint8>(file0, PixImageSharp.Loader)
-                let pi9 = PixImage<uint8>(file9, PixImageSharp.Loader)
+                let pi0 = PixImage<uint8>(file0, loader)
+                let pi9 = PixImage<uint8>(file9, loader)
 
                 PixImage.compare pi0 pi9
 

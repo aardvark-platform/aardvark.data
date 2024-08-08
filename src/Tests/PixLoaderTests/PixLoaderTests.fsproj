@@ -51,10 +51,13 @@
     <Compile Include="Pfim\Dds.fs" />
     <Compile Include="Pfim\Tga.fs" />
     <Compile Include="PixLoaderTests.fs" />
+    <Compile Include="Benchmark.fs" />
+    <Compile Include="TiffTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Aardvark.PixImage.DevIL\Aardvark.PixImage.DevIL.csproj" />
+    <ProjectReference Include="..\..\Aardvark.PixImage.FreeImage\Aardvark.PixImage.FreeImage.csproj" />
     <ProjectReference Include="..\..\Aardvark.PixImage.ImageSharp\Aardvark.PixImage.ImageSharp.fsproj" />
     <ProjectReference Include="..\..\Aardvark.PixImage.Pfim\Aardvark.PixImage.Pfim.fsproj" />
     <ProjectReference Include="..\..\Aardvark.PixImage.WindowsMedia\Aardvark.PixImage.WindowsMedia.csproj" />

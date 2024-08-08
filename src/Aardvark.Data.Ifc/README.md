@@ -1,5 +1,9 @@
 # Aardvark.Data.Ifc
+[![NuGet](https://badgen.net/nuget/v/Aardvark.Data.Ifc)](https://www.nuget.org/packages/Aardvark.Data.Ifc/)
+[![NuGet](https://badgen.net/nuget/dt/Aardvark.Data.Ifc)](https://www.nuget.org/packages/Aardvark.Data.Ifc/)
+
 Simple IFC loader for the Aardvark Platform.
+
 ## Installing Xbim 6.X packages
 Currently, there are no official packages for Xbim 6.X. You will have to add the Xbim development and aardvark-platform feeds to your `paket.dependencies` file:
 ```
