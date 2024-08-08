@@ -33,9 +33,9 @@ nuget Xbim.IO.MemoryModel                                   ~> 6.0.0
 nuget Xbim.Essentials                                       ~> 6.0.0
 nuget Xbim.Common                                           ~> 6.0.0
 nuget Xbim.Tessellator                                      ~> 6.0.0
-nuget Xbim.Geometry                                         ~> 6.0.0-dev
-nuget Xbim.Geometry.Engine.Interop                          ~> 6.0.0-dev
-nuget Xbim.ModelGeometry.Scene                              ~> 6.0.0-dev
+nuget Xbim.Geometry                                         ~> 6.0.1-dev
+nuget Xbim.Geometry.Engine.Interop                          ~> 6.0.1-dev
+nuget Xbim.ModelGeometry.Scene                              ~> 6.0.1-dev
 
 group Test
     framework: auto-detect
