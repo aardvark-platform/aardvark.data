@@ -1,3 +1,7 @@
+### 1.1.0-prerelease0004
+- Updated to Aardvark.Base 5.3.0
+- Updated xBim packages
+
 ### 1.1.0-prerelease0003
 - Updated to NET 8 and Aardvark.Base 5.3 (prerelease)
 
