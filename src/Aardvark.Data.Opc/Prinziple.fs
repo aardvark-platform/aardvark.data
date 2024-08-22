@@ -78,6 +78,7 @@ module Prinziple =
             if not <| Directory.Exists dir then
                 Directory.CreateDirectory dir |> ignore
 
+            if File.Exists path then File.Delete path // When writing to the ZIP, files get replaced instead of overwritten
             let f = File.OpenWrite path
 
             new StreamWithDispose(f, fun _ ->
@@ -190,14 +191,15 @@ module Prinziple =
     let private allowedExtensions =
         [| ".opc"; ".zip" |]
 
-    /// Tries register a path as a ZIP archive by looking for corresponding files with an *.opc or *.zip extension.
+    /// Tries to register a path as a ZIP archive by looking for corresponding files with an *.opc or *.zip extension.
     /// Upon successful registration the content of the archive is available via the other functions of this module.
-    /// Returns the input path.
-    let register (path: string) =
+    /// Returns true if an archive has been registered successfully, false otherwise.
+    let tryRegister (path: string) : bool =
         let path = Path.GetFullPath(path)
 
         lock zipTable (fun _ ->
-            if not <| zipTable.ContainsKey path then
+            if zipTable.ContainsKey path then true
+            else
                 allowedExtensions |> Array.exists (fun ext ->
                     let zipPath = Path.ChangeExtension(path, ext)
 
@@ -215,10 +217,27 @@ module Prinziple =
                             false
                     else
                         false
-                ) |> ignore
+                )
         )
 
+    /// Registers a path as a ZIP archive by looking for corresponding files with an *.opc or *.zip extension.
+    /// Upon successful registration the content of the archive is available via the other functions of this module.
+    /// Returns the input path.
+    let register (path: string) =
+        tryRegister path |> ignore
         path
+
+    /// Returns a list of all registered paths
+    let getRegistered() : string list =
+        lock zipTable (fun _ ->
+            zipTable.Keys |> List.ofSeq
+        )
+
+    /// Returns if the given path is registered.
+    let isRegistered (path: string) =
+        lock zipTable (fun _ ->
+            zipTable.ContainsKey <| Path.GetFullPath(path)
+        )
 
     /// Opens a stream for reading from the given file.
     let openRead (path: string) : Stream =
@@ -290,10 +309,41 @@ module Prinziple =
         use s = openRead path
         Stream.readAllBytes s
 
+    /// Reads the content of the given file as a string.
+    let readAllText (path: string) : string =
+        use s = openRead path
+        use r = new StreamReader(s, detectEncodingFromByteOrderMarks = true)
+        r.ReadToEnd();
+
+    /// Reads the lines of the given file as a string array.
+    let readAllLines (path: string) : string[] =
+        use s = openRead path
+        use r = new StreamReader(s, detectEncodingFromByteOrderMarks = true)
+
+        let result = ResizeArray<string>()
+
+        let mutable line = r.ReadLine()
+        while line <> null do
+            result.Add line
+            line <- r.ReadLine()
+
+        result.ToArray()
+
     /// Writes data to the given file.
     let writeAllBytes (path: string) (data: byte[]) =
         use f = openWrite path
         f.Write(data, 0, data.Length)
+
+    /// Writes a string to the given file.
+    let writeAllText (path: string) (content: string) =
+        let data = Text.Encoding.UTF8.GetBytes content
+        writeAllBytes path data
+
+    /// Writes a string array to the given file.
+    let writeAllLines (path: string) (lines: string[]) =
+        use f = openWrite path
+        use w = new StreamWriter(f)
+        for l in lines do w.WriteLine l
 
     /// Reads the XML document in the given path.
     let readXmlDoc (path: string) =
@@ -302,8 +352,45 @@ module Prinziple =
         doc.Load s
         doc
 
+    /// Adds all modified and new of the given path to the corresponding archive.
+    /// Note: This call must be externally synchronized with other Prinziple function calls.
+    let commit (compress: bool) (path: string) =
+        let path = Path.GetFullPath path
+
+        lock zipTable (fun _ ->
+            match zipTable.TryFindV path with
+            | ValueSome zip -> zip.Commit(compress)
+            | _ -> ()
+        )
+
     /// Adds all modified and new files to their corresponding archives.
     /// Note: This call must be externally synchronized with other Prinziple function calls.
-    let commit (compress: bool) =
-        for KeyValue(_, zip) in zipTable do
-            zip.Commit(compress)
+    let commitAll (compress: bool) =
+        lock zipTable (fun _ ->
+            for KeyValue(_, zip) in zipTable do
+                zip.Commit(compress)
+        )
+
+    /// Closes and unregisters the ZIP archive corresponding to the given path if it exists.
+    /// Note: This call must be externally synchronized with other Prinziple function calls.
+    let close (path: string) =
+        let path = Path.GetFullPath(path)
+
+        lock zipTable (fun _ ->
+            match zipTable.TryFindV path with
+            | ValueSome zip ->
+                zipTable.Remove path |> ignore
+                zip.Dispose()
+
+            | _ -> ()
+        )
+
+    /// Closes and unregisters all ZIP archives.
+    /// Note: This call must be externally synchronized with other Prinziple function calls.
+    let closeAll() =
+        lock zipTable (fun _ ->
+            for zip in zipTable.Values do
+                zip.Dispose()
+
+            zipTable.Clear()
+        )

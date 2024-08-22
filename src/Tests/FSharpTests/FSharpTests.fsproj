@@ -6,14 +6,18 @@
     <OutputPath>..\..\..\bin\$(Configuration)</OutputPath>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="data\opc\test.zip" />
     <EmbeddedResource Include="data\Avocado.zip" />
     <EmbeddedResource Include="data\Avocado.glb" />
     <EmbeddedResource Include="data\2CylinderEngine.gltf" />
     <Compile Include="GLTFTests.fs" />
+    <Compile Include="OpcTests.fs" />
     <Content Include="paket.references" />
   </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <ProjectReference Include="..\..\Aardvark.Data.GLTF\Aardvark.Data.GLTF.fsproj" />
+    <ProjectReference Include="..\..\Aardvark.Data.Opc\Aardvark.Data.Opc.fsproj" />
   </ItemGroup>
   <Import Project="..\..\..\.paket\Paket.Restore.targets" />
 </Project>
