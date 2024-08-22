@@ -323,7 +323,7 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
         else Nullable (min q 100)
 
     static let toPixImage =
-        LookupTable.lookupTable [
+        LookupTable.lookup [
             typeof<PixelFormats.A8>,        (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.Gray img.Width img.Height trafo (fun dst -> piDirect<A8, byte>(unbox img, dst)) :> PixImage)
             typeof<PixelFormats.L8>,         (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.Gray img.Width img.Height trafo (fun dst -> piDirect<L8, byte>(unbox img, dst)) :> PixImage)
             typeof<PixelFormats.Argb32>,        (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.RGBA img.Width img.Height trafo (fun dst -> piChannel<Argb32, byte>(unbox img, dst, [|1;2;3;0|])) :> PixImage)
@@ -345,7 +345,7 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
         ]
 
     static let toImage =
-        LookupTable.lookupTable [
+        LookupTable.lookup [
             PixFormat.ByteGray,             (fun (img : PixImage) -> imgDirect<byte, L8>(unbox img) :> Image)
             PixFormat.ByteBGR,              (fun (img : PixImage) -> imgDirect<byte, Bgr24>(unbox img) :> Image)
             PixFormat.ByteBGRA,             (fun (img : PixImage) -> imgDirect<byte, Bgra32>(unbox img) :> Image)

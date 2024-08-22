@@ -149,8 +149,8 @@ module private PixImagePfimImpl =
             )
         )
 
-    let private levelToPixImageTable : (ImageFormat -> (MipMapOffset -> uint8[] -> PixImage) option) =
-        LookupTable.lookupTable' [
+    let private levelToPixImageTable : (ImageFormat -> (MipMapOffset -> uint8[] -> PixImage) voption) =
+        LookupTable.tryLookupV [
             ImageFormat.Rgb8,     of8Bit Col.Format.Gray
             ImageFormat.Rgb24,    of8Bit Col.Format.BGR
             ImageFormat.Rgba32,   of8Bit Col.Format.BGRA
@@ -162,7 +162,7 @@ module private PixImagePfimImpl =
 
     let private levelToPixImage (format : ImageFormat) =
         match levelToPixImageTable format with
-        | Some pi -> pi
+        | ValueSome pi -> pi
         | _ ->
             raise <| NotSupportedException($"Format {format} not supported.")
 

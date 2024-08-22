@@ -6,8 +6,8 @@ nuget Aardvark.Build                                        ~> 1.0.25
 nuget FSharp.Core                                           >= 8.0.0 lowest_matching: true
 
 // Aardvark Base
-nuget Aardvark.Base                                         ~> 5.3.0
-nuget Aardvark.Base.Tensors                                 ~> 5.3.0
+nuget Aardvark.Base                                         ~> 5.3.2
+nuget Aardvark.Base.Tensors                                 ~> 5.3.2
 
 // Aardvark Rendering
 nuget Aardvark.Rendering.Common                             >= 5.5.0 lowest_matching: true
