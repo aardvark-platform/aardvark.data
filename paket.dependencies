@@ -22,6 +22,8 @@ nuget System.Drawing.Common                                 >= 8.0.0 lowest_matc
 
 nuget glTF2Loader                                           ~> 1.1.4-alpha
 
+nuget SharpZipLib                                           ~> 1.4.1
+
 // XBim does not have proper version constraints so we declare and reference everything explicitly
 nuget Xbim.Ifc                                              ~> 5.1.341
 nuget Xbim.Ifc2x3                                           ~> 5.1.341

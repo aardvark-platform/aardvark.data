@@ -1,0 +1,6 @@
+FSharp.Core
+Aardvark.Build
+Aardvark.Base.FSharp
+Aardvark.Base.Tensors
+Aardvark.Rendering.Common
+SharpZipLib
