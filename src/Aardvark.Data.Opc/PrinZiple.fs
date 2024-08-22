@@ -1,4 +1,4 @@
-﻿namespace Aardvark.Prinziple
+﻿namespace Aardvark.Data.Opc
 
 open System
 open System.IO

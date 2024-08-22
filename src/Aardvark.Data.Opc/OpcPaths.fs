@@ -1,8 +1,7 @@
-﻿namespace Aardvark.SceneGraph.Opc
+﻿namespace Aardvark.Data.Opc
 
 open System
 open System.IO
-open Aardvark.Base
 
 type OpcPaths = OpcPaths of string
 
@@ -28,7 +27,7 @@ module OpcPaths =
     // KdTrees in root-patch directory
     let KdTree_Ext = "aakd"
     let KdTreeMaster_Ext = "cache"
-    
+
     // images/
     let Images_DirNames = ["images"; "Images"]
     // obsolete in favor of robust handling for: https://github.com/pro3d-space/PRo3D/issues/280
@@ -50,8 +49,8 @@ type OpcPaths with
     member this.ShortName = Directory.GetParent(this.Opc_DirAbsPath).Name +/ Path.GetFileName(this.Opc_DirAbsPath)
 
     // Patches. Note: this throws if no patches dir is found given current OpcPaths
-    member this.Patches_DirAbsPath = 
-        let probingDirs = 
+    member this.Patches_DirAbsPath =
+        let probingDirs =
             OpcPaths.Patches_DirNames |> List.map (fun patchSuffix -> this.Opc_DirAbsPath +/ patchSuffix)
         match probingDirs |> List.tryFind Directory.Exists with
         | None -> failwithf "patches dir not found. Probing directories: %A" probingDirs
@@ -62,13 +61,13 @@ type OpcPaths with
     member this.profileLut_FileAbsPath = this.Patches_DirAbsPath +/ OpcPaths.ProfilLut_FileName
 
     // Images. Note: this throws if no patches dir is found given current OpcPaths
-    member this.Images_DirAbsPath = 
-        let probingDirs = 
+    member this.Images_DirAbsPath =
+        let probingDirs =
             OpcPaths.Images_DirNames |> List.map (fun imageSuffix -> this.Opc_DirAbsPath +/ imageSuffix)
         match probingDirs |> List.tryFind Directory.Exists with
         | None -> failwithf "images dir not found. Probing directories: %A" probingDirs
         | Some d -> d
-        
+
 
     member this.ImagePyramid_FileAbsPaths =
         Directory.GetDirectories(this.Images_DirAbsPath)

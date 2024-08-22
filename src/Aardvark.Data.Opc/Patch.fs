@@ -1,18 +1,19 @@
-﻿namespace Aardvark.SceneGraph.Opc
+﻿namespace Aardvark.Data.Opc
 
 open System
 open Aardvark.Base
 open Aardvark.Rendering
-open Aardvark.Prinziple
 
+[<Struct; RequireQualifiedAccess>]
 type ViewerModality = XYZ | SvBR
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module ViewerModality =
-  let matchy threeD twoD (modality : ViewerModality)= 
+
+  let matchy threeD twoD (modality : ViewerModality) =
       match modality with
-      | XYZ  -> threeD
-      | SvBR -> twoD
+      | ViewerModality.XYZ  -> threeD
+      | ViewerModality.SvBR -> twoD
 
 type Patch =
     {
@@ -24,25 +25,25 @@ type Patch =
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Patch =
     let ofInfo (level : int) (size: float) (p : PatchFileInfo) = { level = level; info = p; triangleSize = size }
-        
+
     let load (opcPaths : OpcPaths) (mode : ViewerModality) (p : PatchFileInfo)  =
         let sw = System.Diagnostics.Stopwatch()
         sw.Start()
         let patch_DirAbsPath = opcPaths.Patches_DirAbsPath +/ p.Name
 
-        let pos = 
+        let pos =
           match mode, p.Positions2d with
           | ViewerModality.SvBR, Some p2 -> p2
-          | _ -> p.Positions          
-        
-        let positions   = patch_DirAbsPath +/ pos |> fromFile<V3f>
-        let coordinates = patch_DirAbsPath +/ (List.head p.Coordinates) |> fromFile<V2f>
-                
+          | _ -> p.Positions
+
+        let positions   = patch_DirAbsPath +/ pos |> Aara.fromFile<V3f>
+        let coordinates = patch_DirAbsPath +/ (List.head p.Coordinates) |> Aara.fromFile<V2f>
+
         sw.Stop()
 
         let coordinates = coordinates.Data |> Array.map (fun v -> V2f(v.X, 1.0f-v.Y))
 
-        let index = createIndex (positions.AsMatrix())
+        let index = Aara.createIndex (positions.AsMatrix())
 
         let a : float = 0.0
 
@@ -51,8 +52,8 @@ module Patch =
                 DefaultSemantic.Positions, positions.Data :> Array
                 DefaultSemantic.DiffuseColorCoordinates, coordinates :> Array
             ]
-            
-            def |> SymDict.ofList 
+
+            def |> SymDict.ofList
 
         let geometry =
             IndexedGeometry(
@@ -60,7 +61,7 @@ module Patch =
                 IndexArray        = index,
                 IndexedAttributes = indexAttributes
             )
-                                        
+
         geometry, sw.MicroTime
 
     let extractTexturePath (opcPaths : OpcPaths) (patchInfo : PatchFileInfo) (texNumber : int) =
@@ -71,10 +72,10 @@ module Patch =
 
         let rec tryFindTex exts path =
             match exts with
-                | x::xs -> 
-                    let current = System.IO.Path.ChangeExtension(path,x)
-                    if Prinziple.exists current then current else tryFindTex xs path
-                | [] -> failwithf "texture not found: %s" path
+            | x::xs ->
+                let current = System.IO.Path.ChangeExtension(path,x)
+                if Prinziple.exists current then current else tryFindTex xs path
+            | [] -> failwithf "texture not found: %s" path
 
         tryFindTex extensions sourcePath
 
