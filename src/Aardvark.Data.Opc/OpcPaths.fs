@@ -52,7 +52,7 @@ type OpcPaths with
     member this.Patches_DirAbsPath =
         let probingDirs =
             OpcPaths.Patches_DirNames |> List.map (fun patchSuffix -> this.Opc_DirAbsPath +/ patchSuffix)
-        match probingDirs |> List.tryFind Directory.Exists with
+        match probingDirs |> List.tryFind Prinziple.directoryExists with
         | None -> failwithf "patches dir not found. Probing directories: %A" probingDirs
         | Some d -> d
 
@@ -64,11 +64,10 @@ type OpcPaths with
     member this.Images_DirAbsPath =
         let probingDirs =
             OpcPaths.Images_DirNames |> List.map (fun imageSuffix -> this.Opc_DirAbsPath +/ imageSuffix)
-        match probingDirs |> List.tryFind Directory.Exists with
+        match probingDirs |> List.tryFind Prinziple.directoryExists with
         | None -> failwithf "images dir not found. Probing directories: %A" probingDirs
         | Some d -> d
 
-
     member this.ImagePyramid_FileAbsPaths =
-        Directory.GetDirectories(this.Images_DirAbsPath)
+        Prinziple.getDirectories this.Images_DirAbsPath
         |> Array.map (fun images_DirPath -> this.Images_DirAbsPath +/ images_DirPath +/ OpcPaths.ImagePyramid_FileName)

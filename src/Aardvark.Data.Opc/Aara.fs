@@ -9,7 +9,7 @@ open FSharp.Data.Adaptive
 
 module Aara =
 
-    let readerChars2String (f : Stream)  =
+    let private readerChars2String (f : Stream)  =
         let cnt = f.ReadByte()
 
         let target = Array.zeroCreate cnt
@@ -33,10 +33,6 @@ module Aara =
         finally
             gc.Free()
         result
-
-    [<Obsolete("Use loadRaw instead?")>]
-    let loadRaw2<'T  when 'T : unmanaged> (elementCount : int) (f : Stream) : 'T[] =
-        loadRaw elementCount f
 
     let loadFromStream<'T when 'T : unmanaged> (f : Stream) =
         let binaryReader = new BinaryReader(f,Text.Encoding.ASCII, true)

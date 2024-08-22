@@ -45,8 +45,6 @@ module Patch =
 
         let index = Aara.createIndex (positions.AsMatrix())
 
-        let a : float = 0.0
-
         let indexAttributes =
             let def = [
                 DefaultSemantic.Positions, positions.Data :> Array
@@ -74,8 +72,10 @@ module Patch =
             match exts with
             | x::xs ->
                 let current = System.IO.Path.ChangeExtension(path,x)
-                if Prinziple.exists current then current else tryFindTex xs path
-            | [] -> failwithf "texture not found: %s" path
+                if Prinziple.fileExists current then current else tryFindTex xs path
+
+            | [] ->
+                failwithf "texture not found: %s" path
 
         tryFindTex extensions sourcePath
 

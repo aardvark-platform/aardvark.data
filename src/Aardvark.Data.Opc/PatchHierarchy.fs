@@ -66,7 +66,7 @@ module PatchHierarchy =
                 p |> PatchFileInfo.load opcPaths |> Patch.ofInfo level sizes.[level]
             )
 
-        hierarchy |> pickle |> File.writeAllBytes cache
+        hierarchy |> pickle |> Prinziple.writeAllBytes cache
         Log.stop()
         { opcPaths = opcPaths; tree = hierarchy }
 
@@ -74,7 +74,7 @@ module PatchHierarchy =
         let cachefile = opcPaths.PatchHierarchyCache_FileAbsPath
 
         try
-            if Prinziple.exists cachefile then
+            if Prinziple.fileExists cachefile then
                 Log.startTimed "loading from cache file"
 
                 let readFile = Prinziple.readAllBytes cachefile
