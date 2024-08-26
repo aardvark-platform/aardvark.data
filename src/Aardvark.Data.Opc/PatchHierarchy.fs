@@ -54,21 +54,26 @@ module PatchHierarchy =
 
     let loadAndCache (opcPaths : OpcPaths) (pickle : QTree<Patch> -> byte[]) =
         Log.startTimed "loading from hierarchy"
-        let xml   = opcPaths.PatchHierarchy_FileAbsPath
-        let cache = opcPaths.PatchHierarchyCache_FileAbsPath
 
-        let tree, sizes =
-            XDocument.Load(xml) |> ofDoc
+        try
+            let xml   = opcPaths.PatchHierarchy_FileAbsPath
+            let cache = opcPaths.PatchHierarchyCache_FileAbsPath
 
-        let hierarchy =
-            tree
-            |> QTree.mapLevel (fun level p ->
-                p |> PatchFileInfo.load opcPaths |> Patch.ofInfo level sizes.[level]
-            )
+            let tree, sizes =
+                use s = Prinziple.openRead xml
+                XDocument.Load(s) |> ofDoc
 
-        hierarchy |> pickle |> Prinziple.writeAllBytes cache
-        Log.stop()
-        { opcPaths = opcPaths; tree = hierarchy }
+            let hierarchy =
+                tree
+                |> QTree.mapLevel (fun level p ->
+                    p |> PatchFileInfo.load opcPaths |> Patch.ofInfo level sizes.[level]
+                )
+
+            hierarchy |> pickle |> Prinziple.writeAllBytes cache
+            { opcPaths = opcPaths; tree = hierarchy }
+
+        finally
+            Log.stop()
 
     let load (pickle : QTree<Patch> -> byte[]) (unpickle :  byte[] -> QTree<Patch>) (opcPaths : OpcPaths) =
         let cachefile = opcPaths.PatchHierarchyCache_FileAbsPath
@@ -77,11 +82,12 @@ module PatchHierarchy =
             if Prinziple.fileExists cachefile then
                 Log.startTimed "loading from cache file"
 
-                let readFile = Prinziple.readAllBytes cachefile
+                try
+                    let readFile = Prinziple.readAllBytes cachefile
+                    { opcPaths = opcPaths; tree = readFile |> unpickle }
 
-                let r = { opcPaths = opcPaths; tree = readFile |> unpickle }
-                Log.stop()
-                r
+                finally
+                    Log.stop()
             else
                 loadAndCache opcPaths pickle
         with e ->
