@@ -9,25 +9,42 @@ open System.Threading.Tasks
 open NUnit.Framework
 open FsUnit
 
+[<Struct>]
+type ZipKind =
+    | ImplicitDirs
+    | ExplicitDirs
+
+[<Struct>]
+type GetFilesMode =
+    | Recursive
+    | TopLevel
+
 module Prinziple =
 
-    let private rootPath = Path.Combine(__SOURCE_DIRECTORY__, "data", "opc", "test")
+    let private getRootPath (zipKind: ZipKind) =
+        let file = if zipKind = ImplicitDirs then "test_implicit_dirs" else "test"
+        Path.Combine(__SOURCE_DIRECTORY__, "data", "opc", file)
+
+    let private ZipKindSource = [| ImplicitDirs; ExplicitDirs |]
+    let private GetFilesModeSource = [| Recursive; TopLevel |]
 
     [<Test>]
-    let fileExists() =
+    let fileExists ([<ValueSource(nameof ZipKindSource)>] zipKind: ZipKind) =
+        let rootPath = getRootPath zipKind
         Prinziple.tryRegister rootPath |> should be True
         [rootPath; "files"; "nested"; "g.txt"] |> Path.combine |> Prinziple.fileExists |> should be True
         [rootPath; "files"; "nested"] |> Path.combine |> Prinziple.fileExists |> should be False
 
     [<Test>]
-    let directoryExists() =
+    let directoryExists([<ValueSource(nameof ZipKindSource)>] zipKind: ZipKind) =
+        let rootPath = getRootPath zipKind
         Prinziple.tryRegister rootPath |> should be True
         [rootPath; "files"; "nested"; "g.txt"] |> Path.combine |> Prinziple.directoryExists |> should be False
         [rootPath; "files"; "nested"] |> Path.combine |> Prinziple.directoryExists |> should be True
 
-    [<TestCase(true)>]
-    [<TestCase(false)>]
-    let getFiles (recursive: bool) =
+    [<Test>]
+    let getFiles ([<ValueSource(nameof GetFilesModeSource)>] mode: GetFilesMode) ([<ValueSource(nameof ZipKindSource)>] zipKind: ZipKind) =
+        let rootPath = getRootPath zipKind
         Prinziple.tryRegister rootPath |> should be True
 
         let expected =
@@ -37,21 +54,22 @@ module Prinziple =
                 "files/c.txt"
                 "files/d.txt"
                 "files/e.txt"
-                if recursive then "files/more/f.txt"
-                if recursive then "files/nested/g.txt"
+                if mode = Recursive then "files/more/f.txt"
+                if mode = Recursive then "files/nested/g.txt"
             |]
             |> Array.map (fun f -> Path.Combine(rootPath, f) |> Path.GetFullPath)
             |> Array.sort
 
         let files =
             Path.combine [rootPath; "files"]
-            |> Prinziple.getFiles recursive
+            |> Prinziple.getFiles (mode = Recursive)
             |> Array.sort
 
         files |> should equal expected
 
     [<Test>]
-    let getDirectories() =
+    let getDirectories ([<ValueSource(nameof ZipKindSource)>] zipKind: ZipKind) =
+        let rootPath = getRootPath zipKind
         Prinziple.tryRegister rootPath |> should be True
 
         let expected =
@@ -70,14 +88,16 @@ module Prinziple =
         dirs |> should equal expected
 
     [<Test>]
-    let reading() =
+    let reading ([<ValueSource(nameof ZipKindSource)>] zipKind: ZipKind) =
+        let rootPath = getRootPath zipKind
         Prinziple.tryRegister rootPath |> should be True
 
         let path = Path.combine [rootPath; "files"; "a.txt"]
         Prinziple.readAllText path |> should equal "TEST"
 
     [<Test>]
-    let ``concurrent I/O``() =
+    let ``concurrent I/O`` ([<ValueSource(nameof ZipKindSource)>] zipKind: ZipKind) =
+        let rootPath = getRootPath zipKind
         Prinziple.tryRegister rootPath |> should be True
 
         try
@@ -127,7 +147,8 @@ module Prinziple =
                 Directory.Delete(rootPath, true)
 
     [<Test>]
-    let writing() =
+    let writing ([<ValueSource(nameof ZipKindSource)>] zipKind: ZipKind) =
+        let rootPath = getRootPath zipKind
         Prinziple.tryRegister rootPath |> should be True
 
         let path = Path.combine [rootPath; "files"; "new.txt"]
@@ -145,7 +166,8 @@ module Prinziple =
                 Directory.Delete(rootPath, true)
 
     [<Test>]
-    let commit() =
+    let commit ([<ValueSource(nameof ZipKindSource)>] zipKind: ZipKind) =
+        let rootPath = getRootPath zipKind
         let tempRootPath = rootPath + "_temp"
         let tempRootZip = Path.ChangeExtension(tempRootPath, ".zip")
 

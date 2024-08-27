@@ -105,39 +105,61 @@ module Prinziple =
 
                 check 0
 
-        member inline private x.GetEntries (predicate: string -> bool) =
+        member x.GetFiles(path: string, recursive: bool) =
+            let path = path.ToLowerInvariant()
+
+            let isFileInPath (n: string) =
+                n |> String.endsWith "/" |> not &&
+                n |> String.startsWith path &&
+                (recursive || n.LastIndexOf('/') < path.Length)
+
             let result = ResizeArray<string>()
 
             for i = 0 to int zip.Count - 1 do
                 let n = (zip.EntryByIndex i).Name
 
-                if predicate <| n.ToLowerInvariant() then
+                if isFileInPath <| n.ToLowerInvariant() then
                     result.Add (Path.Combine(rootPath, n.Replace('/', dirSeparator)))
 
             for KeyValue(n, p) in additionalEntries do
-                if not <| result.Contains p && predicate n then
+                if not <| result.Contains p && isFileInPath n then
                     result.Add p
 
             result.ToArray()
 
-        member x.GetFiles(path: string, recursive: bool) =
-            let path = path.ToLowerInvariant()
-
-            x.GetEntries (fun n ->
-                n |> String.endsWith "/" |> not &&
-                n |> String.startsWith path &&
-                (recursive || n.LastIndexOf('/') < path.Length)
-            )
-
         member x.GetDirectories(path: string) =
             let path = path.ToLowerInvariant()
 
-            x.GetEntries (fun n ->
-                n |> String.endsWith "/" &&
-                n |> String.startsWith path &&
-                n.Length > path.Length &&
-                n.Substring(0, n.Length - 1).LastIndexOf('/') < path.Length
-            )
+            let tryGetFolder (n: string) =
+                if n.ToLowerInvariant().StartsWith(path) && n.Length > path.Length then
+                    let name = n.Substring path.Length
+                    let s = name.IndexOf '/'
+
+                    if s > -1 then
+                        ValueSome <| n.Substring(0, path.Length + s + 1)
+                    else
+                        ValueNone
+                else
+                    ValueNone
+
+            let result = HashSet<string>()
+
+            let addEntry (n: string) =
+                match tryGetFolder n with
+                | ValueSome n ->
+                    let p = Path.Combine(rootPath, n.Replace('/', dirSeparator))
+                    result.Add p |> ignore
+
+                | _ -> ()
+
+            for i = 0 to int zip.Count - 1 do
+                let n = (zip.EntryByIndex i).Name
+                addEntry n
+
+            for KeyValue(n, _) in additionalEntries do
+                addEntry n
+
+            result.ToArray(result.Count)
 
         member x.Commit(compress: bool) =
             if not additionalEntries.IsEmpty then

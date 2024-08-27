@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="data\opc\test.zip" />
+    <None Include="data\opc\test_implicit_dirs.zip" />
     <EmbeddedResource Include="data\Avocado.zip" />
     <EmbeddedResource Include="data\Avocado.glb" />
     <EmbeddedResource Include="data\2CylinderEngine.gltf" />
@@ -14,7 +15,6 @@
     <Compile Include="OpcTests.fs" />
     <Content Include="paket.references" />
   </ItemGroup>
-  <ItemGroup />
   <ItemGroup>
     <ProjectReference Include="..\..\Aardvark.Data.GLTF\Aardvark.Data.GLTF.fsproj" />
     <ProjectReference Include="..\..\Aardvark.Data.Opc\Aardvark.Data.Opc.fsproj" />
