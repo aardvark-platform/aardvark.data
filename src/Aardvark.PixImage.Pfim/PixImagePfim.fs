@@ -79,10 +79,10 @@ module private PixImagePfimImpl =
 
         let pi = PixImage<uint8>(format, int64 info.Width, int64 info.Height)
 
-        pinned src (fun src ->
+        src |> NativePtr.pinArr (fun src ->
             let srcVolume =
                 NativeVolume<uint16>(
-                    NativePtr.ofNativeInt (src + nativeint info.DataOffset),
+                    NativePtr.ofNativeInt (src.Address + nativeint info.DataOffset),
                     VolumeInfo(
                         0L,
                         V3l(info.Width, info.Height, 1),
