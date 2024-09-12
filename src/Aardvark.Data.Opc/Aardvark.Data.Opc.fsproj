@@ -24,6 +24,5 @@
     <Compile Include="Patch.fs" />
     <Compile Include="PatchHierarchy.fs" />
   </ItemGroup>
-  <ItemGroup />
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

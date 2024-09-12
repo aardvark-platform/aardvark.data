@@ -1,7 +1,9 @@
 ﻿namespace Aardvark.Data.Opc
 
 open System
+open System.Buffers
 open System.IO
+open System.Text
 open System.Runtime.InteropServices
 
 open Aardvark.Base
@@ -9,34 +11,38 @@ open FSharp.Data.Adaptive
 
 module Aara =
 
-    let private readerChars2String (f : Stream)  =
-        let cnt = f.ReadByte()
-
-        let target = Array.zeroCreate cnt
-        let read = f.Read(target,0,cnt)
-        if cnt <> read then failwith ""
-        System.Text.Encoding.Default.GetString target
+    /// Reads a length-prefixed (byte) string from the stream.
+    let readString (encoding: Encoding) (s: Stream) =
+        let count = s.ReadByte()
+        let buffer = Array.zeroCreate<byte> count
+        s.ReadBytes(buffer, count = count)
+        encoding.GetString buffer
 
     let loadRaw<'T  when 'T : unmanaged> (elementCount : int) (f : Stream)  =
-        let result = Array.zeroCreate<'T> elementCount
-        let buffer = Array.zeroCreate<byte> (1 <<< 22)
+        let buffer = ArrayPool<byte>.Shared.Rent(1 <<< 22)
 
-        let gc = GCHandle.Alloc(result, GCHandleType.Pinned)
         try
-            let mutable ptr = gc.AddrOfPinnedObject()
-            let mutable remaining = sizeof<'T> * result.Length
-            while remaining > 0 do
-                let s = f.Read(buffer, 0, buffer.Length)
-                Marshal.Copy(buffer, 0, ptr, s)
-                ptr <- ptr + nativeint s
-                remaining <- remaining - s
+            let result = Array.zeroCreate<'T> elementCount
+
+            result |> NativePtr.pinArr (fun dst ->
+                let mutable ptr = dst.Address
+                let mutable remaining = sizeof<'T> * result.Length
+
+                while remaining > 0 do
+                    let s = f.Read(buffer, 0, buffer.Length)
+                    Marshal.Copy(buffer, 0, ptr, s)
+                    ptr <- ptr + nativeint s
+                    remaining <- remaining - s
+            )
+
+            result
+
         finally
-            gc.Free()
-        result
+            ArrayPool<byte>.Shared.Return(buffer)
 
     let loadFromStream<'T when 'T : unmanaged> (f : Stream) =
         let binaryReader = new BinaryReader(f,Text.Encoding.ASCII, true)
-        let typeName = readerChars2String f
+        let typeName = readString Encoding.Default f
         let dimensions = f.ReadByte() |> int
         let sizes = [| for d in 0 .. dimensions - 1 do yield binaryReader.ReadInt32() |]
 
