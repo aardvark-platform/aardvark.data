@@ -199,6 +199,8 @@ module Prinziple =
     let private zipTable = Dictionary<string, ZippedOpc>()
 
     let private tryGetZip (path: string) =
+        let path = path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
+
         lock zipTable (fun _ ->
             zipTable |> Seq.tryPickV (fun (KeyValue(root, zip)) ->
                 if path.StartsWith root then
@@ -210,20 +212,25 @@ module Prinziple =
             )
         )
 
-    let private allowedExtensions =
-        [| ".opc"; ".zip" |]
+    let mutable private allowedExtensions =
+        [| ".opc"; ".opcz"; ".zip"|]
 
-    /// Tries to register a path as a ZIP archive by looking for corresponding files with an *.opc or *.zip extension.
+    /// Sets the extensions that are considered for subsequent calls of register and tryRegister.
+    /// By default .opc, .opcz, and .zip extensions are recognized.
+    let setAllowedExtensions (extensions: string seq) =
+        allowedExtensions <- Array.ofSeq extensions
+
+    /// Tries to register a path as a ZIP archive by looking for corresponding files with a supported extension.
     /// Upon successful registration the content of the archive is available via the other functions of this module.
     /// Returns true if an archive has been registered successfully, false otherwise.
     let tryRegister (path: string) : bool =
-        let path = Path.GetFullPath(path)
+        let path = path |> Path.GetFullPath |> Path.withoutTrailingSlash
 
         lock zipTable (fun _ ->
             if zipTable.ContainsKey path then true
             else
                 allowedExtensions |> Array.exists (fun ext ->
-                    let zipPath = Path.ChangeExtension(path, ext)
+                    let zipPath = path + ext
 
                     if File.Exists zipPath then
                         Report.BeginTimed(3, $"[Prinziple] Registering archive {zipPath}")
@@ -242,7 +249,7 @@ module Prinziple =
                 )
         )
 
-    /// Registers a path as a ZIP archive by looking for corresponding files with an *.opc or *.zip extension.
+    /// Registers a path as a ZIP archive by looking for corresponding files with a supported extension.
     /// Upon successful registration the content of the archive is available via the other functions of this module.
     /// Returns the input path.
     let register (path: string) =
