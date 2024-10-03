@@ -206,10 +206,17 @@ module PatchFileInfo =
         let doc = Prinziple.readXmlDoc path
         ofXDoc doc patchName true
 
+namespace Aardvark.SceneGraph.Opc
+
+// in the old namespace to enable deserialization in (pickler) caches without hurdles.
 [<RequireQualifiedAccess>]
 type QTree<'T> =
     | Node of 'T * QTree<'T>[]
     | Leaf of 'T
+
+namespace Aardvark.Data.Opc
+
+open Aardvark.SceneGraph.Opc
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module QTree =
