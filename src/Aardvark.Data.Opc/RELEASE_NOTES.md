@@ -1,3 +1,6 @@
+### 0.10.0
+- moved QTree to old Aardvark.SceneGraph.Opc namespace to prevent serialization issues.
+
 ### 0.9.2
 - [Prinziple] Added supported for ZIP archives without explicit directory entries
 - [Prinziple] Added setAllowedExtensions and added *.opcz as default extension
