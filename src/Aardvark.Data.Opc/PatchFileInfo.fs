@@ -210,13 +210,15 @@ namespace Aardvark.SceneGraph.Opc
 
 // in the old namespace to enable deserialization in (pickler) caches without hurdles.
 [<RequireQualifiedAccess>]
-type QTree<'T> =
-    | Node of 'T * QTree<'T>[]
-    | Leaf of 'T
+type QTree<'a> =
+    | Node of 'a * QTree<'a>[]
+    | Leaf of 'a
 
 namespace Aardvark.Data.Opc
 
 open Aardvark.SceneGraph.Opc
+
+type QTree<'a> = Aardvark.SceneGraph.Opc.QTree<'a>
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module QTree =
