@@ -15,12 +15,25 @@ module ViewerModality =
       | ViewerModality.XYZ  -> threeD
       | ViewerModality.SvBR -> twoD
 
+
+namespace Aardvark.SceneGraph.Opc
+
+// in the old namespace to enable deserialization in (pickler) caches without hurdles.
 type Patch =
     {
         level           : int
         info            : PatchFileInfo
         triangleSize    : float
     }
+
+namespace Aardvark.Data.Opc
+
+open System
+open Aardvark.Base
+open Aardvark.Rendering
+open Aardvark.SceneGraph.Opc
+
+type Patch = Aardvark.SceneGraph.Opc.Patch
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Patch =

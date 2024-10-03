@@ -29,6 +29,12 @@ module internal XmlHelpers =
     let prop name (p : XElement) =
         (elem name p).Value.Trim()
 
+
+// in the old namespace to enable deserialization in (pickler) caches without hurdles.
+namespace Aardvark.SceneGraph.Opc
+
+open Aardvark.Base
+
 type Texture = { fileName : string; weights : string }
 
 [<Struct; RequireQualifiedAccess>]
@@ -63,6 +69,13 @@ type PatchFileInfo =
         Textures            : list<Texture>
         Attributes          : list<string>
     }
+
+namespace Aardvark.Data.Opc
+
+open System.Xml
+open System.Xml.Linq
+open Aardvark.Base
+open Aardvark.SceneGraph.Opc
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module PatchFileInfo =

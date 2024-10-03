@@ -1,3 +1,6 @@
+### 0.11.0
+- moved Patch to old namespace
+
 ### 0.10.0
 - moved QTree to old Aardvark.SceneGraph.Opc namespace to prevent serialization issues.
 
