@@ -29,7 +29,7 @@ namespace Aardvark.Data.Photometry
 
         protected static int ParseInt(String s)
         {
-            return (int)Decimal.Parse(s); // NOTE use decimal parsing to not crash with floating point values (could report warning)
+            return int.Parse(s);
         }
 
         protected String[] StringSplit(String s)

@@ -43,17 +43,17 @@ namespace Aardvark.Data.Photometry
             // 11-15
             ldt.FileName = sr.ReadLine();
             ldt.DateUser = sr.ReadLine();
-            ldt.LengthLuminaire = ReadIntLine(sr);
-            ldt.WidthLuminaire = ReadIntLine(sr);
-            ldt.HeightLuminare = ReadIntLine(sr);
+            ldt.LengthLuminaire = (int)ReadDoubleLine(sr); // NOTE: allow decimal value, but take integer
+            ldt.WidthLuminaire = (int)ReadDoubleLine(sr); // NOTE: allow decimal points, but take integer
+            ldt.HeightLuminare = (int)ReadDoubleLine(sr); // NOTE: allow decimal points, but take integer
             // 16-20
-            ldt.LengthLuminousArea = ReadIntLine(sr);
-            ldt.WidthLuminousArea = ReadIntLine(sr);
-            ldt.HeightLuminousAreaC0 = ReadIntLine(sr);
-            ldt.HeightLuminousAreaC90 = ReadIntLine(sr);
-            ldt.HeightLuminousAreaC180 = ReadIntLine(sr);
+            ldt.LengthLuminousArea = (int)ReadDoubleLine(sr); // NOTE: allow decimal points, but take integer
+            ldt.WidthLuminousArea = (int)ReadDoubleLine(sr); // NOTE: allow decimal points, but take integer
+            ldt.HeightLuminousAreaC0 = (int)ReadDoubleLine(sr); // NOTE: allow decimal points, but take integer
+            ldt.HeightLuminousAreaC90 = (int)ReadDoubleLine(sr); // NOTE: allow decimal points, but take integer
+            ldt.HeightLuminousAreaC180 = (int)ReadDoubleLine(sr); // NOTE: allow decimal points, but take integer
             // 21-25
-            ldt.HeightLuminousAreaC270 = ReadIntLine(sr);
+            ldt.HeightLuminousAreaC270 = (int)ReadDoubleLine(sr); // NOTE: allow decimal points, but take integer
             ldt.DownwardFluxFraction = ReadDoubleLine(sr);
             ldt.LightOutputRatioLuminaire = ReadDoubleLine(sr);
             ldt.ConversionIntensity = ReadDoubleLine(sr);

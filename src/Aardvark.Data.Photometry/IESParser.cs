@@ -15,6 +15,9 @@ namespace Aardvark.Data.Photometry
             }
         }
 
+        /// <summary>
+        /// Read everything expect the luminous intensity distribution values.
+        /// </summary>
         public IESData ParseMeta(String filePath)
         {
             using (var stream = new FileStream(filePath, FileMode.Open))

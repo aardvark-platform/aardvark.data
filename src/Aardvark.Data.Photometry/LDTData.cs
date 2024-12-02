@@ -70,7 +70,8 @@ namespace Aardvark.Data.Photometry
 
     /// <summary>
     /// Holds the data represented in an EULUMDATA luminaire data file
-    /// http://www.helios32.com/Eulumdat.htm
+    /// https://docs.agi32.com/PhotometricToolbox/Content/Open_Tool/eulumdat_file_format.htm
+    /// https://paulbourke.net/dataformats/ldt/
     /// </summary>
     public class LDTData
     {
@@ -90,6 +91,9 @@ namespace Aardvark.Data.Photometry
             return FromStream(stream);
         }
 
+        /// <summary>
+        /// Read everything expect the luminous intensity distribution values.
+        /// </summary>
         public static LDTData ParseMeta(string filename)
         {
             return new LDTParser().ParseMeta(filename);
