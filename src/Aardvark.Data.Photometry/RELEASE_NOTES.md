@@ -1,5 +1,5 @@
 ### 5.3.11
-- Improved robustness of parsing attributes that might have decimal points
+- Improved robustness of parsing attributes that might have decimal values
 
 ### 5.3.10
 - Updated to NET 8 and Aardvark.Base 5.3
