@@ -9,14 +9,7 @@ namespace Aardvark.Data.Ifc
 {
     public static class IFCHelper
     {
-        public static void PrintHierarchy(string file)
-        {
-            using var model = IfcStore.Open(file);
-            var project = model.Instances.FirstOrDefault<IIfcProject>();
-            Report.Line("HIRARCHY of file: {0}\n", file);
-            PrintHierarchy(project, 0);
-        }
-
+        #region Properties
         public static IEnumerable<IIfcPropertySingleValue> GetProperties(this IIfcObject o)
         {
             return o.IsDefinedBy.Where(r => r.RelatingPropertyDefinition is IIfcPropertySet)
@@ -33,34 +26,25 @@ namespace Aardvark.Data.Ifc
         }
 
         public static Dictionary<string, string> GetPropertiesDict(this IIfcObject o)
-        {
-            return o.GetProperties().ToDictionaryDistinct((x => x.Name.ToString()), (x => x.NominalValue.ToString()), (x, w) => true);
-        }
+            => o.GetProperties().ToDictionaryDistinct((x => x.Name.ToString()), (x => x.NominalValue.ToString()), (x, w) => true);
 
         public static Dictionary<string, string> GetPropertiesDict(this IIfcObject o, string propertySetName)
-        {
-            return o.GetProperties(propertySetName).ToDictionaryDistinct((x => x.Name.ToString()), (x => x.NominalValue.ToString()), (x, w) => true);
-        }
+            => o.GetProperties(propertySetName).ToDictionaryDistinct((x => x.Name.ToString()), (x => x.NominalValue.ToString()), (x, w) => true);
 
-        public static Dictionary<string, string> GetHilitePropertiesDict(this IIfcObject o)
-        {
-            return o.GetPropertiesDict("Hilite");
-        }
+        public static Dictionary<string, string> GetHilitePropertiesDict(this IIfcObject o) 
+            => o.GetPropertiesDict("Hilite");
 
+        #endregion
+
+        #region Convenient Functions
         public static IIfcProject GetProject(this IfcStore model)
-        {
-            return model.Instances.FirstOrDefault<IIfcProject>();
-        }
+            => model.Instances.FirstOrDefault<IIfcProject>();
 
         public static IIfcObjectDefinition GetParent(this IIfcObjectDefinition o)
-        {
-            return o.Decomposes.Select(r => r.RelatingObject).FirstOrDefault();
-        }
+            => o.Decomposes.Select(r => r.RelatingObject).FirstOrDefault();
 
         public static IEnumerable<IIfcObjectDefinition> GetSiblings(this IIfcObjectDefinition o)
-        {
-            return o.Decomposes.SelectMany(r => r.RelatedObjects).Where(x => !o.Equals(x));
-        }
+            => o.Decomposes.SelectMany(r => r.RelatedObjects).Where(x => !o.Equals(x));
 
         public static IEnumerable<IIfcObjectDefinition> GetChildren(this IIfcObjectDefinition o)
         {
@@ -74,14 +58,22 @@ namespace Aardvark.Data.Ifc
             return children;
         }
 
+        #endregion
+
+        #region Hierarchy
+
         public static IFCNode CreateHierarchy(IfcStore model)
-        {
-            return CreateHierarchy(model.GetProject());
-        }
+            => CreateHierarchy(model.GetProject());
 
         private static IFCNode CreateHierarchy(IIfcObjectDefinition obj)
+            => new IFCNode(obj, obj.GetChildren().Select(x => (IIFCNode)CreateHierarchy(x)).ToList());
+
+        public static void PrintHierarchy(string file)
         {
-            return new IFCNode(obj, obj.GetChildren().Select(x => (IIFCNode)CreateHierarchy(x)).ToList());
+            using var model = IfcStore.Open(file);
+            var project = model.Instances.FirstOrDefault<IIfcProject>();
+            Report.Line("HIRARCHY of file: {0}\n", file);
+            PrintHierarchy(project, 0);
         }
 
         public static void PrintHierarchy(IIfcObjectDefinition o, int level)
@@ -123,5 +115,7 @@ namespace Aardvark.Data.Ifc
                 indent += "  ";
             return indent;
         }
+
+        #endregion
     }
 }

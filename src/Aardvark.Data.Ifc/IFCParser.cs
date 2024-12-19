@@ -320,18 +320,18 @@ namespace Aardvark.Data.Ifc
 
             var properties = mat.HasProperties.SelectMany(a => a.Properties);
 
-            Func<string, double> getProperty = (string input) => {
-                var thermal = properties.First(x => (string)x.Name == input);
-                if (thermal is IIfcPropertySingleValue value)
+            Func<string, double> tryGetProperty = (string input) => {
+                var thermal = properties.FirstOrDefault(x => (string)x.Name == input);
+                if (thermal != null && thermal is IIfcPropertySingleValue value)
                 {
                     return (double)value.NominalValue.Value;
                 }
                 else return 0.0;
             };
 
-            var thermal = getProperty("ThermalConductivity");
-            var capacity = getProperty("SpecificHeatCapacity");
-            var density = getProperty("MassDensity");
+            var thermal = tryGetProperty("ThermalConductivity");
+            var capacity = tryGetProperty("SpecificHeatCapacity");
+            var density = tryGetProperty("MassDensity");
 
             return new IFCMaterial(mat.Name.ToString(), material, thermal, capacity, density);
         }
