@@ -318,7 +318,7 @@ namespace Aardvark.Data.Ifc
 
             var material = XbimTexture.Create(surfStyle);
 
-            var properties = mat.HasProperties.SelectMany(a => a.Properties);
+            var properties = mat.HasProperties.SelectMany(a => a.Properties).ToArray();
 
             Func<string, double> tryGetProperty = (string input) => {
                 var thermal = properties.FirstOrDefault(x => (string)x.Name == input);
