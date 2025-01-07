@@ -23,6 +23,8 @@ using Xbim.Ifc4.PresentationOrganizationResource;
 using Xbim.Ifc.Extensions;
 using Xbim.Ifc4.MaterialResource;
 using Xbim.Ifc4.PresentationDefinitionResource;
+using Xbim.Ifc4.ElectricalDomain;
+using Xbim.Ifc4.SharedBldgElements;
 
 namespace Aardvark.Data.Ifc
 {
@@ -1437,6 +1439,172 @@ namespace Aardvark.Data.Ifc
             return element;
         }
         #endregion
+    }
+
+    public static class IfcObjectExtensions
+    {
+        public static IIfcValue GetArea(this IfcObject o)
+        {
+            // short-cut
+            var area = o.PhysicalSimpleQuantities.OfType<IIfcQuantityArea>().FirstOrDefault()?.AreaValue;
+
+            ////try to get the value from quantities first
+            //var area =
+            //    //get all relations which can define property and quantity sets
+            //    obj.IsDefinedBy
+
+            //    //Search across all property and quantity sets. 
+            //    //You might also want to search in a specific quantity set by name
+            //    .SelectMany(r => r.RelatingPropertyDefinition.PropertySetDefinitions)
+
+            //    //Only consider quantity sets in this case.
+            //    .OfType<IIfcElementQuantity>()
+
+            //    //Get all quantities from all quantity sets
+            //    .SelectMany(qset => qset.Quantities)
+
+            //    //We are only interested in areas 
+            //    .OfType<IIfcQuantityArea>()
+
+            //    //We will take the first one. There might obviously be more than one area properties
+            //    //so you might want to check the name. But we will keep it simple for this example.
+            //    .FirstOrDefault()?.AreaValue;
+
+            if (area != null) return area;
+
+            //try to get the value from properties
+            return IFCHelper.GetProperty(o, "Area");
+        }
+
+        public static IfcSlab CreateAttachSlab(this IfcSpatialStructureElement parent, string elementName, IfcPresentationLayerAssignment layer, IfcMaterial material)
+        {
+            var model = parent.Model;
+
+            var box = new Box3d(V3d.Zero, new V3d(100.0, 100.0, 300.0));
+
+            var shape = model.New<IfcShapeRepresentation>(s => {
+
+                var rectProf = model.New<IfcRectangleProfileDef>(p =>
+                {
+                    p.ProfileName = "RectArea";
+                    p.ProfileType = IfcProfileTypeEnum.AREA;
+                    p.XDim = box.SizeX;
+                    p.YDim = box.SizeY;
+                });
+
+                IfcGeometricRepresentationItem item = model.New<IfcExtrudedAreaSolid>(solid =>
+                {
+                    solid.Position = parent.Model.CreateAxis2Placement3D(box.Min);
+                    solid.Depth = box.SizeZ;    // CAUTION: this must be the layer-thickness
+                    solid.ExtrudedDirection = parent.Model.CreateDirection(V3d.ZAxis); // CAUTION: this must be the layer-orientation
+                    solid.SweptArea = rectProf;
+                });
+                layer?.AssignedItems.Add(item);
+
+                s.ContextOfItems = model.Instances.OfType<IfcGeometricRepresentationContext>().First();
+                s.RepresentationType = "SweptSolid";
+                s.RepresentationIdentifier = "Body";
+                s.Items.Add(item);
+            });
+
+            var slab = model.New<IfcSlab>(c => {
+                c.Name = elementName;
+                c.Representation = model.New<IfcProductDefinitionShape>(r => r.Representations.Add(shape));
+                c.ObjectPlacement = parent.Model.CreateLocalPlacement(new V3d(500, 500, 500));
+            });
+            parent.AddElement(slab);
+
+            // Link Material via RelAssociatesMaterial
+            model.New<IfcRelAssociatesMaterial>(mat =>
+            {
+                // Material Layer Set Usage (HAS TO BE MANUALLY SYNCHED!)
+                IfcMaterialLayerSetUsage usage = model.New<IfcMaterialLayerSetUsage>(u =>
+                {
+                    u.DirectionSense = IfcDirectionSenseEnum.NEGATIVE;
+                    u.LayerSetDirection = IfcLayerSetDirectionEnum.AXIS3;
+                    u.OffsetFromReferenceLine = 0;
+                    u.ForLayerSet = model.New<IfcMaterialLayerSet>(set =>
+                    {
+                        set.LayerSetName = "Concrete Layer Set";
+                        set.MaterialLayers.Add(model.New<IfcMaterialLayer>(layer =>
+                        {
+                            layer.Name = "Layer1";
+                            layer.Material = material;
+                            layer.LayerThickness = box.SizeZ;
+                            layer.IsVentilated = false;
+                            layer.Category = "Core";
+                        }));
+                    });
+                });
+
+                mat.Name = "RelMat";
+                mat.RelatingMaterial = usage;
+                mat.RelatedObjects.Add(slab);
+            });
+
+            return slab;
+        }
+
+        public static IfcAnnotation CreateAnnotation(this IModel model, string text, IfcObjectPlacement placement, V3d position, IfcPresentationLayerWithStyle layer)
+        {
+            // Anotation-Experiments https://ifc43-docs.standards.buildingsmart.org/IFC/RELEASE/IFC4x3/HTML/lexical/IfcAnnotation.htm
+            return model.New<IfcAnnotation>(a =>
+            {
+                var box = new Box3d(V3d.Zero, new V3d(200, 100, 500)); // mm
+
+                a.Name = "Intersection of " + text;
+                a.ObjectPlacement = placement;
+                a.Representation = model.New<IfcProductDefinitionShape>(r => {
+                    r.Representations.AddRange([
+                        model.CreateShapeRepresentationAnnotation2dText(text, position.XY, layer),
+                        model.CreateShapeRepresentationAnnotation2dCurve([position.XY, (position.XY + new V2d(500, 750.0)), (position.XY + new V2d(1000,1000))], [[1,2,3]], layer),
+                        model.CreateShapeRepresentationAnnotation3dCurve([position, (position + new V3d(500, 750.0, 100)), (position + new V3d(1000,1000, 200))], layer),
+                        model.CreateShapeRepresentationAnnotation3dSurface(Plane3d.ZPlane, new Polygon2d(box.XY.Translated(position.XY-box.XY.Center).ComputeCornersCCW()), layer),
+                        model.CreateShapeRepresentationAnnotation3dCross(position, V3d.YAxis, 45, 1000.0, layer)
+                        //// NOT-displayed in BIMVision
+                        //model.CreateShapeRepresentationAnnotation2dPoint(position.XY, layer),
+                        //model.CreateShapeRepresentationAnnotation3dPoint(position, layer),
+                        //model.CreateShapeRepresentationAnnotation2dArea(new Box2d(V2d.Zero, V2d.One*1000.0), layer),
+
+                        // broken
+                        //model.CreateShapeRepresentationSurveyPoints(position.XY),
+                        //model.CreateShapeRepresentationSurveyPoints(position),
+                    ]);
+                });
+            });
+        }
+
+        public static IfcLightFixture CreateLightAmbient(this IModel model, string name, C3d color, IfcObjectPlacement placement, IfcPresentationLayerAssignment layer)
+        {
+            // box to visualize light dimensions
+            var shape = model.CreateShapeRepresentationSolidBox(new Box3d(V3d.Zero, new V3d(200, 200, 300)), layer);
+
+            //IfcRepresentationItem repItem = shape.Items.First();
+            //repItem.CreateStyleItem(model.Instances.OfType<IfcSurfaceStyle>().First());
+
+            // TODO: for regular grid matrix could be used...
+            var distribution = model.CreateLightIntensityDistribution(IfcLightDistributionCurveEnum.TYPE_C, [
+                // Main plane-angle and its secondary-plane-angles     
+                new IFCHelper.LightIntensityDistributionData(0, [new IFCHelper.AngleAndIntensity(0.0, 100.0), new IFCHelper.AngleAndIntensity(90.0, 200.0), new IFCHelper.AngleAndIntensity(180.0, 100.0)]),
+                new IFCHelper.LightIntensityDistributionData(180, [new IFCHelper.AngleAndIntensity(0.0, 10.0), new IFCHelper.AngleAndIntensity(45.0, 15.0), new IFCHelper.AngleAndIntensity(90.0, 20.0), new IFCHelper.AngleAndIntensity(135.0, 15.0), new IFCHelper.AngleAndIntensity(180.0, 10.0)])
+            ]);
+
+            return model.New<IfcLightFixture>(t =>
+            {
+                t.Name = name;
+                t.ObjectPlacement = placement;
+                t.Representation = model.New<IfcProductDefinitionShape>(r =>
+                {
+                    r.Representations.AddRange([
+                        model.CreateShapeRepresentationLightingAmbient(color),
+                        model.CreateShapeRepresentationLightingDirectional(color, V3d.ZAxis),
+                        model.CreateShapeRepresentationLightingGoniemtric(color, V3d.Zero, 1000, 1000, distribution),
+                        shape,
+                    ]);
+                });
+            });
+
+        }
     }
 
     public static class AardvarkExtensions
