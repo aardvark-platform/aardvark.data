@@ -1,3 +1,6 @@
+### 1.1.0-prerelease0005
+- Updated to xBIM-Geometry 6.1.801-netcore and xBIM-Essentials 6.0.489
+
 ### 1.0.4
 - Updated to NET 8 and Aardvark.Base 5.3
 
