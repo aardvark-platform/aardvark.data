@@ -12,9 +12,13 @@
     <OutputPath>..\..\..\bin\Release</OutputPath>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="data\simple_scene.ifc" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\Aardvark.Data.Ifc\Aardvark.Data.Ifc.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="data\simple_scene.ifc" />
     <EmbeddedResource Include="data\slab.ifc" />
     <EmbeddedResource Include="data\surface-model.ifc" />
     <EmbeddedResource Include="data\wall.ifc" />

@@ -32,8 +32,9 @@ namespace Aardvark.Data.Ifc
             if (model.GeometryStore.IsEmpty)
             {
                 var context = new Xbim3DModelContext(model);
+                context.MaxThreads = 1;
                 //upgrade to new geometry representation, uses the default 3D model
-                context.CreateContext();    // THIS IS COSTLY!
+                context.CreateContext(null, true, false);    // THIS IS COSTLY!
             }
 
             foreach (var modelReference in model.ReferencedModels)
@@ -46,7 +47,7 @@ namespace Aardvark.Data.Ifc
                     continue;
                 var context = new Xbim3DModelContext(modelReference.Model);
                 //upgrade to new geometry representation, uses the default 3D model
-                context.CreateContext();
+                context.CreateContext(null, true, false);
             }
 
             var project = model.Instances.OfType<IIfcProject>().First().UnitsInContext;

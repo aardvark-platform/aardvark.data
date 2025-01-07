@@ -1,3 +1,6 @@
+### 1.1.0-prerelease0006
+- Restored features from v6-branch
+
 ### 1.1.0-prerelease0005
 - Updated to xBIM-Geometry 6.1.801-netcore and xBIM-Essentials 6.0.489
 
