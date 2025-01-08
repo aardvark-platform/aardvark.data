@@ -322,7 +322,7 @@ namespace Aardvark.Data.Ifc
             var properties = mat.HasProperties.SelectMany(a => a.Properties).ToArray();
 
             Func<string, double> tryGetProperty = (string input) => {
-                var thermal = properties.FirstOrDefault(x => (string)x.Name == input);
+                var thermal = properties.FirstOrDefault(p => p != null ? (string)p.Name == input : false);
                 if (thermal != null && thermal is IIfcPropertySingleValue value)
                 {
                     return (double)value.NominalValue.Value;
