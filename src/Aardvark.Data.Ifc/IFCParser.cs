@@ -8,6 +8,7 @@ using Xbim.Common;
 using Xbim.Common.Geometry;
 using Xbim.Common.Metadata;
 using Xbim.Common.XbimExtensions;
+using Xbim.Geometry.Abstractions;
 using Xbim.Ifc;
 using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.UtilityResource;
@@ -19,7 +20,7 @@ namespace Aardvark.Data.Ifc
     {
         static readonly XbimColourMap _colourMap = new XbimColourMap();
 
-        public static IFCData PreprocessIFC(string filePath, XbimEditorCredentials editor = null)
+        public static IFCData PreprocessIFC(string filePath, XbimEditorCredentials editor = null, XGeometryEngineVersion geometryEngine = XGeometryEngineVersion.V6, bool singleThreading = false)
         {
             Dict<IfcGloballyUniqueId, IFCContent> content = null;
             Dictionary<string, IFCMaterial> materials = null;
@@ -31,10 +32,10 @@ namespace Aardvark.Data.Ifc
 
             if (model.GeometryStore.IsEmpty)
             {
-                var context = new Xbim3DModelContext(model);
-                context.MaxThreads = 1;
+                var context = new Xbim3DModelContext(model, engineVersion: geometryEngine);
+                if(singleThreading) context.MaxThreads = 1;
                 //upgrade to new geometry representation, uses the default 3D model
-                context.CreateContext(null, true, false);    // THIS IS COSTLY!
+                context.CreateContext(null, true, false);
             }
 
             foreach (var modelReference in model.ReferencedModels)
@@ -45,7 +46,8 @@ namespace Aardvark.Data.Ifc
                     continue;
                 if (!modelReference.Model.GeometryStore.IsEmpty)
                     continue;
-                var context = new Xbim3DModelContext(modelReference.Model);
+                var context = new Xbim3DModelContext(modelReference.Model, engineVersion: geometryEngine);
+                if (singleThreading) context.MaxThreads = 1;
                 //upgrade to new geometry representation, uses the default 3D model
                 context.CreateContext(null, true, false);
             }
