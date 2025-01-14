@@ -321,16 +321,24 @@ namespace Aardvark.Data.Ifc
 
             var material = XbimTexture.Create(surfStyle);
 
-            var properties = mat.HasProperties.SelectMany(a => a.Properties).ToArray();
+            var lookup = IFCHelper.DistinctDictionaryFromProperties2(mat.GetProperties());
+            
+            var floatingPointLookup = IFCHelper.DistinctDictionaryFromPropertiesOfType<double>(mat.GetProperties()); // only floating-point attributes!
 
-            Func<string, double> tryGetProperty = (string input) => {
-                var thermal = properties.FirstOrDefault(p => p != null ? (string)p.Name == input : false);
-                if (thermal != null && thermal is IIfcPropertySingleValue value)
-                {
-                    return (double)value.NominalValue.Value;
-                }
-                else return 0.0;
-            };
+            double tryGetProperty(string input) {
+                
+                // pre filtered and converted lookup table
+                var valid = floatingPointLookup.TryGetValue(input, out var result);
+
+                // post filtered table
+                var valid2 = lookup.TryGetValue(input, out var v2);
+                double result2 = 0.0;
+                if(valid2) v2.TryGetSimpleValue(out result2);
+
+                if (valid && valid2 && !result2.ApproximateEquals(result)) Report.Error("Different values for properties lookups!");
+
+                return valid ? result : 0.0;
+            }
 
             var thermal = tryGetProperty("ThermalConductivity");
             var capacity = tryGetProperty("SpecificHeatCapacity");

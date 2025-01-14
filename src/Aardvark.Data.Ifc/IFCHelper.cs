@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Collections.Generic;
 using System.Linq;
 using Aardvark.Base;
@@ -25,6 +26,7 @@ using Xbim.Ifc4.MaterialResource;
 using Xbim.Ifc4.PresentationDefinitionResource;
 using Xbim.Ifc4.ElectricalDomain;
 using Xbim.Ifc4.SharedBldgElements;
+using Xbim.Ifc4.DateTimeResource;
 
 namespace Aardvark.Data.Ifc
 {
@@ -85,9 +87,246 @@ namespace Aardvark.Data.Ifc
             return o.GetPropertyFromType(name);
         }
 
+        #region Property-Value
+
+        public static bool TryGetSimpleValue2<T>(this IExpressValueType ifcValue, out T result) where T : struct
+        {
+            static DateTime ReadDateTime(string str)
+            {
+                try
+                {
+                    var parts = str.Split([':', '-', 'T', 'Z'], StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length == 6) //it is a date time
+                    {
+                        var year = Convert.ToInt32(parts[0]);
+                        var month = Convert.ToInt32(parts[1]);
+                        var day = Convert.ToInt32(parts[2]);
+                        var hours = Convert.ToInt32(parts[3]);
+                        var minutes = Convert.ToInt32(parts[4]);
+                        var seconds = Convert.ToInt32(parts[5]);
+                        return new DateTime(year, month, day, hours, minutes, seconds, str.Last() == 'Z' ? DateTimeKind.Utc : DateTimeKind.Unspecified);
+                    }
+                    if (parts.Length == 3) //it is a date
+                    {
+                        var year = Convert.ToInt32(parts[0]);
+                        var month = Convert.ToInt32(parts[1]);
+                        var day = Convert.ToInt32(parts[2]);
+                        return new DateTime(year, month, day);
+                    }
+                }
+                catch (Exception)
+                {
+                    Report.Warn("Date Time Conversion: An illegal date time string has been found [{stringValue}]", str);
+                }
+                return default;
+            }
+
+            var value = new T();
+            try
+            {
+                if (ifcValue is IfcMonetaryMeasure)
+                {
+                    value = (T)Convert.ChangeType(ifcValue.Value, typeof(T));
+                }
+                else if (ifcValue is IfcTimeStamp timeStamp)
+                {
+                    value = (T)Convert.ChangeType(timeStamp.ToDateTime(), typeof(T));
+                }
+                else if (value is DateTime) //sometimes these are written as strings in the ifc file
+                {
+                    value = (T)Convert.ChangeType(ReadDateTime(ifcValue.Value.ToString()), typeof(T));
+                }
+                else if (ifcValue.UnderlyingSystemType == typeof(int) || ifcValue.UnderlyingSystemType == typeof(long) || ifcValue.UnderlyingSystemType == typeof(short) || ifcValue.UnderlyingSystemType == typeof(byte))
+                {
+                    value = (T)Convert.ChangeType(ifcValue.Value, typeof(T));
+                }
+                else if (ifcValue.UnderlyingSystemType == typeof(double) || ifcValue.UnderlyingSystemType == typeof(float))
+                {
+                    value = (T)Convert.ChangeType(ifcValue.Value, typeof(T));
+                }
+                else if (ifcValue.UnderlyingSystemType == typeof(string))
+                {
+                    value = (T)Convert.ChangeType(ifcValue.Value, typeof(T));
+                }
+                else if (ifcValue.UnderlyingSystemType == typeof(bool) || ifcValue.UnderlyingSystemType == typeof(bool?))
+                {
+                    value = (T)Convert.ChangeType(ifcValue.Value, typeof(T));
+                }
+            }
+            catch (Exception ex)
+            {
+                result = default;
+                return false;
+            }
+
+            result = value;
+            return true;
+        }
+
+        public static bool TryGetSimpleValue<T>(this IExpressValueType ifcValue, out T result) where T : struct
+        {
+            var targetType = typeof(T);
+
+            //handle null value if is it acceptable
+            if (ifcValue == null || ifcValue.Value == null)
+            {
+                result = default;
+                //return true if null is acceptable value
+                return targetType.IsClass ||
+                       (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>));
+            }
+
+            if (targetType == typeof(string))
+            {
+                result = (T)(object)ifcValue.ToString();
+                return true;
+            }
+
+            if (targetType == typeof(float) || targetType == typeof(float?) || targetType == typeof(double) || targetType == typeof(double?))
+            {
+                try
+                {
+                    result = (T)(object)Convert.ToDouble(ifcValue.Value, CultureInfo.InvariantCulture);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    if (ex is NullReferenceException || ex is ArgumentNullException || ex is FormatException || ex is OverflowException)
+                    {
+                        if (typeof(T) == typeof(float?) ||
+                        typeof(T) == typeof(double?))
+                        {
+                            result = default;
+                            return true;
+                        }
+                    }
+                }
+                
+                result = default;
+                return false;
+            }
+
+            if (targetType == typeof(bool) || targetType == typeof(bool?))
+            {
+                try
+                {
+                    result = (T)(object)Convert.ToBoolean(ifcValue.Value);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    if (ex is NullReferenceException || ex is ArgumentNullException)
+                    {
+                        if (typeof(T) == typeof(bool?))
+                        {
+                            result = default;
+                            return true;
+                        }
+                    }
+
+                    if (ex is FormatException) Report.Warn("Boolean Conversion: String does not consist of an " + "optional sign followed by a series of digits.");
+                    if (ex is OverflowException) Report.Warn("Boolean Conversion: Overflow in string to int conversion.");
+                }
+                
+                result = default;
+                return false;
+            }
+
+            if (targetType == typeof(int) || targetType == typeof(int?) || targetType == typeof(long) || targetType == typeof(long?))
+            {
+                try
+                {
+                    result = (T)(object)Convert.ToInt32(ifcValue.Value);
+                    return true;
+                }
+                catch (Exception ex) {
+                    if (ex is NullReferenceException || ex is ArgumentNullException) { 
+
+                        if (targetType == typeof(int?) || targetType == typeof(long?))
+                        {
+                            result = default;
+                            return true;
+                        }
+                    }
+                }
+
+                result = default;
+                return false;
+            }
+
+            if (targetType == typeof(DateTime) || targetType == typeof(DateTime?))
+            {
+                try
+                {
+                    result = (T)(object)Convert.ToDateTime(ifcValue.Value);
+                    return true;
+                }
+                catch (Exception)
+                {
+                    result = default;
+                    return targetType == typeof(DateTime?);
+                }
+            }
+
+            result = default;
+            return false;
+        }
+
+        public static bool TryGetSimpleValue<T>(this IIfcPhysicalQuantity ifcQuantity, out T result) where T : struct
+        {
+            if (ifcQuantity is IIfcQuantityLength ifcQuantityLength)
+                return TryGetSimpleValue(ifcQuantityLength.LengthValue, out result);
+
+            if (ifcQuantity is IIfcQuantityArea ifcQuantityArea)
+                return TryGetSimpleValue(ifcQuantityArea.AreaValue, out result);
+
+            if (ifcQuantity is IIfcQuantityVolume ifcQuantityVolume)
+                return TryGetSimpleValue(ifcQuantityVolume.VolumeValue, out result);
+
+            if (ifcQuantity is IIfcQuantityCount ifcQuantityCount)
+                return TryGetSimpleValue(ifcQuantityCount.CountValue, out result);
+
+            if (ifcQuantity is IIfcQuantityWeight ifcQuantityWeight)
+                return TryGetSimpleValue(ifcQuantityWeight.WeightValue, out result);
+
+            if (ifcQuantity is IIfcQuantityTime ifcQuantityTime)
+                return TryGetSimpleValue(ifcQuantityTime.TimeValue, out result);
+            
+            if (ifcQuantity is IIfcPhysicalComplexQuantity)
+            {
+                Report.Warn("Complex Types are not supported!");
+            }
+            result = default;
+            return false;
+        }
+
+        public static bool TryGetSimpleValue<T>(this IIfcPropertySingleValue property, out T result) where T : struct
+        {
+            var isValid = property.NominalValue.TryGetSimpleValue(out T res);
+            result = res;
+
+            return isValid;
+        }
+
+        #endregion
+
         public static Dictionary<string, string> DistinctDictionaryFromProperties(IEnumerable<IIfcPropertySingleValue> input)
             => input.ToDictionaryDistinct(x => x.Name.ToString(), x => x.NominalValue.ToString(), (x, w) => true);
-        
+
+        public static Dictionary<string, IIfcPropertySingleValue> DistinctDictionaryFromProperties2(IEnumerable<IIfcPropertySingleValue> input)
+            => input.ToDictionaryDistinct(x => x.Name.ToString(), x => x, (x, w) => true);
+
+        public static Dictionary<string, T> DistinctDictionaryFromPropertiesOfType<T>(IEnumerable<IIfcPropertySingleValue> input) where T : struct
+        {
+            return input
+                .Select(x => {
+                    var valid = x.TryGetSimpleValue(out T result);
+                    return Tuple.Create(x.Name.ToString(), valid, result);
+                })
+                .Where(t => t.Item2)
+                .ToDictionaryDistinct(t => t.Item1, t => t.Item3, (x,w) => true);
+        }
+
         public static Dictionary<string, string> GetPropertiesDict(this IIfcObject o, string propertySetName = null)
             => DistinctDictionaryFromProperties((propertySetName == null) ? o.GetProperties() : o.GetProperties(propertySetName));
 
@@ -97,6 +336,7 @@ namespace Aardvark.Data.Ifc
         public static Dictionary<string, string> GetAllPropertiesDict(this IIfcObject o) 
             => DistinctDictionaryFromProperties(o.GetAllProperties());
 
+        [Obsolete]
         public static Dictionary<string, string> GetHilitePropertiesDict(this IIfcObject o)
             => o.GetPropertiesDict("Hilite");
 
@@ -730,6 +970,14 @@ namespace Aardvark.Data.Ifc
         #endregion
 
         #region Material
+
+        public static IEnumerable<IIfcPropertySingleValue> GetProperties(this IIfcMaterial mat)
+        {
+            return mat.HasProperties
+                    .SelectMany(mp => mp.Properties)
+                    .OfType<IIfcPropertySingleValue>();
+        }
+
         public static IfcMaterialProperties CreateAttachPsetMaterialCommon(this IfcMaterial material, double molecularWeight, double porosity, double massDensity)
         {
             return material.Model.New<IfcMaterialProperties>(ps => {
@@ -1446,7 +1694,7 @@ namespace Aardvark.Data.Ifc
         public static IIfcValue GetArea(this IfcObject o)
         {
             // short-cut
-            var area = o.PhysicalSimpleQuantities.OfType<IIfcQuantityArea>().FirstOrDefault()?.AreaValue;
+            var area = o.PhysicalSimpleQuantities.OfType<IIfcQuantityArea>().FirstOrDefault()?.AreaValue; //.TryGetSimpleValue(out double areaValue);
 
             ////try to get the value from quantities first
             //var area =
@@ -1473,7 +1721,7 @@ namespace Aardvark.Data.Ifc
             if (area != null) return area;
 
             //try to get the value from properties
-            return IFCHelper.GetProperty(o, "Area");
+            return IFCHelper.GetProperty(o, "Area"); // .TryGetSimpleValue(out double areaValue2);
         }
 
         public static IfcSlab CreateAttachSlab(this IfcSpatialStructureElement parent, string elementName, IfcPresentationLayerAssignment layer, IfcMaterial material)
