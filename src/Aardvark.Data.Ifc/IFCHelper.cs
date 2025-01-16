@@ -1,32 +1,32 @@
 ﻿using System;
-using System.Globalization;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+
 using Aardvark.Base;
 using Aardvark.Geometry;
 
-using Xbim.Ifc;
-using Xbim.Ifc4.Interfaces;
-
 using Xbim.Common;
 using Xbim.Common.Step21;
-using Xbim.Ifc4.Kernel;
-using Xbim.Ifc4.PropertyResource;
-using Xbim.Ifc4.MeasureResource;
-using Xbim.Ifc4.ProductExtension;
-using Xbim.Ifc4.RepresentationResource;
-using Xbim.Ifc4.GeometryResource;
-using Xbim.Ifc4.GeometricModelResource;
-using Xbim.Ifc4.ProfileResource;
-using Xbim.Ifc4.GeometricConstraintResource;
-using Xbim.Ifc4.PresentationAppearanceResource;
-using Xbim.Ifc4.PresentationOrganizationResource;
+using Xbim.Ifc;
 using Xbim.Ifc.Extensions;
-using Xbim.Ifc4.MaterialResource;
-using Xbim.Ifc4.PresentationDefinitionResource;
-using Xbim.Ifc4.ElectricalDomain;
-using Xbim.Ifc4.SharedBldgElements;
 using Xbim.Ifc4.DateTimeResource;
+using Xbim.Ifc4.ElectricalDomain;
+using Xbim.Ifc4.GeometricConstraintResource;
+using Xbim.Ifc4.GeometricModelResource;
+using Xbim.Ifc4.GeometryResource;
+using Xbim.Ifc4.Interfaces;
+using Xbim.Ifc4.Kernel;
+using Xbim.Ifc4.MaterialResource;
+using Xbim.Ifc4.MeasureResource;
+using Xbim.Ifc4.PresentationAppearanceResource;
+using Xbim.Ifc4.PresentationDefinitionResource;
+using Xbim.Ifc4.PresentationOrganizationResource;
+using Xbim.Ifc4.ProductExtension;
+using Xbim.Ifc4.ProfileResource;
+using Xbim.Ifc4.PropertyResource;
+using Xbim.Ifc4.RepresentationResource;
+using Xbim.Ifc4.SharedBldgElements;
 
 namespace Aardvark.Data.Ifc
 {
@@ -122,6 +122,7 @@ namespace Aardvark.Data.Ifc
             }
 
             var value = new T();
+
             try
             {
                 if (ifcValue is IfcMonetaryMeasure)
@@ -153,7 +154,7 @@ namespace Aardvark.Data.Ifc
                     value = (T)Convert.ChangeType(ifcValue.Value, typeof(T));
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 result = default;
                 return false;
@@ -310,11 +311,21 @@ namespace Aardvark.Data.Ifc
 
         #endregion
 
-        public static Dictionary<string, string> DistinctDictionaryFromProperties(IEnumerable<IIfcPropertySingleValue> input)
+        public static Dictionary<string, string> DistinctDictionaryFromPropertiesString(IEnumerable<IIfcPropertySingleValue> input)
             => input.ToDictionaryDistinct(x => x.Name.ToString(), x => x.NominalValue.ToString(), (x, w) => true);
 
-        public static Dictionary<string, IIfcPropertySingleValue> DistinctDictionaryFromProperties2(IEnumerable<IIfcPropertySingleValue> input)
+        public static Dictionary<string, IIfcPropertySingleValue> DistinctDictionaryFromPropertiesValues(IEnumerable<IIfcPropertySingleValue> input)
             => input.ToDictionaryDistinct(x => x.Name.ToString(), x => x, (x, w) => true);
+
+        public static T TryGetProperty<T>(this Dictionary<string, IIfcPropertySingleValue> dict, string input) where T : struct
+        {
+            if (dict.TryGetValue(input, out var value))
+            {
+                if (value.TryGetSimpleValue(out T result)) return result;
+            }
+
+            return default;
+        }
 
         public static Dictionary<string, T> DistinctDictionaryFromPropertiesOfType<T>(IEnumerable<IIfcPropertySingleValue> input) where T : struct
         {
@@ -328,13 +339,13 @@ namespace Aardvark.Data.Ifc
         }
 
         public static Dictionary<string, string> GetPropertiesDict(this IIfcObject o, string propertySetName = null)
-            => DistinctDictionaryFromProperties((propertySetName == null) ? o.GetProperties() : o.GetProperties(propertySetName));
+            => DistinctDictionaryFromPropertiesString((propertySetName == null) ? o.GetProperties() : o.GetProperties(propertySetName));
 
         public static Dictionary<string, string> GetSharedPropertiesDict(this IIfcObject o)
-            => DistinctDictionaryFromProperties(GetPropertiesFromType(o));
+            => DistinctDictionaryFromPropertiesString(GetPropertiesFromType(o));
 
         public static Dictionary<string, string> GetAllPropertiesDict(this IIfcObject o) 
-            => DistinctDictionaryFromProperties(o.GetAllProperties());
+            => DistinctDictionaryFromPropertiesString(o.GetAllProperties());
 
         [Obsolete]
         public static Dictionary<string, string> GetHilitePropertiesDict(this IIfcObject o)
@@ -978,6 +989,8 @@ namespace Aardvark.Data.Ifc
                     .OfType<IIfcPropertySingleValue>();
         }
 
+        public static Dictionary<string, IIfcPropertySingleValue> GetPropertiesDict(this IIfcMaterial mat) => DistinctDictionaryFromPropertiesValues(mat.GetProperties());
+
         public static IfcMaterialProperties CreateAttachPsetMaterialCommon(this IfcMaterial material, double molecularWeight, double porosity, double massDensity)
         {
             return material.Model.New<IfcMaterialProperties>(ps => {
@@ -1136,9 +1149,8 @@ namespace Aardvark.Data.Ifc
 
         public static IfcIndexedPolyCurve CreateIndexedPolyCurve(this IModel model, IEnumerable<V2d> points, IEnumerable<int[]> indices = null)
         {
-
             // NOTE: Indices start with 1!
-            var curve = model.New<IfcIndexedPolyCurve>(poly =>
+            return model.New<IfcIndexedPolyCurve>(poly =>
             {
                 poly.Points = model.CreateCartesianPointList2D(points.ToArray());
 
@@ -1152,8 +1164,6 @@ namespace Aardvark.Data.Ifc
                     poly.Segments.AddRange(index);
                 }
             });
-
-            return curve;
         }
 
         #endregion

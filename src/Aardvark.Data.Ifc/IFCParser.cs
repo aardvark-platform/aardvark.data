@@ -302,49 +302,22 @@ namespace Aardvark.Data.Ifc
 
         public static IFCMaterial GetMaterial(IIfcMaterial mat)
         {
-            var matDefRep = mat.HasRepresentation.FirstOrDefault() ?? throw new ArgumentException("No repesentation", mat.Name.ToString());
-            var rep = matDefRep.Representations.First();
-            var repItem = (IIfcStyledItem)rep.Items.First();
-
-            IIfcSurfaceStyle surfStyle;
-            if (repItem.Styles.First() is Xbim.Ifc4.PresentationAppearanceResource.IfcSurfaceStyle s)
-            {
-                surfStyle = s;
-            }
-            else
-            {
-                var presStyleAss = (IIfcPresentationStyleAssignment)repItem.Styles.First();
-                surfStyle = presStyleAss.SurfaceStyles.FirstOrDefault();
-            }
-
-            if (surfStyle == null) throw new ArgumentException("No surfStyle", mat.Name.ToString());
-
-            var material = XbimTexture.Create(surfStyle);
-
-            var lookup = IFCHelper.DistinctDictionaryFromProperties2(mat.GetProperties());
+            var name = mat.Name.ToString();
             
-            var floatingPointLookup = IFCHelper.DistinctDictionaryFromPropertiesOfType<double>(mat.GetProperties()); // only floating-point attributes!
+            var matDefRep = mat.HasRepresentation.FirstOrDefault() ?? throw new ArgumentException("No repesentation", name);
+            var style = ((IIfcStyledItem) matDefRep.Representations.First().Items.First()).Styles.First();
 
-            double tryGetProperty(string input) {
-                
-                // pre filtered and converted lookup table
-                var valid = floatingPointLookup.TryGetValue(input, out var result);
-
-                // post filtered table
-                var valid2 = lookup.TryGetValue(input, out var v2);
-                double result2 = 0.0;
-                if(valid2) v2.TryGetSimpleValue(out result2);
-
-                if (valid && valid2 && !result2.ApproximateEquals(result)) Report.Error("Different values for properties lookups!");
-
-                return valid ? result : 0.0;
-            }
-
-            var thermal = tryGetProperty("ThermalConductivity");
-            var capacity = tryGetProperty("SpecificHeatCapacity");
-            var density = tryGetProperty("MassDensity");
-
-            return new IFCMaterial(mat.Name.ToString(), material, thermal, capacity, density);
+            IIfcSurfaceStyle surfStyle = (style is Xbim.Ifc4.PresentationAppearanceResource.IfcSurfaceStyle s ? s : 
+                ((IIfcPresentationStyleAssignment)style).SurfaceStyles.FirstOrDefault()) ?? throw new ArgumentException("No surfStyle", name);
+            
+            var properties = mat.GetPropertiesDict();
+            
+            return new IFCMaterial(name, 
+                XbimTexture.Create(surfStyle), 
+                properties.TryGetProperty<double>("ThermalConductivity"),
+                properties.TryGetProperty<double>("SpecificHeatCapacity"),
+                properties.TryGetProperty<double>("MassDensity")
+            );
         }
 
         public static IFCMaterial GetMaterialByStyle(IModel model, int styleId)

@@ -1,8 +1,6 @@
 ﻿using Aardvark.Base;
 using Aardvark.Data.Ifc;
 using Aardvark.Geometry;
-using Microsoft.Isam.Esent.Interop;
-using Microsoft.VisualBasic;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -346,6 +344,9 @@ namespace Aardvark.Data.Tests.Ifc
         {
             using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
 
+            var massDensity = 1234.0;
+            var thermalConductivity = 100;
+
             InitScene(model);
             using (var txn = model.BeginTransaction("Create Slab with Material"))
             {
@@ -353,8 +354,8 @@ namespace Aardvark.Data.Tests.Ifc
 
                 // MATERIAL
                 var material = model.New<IfcMaterial>(m => m.Name = "Carbon");
-                material.CreateAttachPsetMaterialCommon(98.7654, 0.54, 1234.0);
-                material.CreateAttachPsetMaterialThermal(100, 500, 99, -10);
+                material.CreateAttachPsetMaterialCommon(98.7654, 0.54, massDensity);
+                material.CreateAttachPsetMaterialThermal(thermalConductivity, 500, 99, -10);
                 material.CreateAttachPresentation(C3d.Magenta);
 
                 var slab = building.CreateAttachSlab("Mesh4", null, material);
@@ -363,7 +364,17 @@ namespace Aardvark.Data.Tests.Ifc
             }
 
             ValidateModel(model.Instances);
-            Assert.True(model.Instances.OfType<IfcMaterial>().First().HasProperties.SelectMany(m => m.Properties).WhereNotNull().Count() == 7);
+
+            var mat = model.Instances.OfType<IfcMaterial>().First();
+
+            var myMaterial = IFCParser.GetMaterial(mat);
+            Assert.IsTrue(myMaterial.MassDensity == massDensity);
+            Assert.IsTrue(myMaterial.ThermalConductivity == thermalConductivity);
+            
+            // Cast to IIfcMaterial results into invalid null values for the first 3 properties in .NET8.0 -> WHY?!
+            var properties = ((Xbim.Ifc4.Interfaces.IIfcMaterial) mat).HasProperties.SelectMany(a => a.Properties).ToArray(); 
+            properties.ForEach(Assert.IsNotNull);
+
             model.SaveAs("test_Material.ifc");
         }
 
