@@ -115,6 +115,16 @@ namespace Aardvark.Data.Tests.Ifc
                 Assert.IsTrue(carbonMaterial.ThermalConductivity.ApproximateEquals(100.0) && carbonMaterial.MassDensity.ApproximateEquals(1234.0));
             });
         }
+
+        [Test]
+        public static void LoadIfc4x3()
+        {
+            LoadEmbeddedData(@"data\Viadotto Acerno_ifc43.ifc", (filePath) => {
+                var parsed = IFCParser.PreprocessIFC(filePath, singleThreading: true);
+                Assert.AreEqual(26, parsed.Materials.Count);
+            });
+        }
+        
     }
 
     [TestFixture]

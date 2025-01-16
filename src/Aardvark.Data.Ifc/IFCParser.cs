@@ -10,6 +10,7 @@ using Xbim.Common.Metadata;
 using Xbim.Common.XbimExtensions;
 using Xbim.Geometry.Abstractions;
 using Xbim.Ifc;
+using Xbim.Ifc4;
 using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.UtilityResource;
 using Xbim.ModelGeometry.Scene;
@@ -20,7 +21,7 @@ namespace Aardvark.Data.Ifc
     {
         static readonly XbimColourMap _colourMap = new XbimColourMap();
 
-        public static IFCData PreprocessIFC(string filePath, XbimEditorCredentials editor = null, XGeometryEngineVersion geometryEngine = XGeometryEngineVersion.V6, bool singleThreading = false)
+        public static IFCData PreprocessIFC(string filePath, XbimEditorCredentials editor = null, XGeometryEngineVersion geometryEngine = XGeometryEngineVersion.V6, bool singleThreading = true)
         {
             Dict<IfcGloballyUniqueId, IFCContent> content = null;
             Dictionary<string, IFCMaterial> materials = null;
@@ -33,7 +34,7 @@ namespace Aardvark.Data.Ifc
             if (model.GeometryStore.IsEmpty)
             {
                 var context = new Xbim3DModelContext(model, engineVersion: geometryEngine);
-                if(singleThreading) context.MaxThreads = 1;
+                if (singleThreading) context.MaxThreads = 1;
                 //upgrade to new geometry representation, uses the default 3D model
                 context.CreateContext(null, true, false);
             }
@@ -52,15 +53,13 @@ namespace Aardvark.Data.Ifc
                 context.CreateContext(null, true, false);
             }
 
-            var project = model.Instances.OfType<IIfcProject>().First().UnitsInContext;
-            double projectScale = 1.0;
-
-            if (project is Xbim.Ifc2x3.MeasureResource.IfcUnitAssignment unitAssignment)
-                projectScale = unitAssignment.LengthUnitPower;
-            else if (project is Xbim.Ifc4.MeasureResource.IfcUnitAssignment unitAssignment4)
-                projectScale = unitAssignment4.LengthUnitPower;
-            else
-                Report.Line("Cannot retrieve Length Unit of IFC-Project. Use Default Unit (meters)");
+            double projectScale = model.Instances.OfType<IIfcProject>().First().UnitsInContext switch
+            {
+                Xbim.Ifc2x3.MeasureResource.IfcUnitAssignment u2x3 => u2x3.LengthUnitPower,
+                Xbim.Ifc4.MeasureResource.IfcUnitAssignment u4 => u4.LengthUnitPower,
+                Xbim.Ifc4x3.MeasureResource.IfcUnitAssignment u4x3 => u4x3.LengthUnitPower,
+                _ => 1.0 // Report.Line("Cannot retrieve Length Unit of IFC-Project. Use Default Unit (meters)")
+            };
 
             var cacheInverse = model.BeginInverseCaching();
             var cacheEntity = model.BeginEntityCaching();
@@ -305,11 +304,31 @@ namespace Aardvark.Data.Ifc
             var name = mat.Name.ToString();
             
             var matDefRep = mat.HasRepresentation.FirstOrDefault() ?? throw new ArgumentException("No repesentation", name);
-            var style = ((IIfcStyledItem) matDefRep.Representations.First().Items.First()).Styles.First();
 
-            IIfcSurfaceStyle surfStyle = (style is Xbim.Ifc4.PresentationAppearanceResource.IfcSurfaceStyle s ? s : 
-                ((IIfcPresentationStyleAssignment)style).SurfaceStyles.FirstOrDefault()) ?? throw new ArgumentException("No surfStyle", name);
-            
+            IIfcSurfaceStyle GetFirstSurfaceStyle() {
+                foreach (var rep in matDefRep.Representations) {
+                    foreach (var repItem in rep.Items) {
+                        if (repItem is IIfcStyledItem styledItem) {
+                            foreach (var style in styledItem.Styles) {
+                                if (style is IIfcSurfaceStyle surf) {
+                                    return surf;
+                                }
+                            }
+                        }
+                    }
+                }
+                return null;
+            }
+
+            var surfStyle = GetFirstSurfaceStyle() switch
+            {
+                Xbim.Ifc2x3.PresentationAppearanceResource.IfcSurfaceStyle s2x3 => s2x3,
+                Xbim.Ifc4.PresentationAppearanceResource.IfcSurfaceStyle s4 => s4,
+                Xbim.Ifc4x3.PresentationAppearanceResource.IfcSurfaceStyle s4x3 => s4x3,
+                IIfcPresentationStyleAssignment a => a.SurfaceStyles.FirstOrDefault(),
+                _ => throw new ArgumentException("No surfStyle", name)
+            };
+
             var properties = mat.GetPropertiesDict();
             
             return new IFCMaterial(name, 

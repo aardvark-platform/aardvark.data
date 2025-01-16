@@ -12,10 +12,6 @@
     <OutputPath>..\..\..\bin\Release</OutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="data\simple_scene.ifc" />
-    <None Remove="data\test_Material.ifc" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\..\Aardvark.Data.Ifc\Aardvark.Data.Ifc.csproj" />
   </ItemGroup>
   <ItemGroup>
@@ -23,6 +19,7 @@
     <EmbeddedResource Include="data\slab.ifc" />
     <EmbeddedResource Include="data\surface-model.ifc" />
     <EmbeddedResource Include="data\test_Material.ifc" />
+    <EmbeddedResource Include="data\Viadotto Acerno_ifc43.ifc" />
     <EmbeddedResource Include="data\wall.ifc" />
   </ItemGroup>
   <Import Project="..\..\..\.paket\Paket.Restore.targets" />
