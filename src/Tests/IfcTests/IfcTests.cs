@@ -380,8 +380,8 @@ namespace Aardvark.Data.Tests.Ifc
             var myMaterial = IFCParser.GetMaterial(mat);
             Assert.IsTrue(myMaterial.MassDensity == massDensity);
             Assert.IsTrue(myMaterial.ThermalConductivity == thermalConductivity);
-            
-            // Cast to IIfcMaterial results into invalid null values for the first 3 properties in .NET8.0 -> WHY?!
+
+            // Cast to IIfcMaterial results into invalid null values for the first 3 properties in .NET8.0 -> resolved with xbim issue #595 in xbim.essentials 6.0.493
             var properties = ((Xbim.Ifc4.Interfaces.IIfcMaterial) mat).HasProperties.SelectMany(a => a.Properties).ToArray(); 
             properties.ForEach(Assert.IsNotNull);
 
