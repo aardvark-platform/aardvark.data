@@ -20,6 +20,7 @@ using Xbim.Ifc4.MeasureResource;
 using Xbim.Ifc4.ProductExtension;
 using Xbim.Ifc4.RepresentationResource;
 using Xbim.Ifc4.SharedBldgElements;
+using Xbim.Ifc4.Interfaces;
 using Xbim.IO;
 
 namespace Aardvark.Data.Tests.Ifc
@@ -339,8 +340,42 @@ namespace Aardvark.Data.Tests.Ifc
 
                 var layer = model.CreateLayerWithStyle("Layer green styled", [model.CreateSurfaceStyle(C3d.Green)]);
 
-                var light = model.CreateLightAmbient("MyFirstLight", C3d.Red, model.CreateLocalPlacement(new V3d(100.0, 500, 1000)), layer);
-                building.AddElement(light);
+                var shiftVec = new V3d(0, 300, 0);
+
+                var baseShape = model.CreateShapeRepresentationSolidBox(new Box3d(V3d.Zero, new V3d(200, 100, 500)), layer);
+
+                var repMap = baseShape.CreateRepresentationMap();
+
+                var trafo1 = Trafo3d.RotationYInDegrees(-10);
+                var trafo2 = Trafo3d.RotationYInDegrees(45);
+                var trafo3 = Trafo3d.RotationYInDegrees(90);
+                var trafo4 = Trafo3d.RotationYInDegrees(125);
+                var trafo5 = Trafo3d.RotationYInDegrees(180);
+                var trafo6 = Trafo3d.RotationYInDegrees(270);
+
+                var prop = new Dictionary<string, object>
+                        {
+                            { "p1", "A" },
+                            { "p2", 123.15 },
+                            { "p3", false }
+                        };
+
+                var generalInfo = model.CreatePropertySet("General Information", prop);
+
+                var lightType = model.CreateLightType(IfcLightFixtureTypeEnum.POINTSOURCE, [repMap], [generalInfo]);
+
+                // attached property sets
+                building.AddElement(model.CreateLightEmpty("Empty_Light", model.CreateLocalPlacement(V3d.Zero), repMap.Instantiate(trafo1)).AttachPropertySet(generalInfo));
+                building.AddElement(model.CreateLightAmbient("Ambient_Light", C3d.Red, model.CreateLocalPlacement(shiftVec), repMap.Instantiate(trafo2)).AttachPropertySet(generalInfo));
+
+                // properties linked via light-type
+                building.AddElement(model.CreateLightDirectional("Directional_Light", C3d.Blue, V3d.ZAxis, model.CreateLocalPlacement(2*shiftVec), repMap.Instantiate(trafo3)).LinkToType(lightType));
+
+                building.AddElement(model.CreateLightPositional("Positional_Light", C3d.Green, new V3d(0, 0, 2000), 150, V3d.Zero, model.CreateLocalPlacement(3 * shiftVec), repMap.Instantiate(trafo4)));
+                building.AddElement(model.CreateLightSpot("Spot_Light", C3d.Yellow, new V3d(0, 0, 1000), V3d.ZAxis, 100, V3d.Zero, 50, 20, model.CreateLocalPlacement(4 * shiftVec), repMap.Instantiate(trafo5)));
+                
+                var dist = model.CreateLightIntensityDistribution(IfcLightDistributionCurveEnum.TYPE_C, []);
+                building.AddElement(model.CreateLightGoniometric("Gonometric_Light", C3d.Orange, new V3d(0, 0, 3000), 3500, 1000, dist, model.CreateLocalPlacement(5 * shiftVec), repMap.Instantiate(trafo6)));
 
                 txn.Commit();
             }

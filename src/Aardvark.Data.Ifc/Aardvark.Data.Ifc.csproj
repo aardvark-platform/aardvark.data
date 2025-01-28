@@ -15,5 +15,8 @@
     <None Include="paket.references" />
     <None Include="paket.template" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Aardvark.Data.Photometry\Aardvark.Data.Photometry.csproj" />
+  </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

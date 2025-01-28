@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-
 using Aardvark.Base;
+using Aardvark.Data.Photometry;
 using Aardvark.Geometry;
 
 using Xbim.Common;
@@ -376,6 +376,13 @@ namespace Aardvark.Data.Ifc
             return set;
         }
 
+
+        public static IfcProduct AttachPropertySet(this IfcProduct o, IfcPropertySet set)
+        {
+            o.AddPropertySet(set);
+            return o;
+        }
+
         public static IfcPropertySet CreateAttachPropertySet(this IfcObject o, string setName, Dictionary<string, object> parameters)
         {
             var set = o.Model.CreatePropertySet(setName, parameters);
@@ -384,7 +391,6 @@ namespace Aardvark.Data.Ifc
 
             return set;
         }
-
 
         public static void PurgePropertySingleValue(this IfcObject o, string pSetName, string propertyName)
         {
@@ -1224,6 +1230,82 @@ namespace Aardvark.Data.Ifc
             });
         }
 
+        public static IfcLightSourcePositional CreateLightSourcePositional(this IModel model, C3d color, V3d position, double radius, double constantAttenuation, double distanceAttenuation, double quadricAttenuation, string name = null, double? intensity = null, double? ambientIntensity = null)
+        {
+            // The Point light node specifies a point light source at a 3D location in the local coordinate system.
+            // A point light source emits light equally in all directions; that is, it is omnidirectional.
+
+            return model.New<IfcLightSourcePositional>(ls => {
+                ls.LightColour = model.CreateColor(color);
+
+                if (name != null) ls.Name = name;
+
+                // Light intensity may range from 0.0 (no light emission) to 1.0 (full intensity).
+                // The intensity field specifies the brightness of the direct emission from the ligth.
+                if (intensity.HasValue) ls.Intensity = new IfcNormalisedRatioMeasure(intensity.Value);
+                // The ambientIntensity specifies the intensity of the ambient emission from the light.
+                if (ambientIntensity.HasValue) ls.AmbientIntensity = ambientIntensity.Value;
+
+                // Definition from ISO/CD 10303-46:1992: The Cartesian point indicates the position of the light source. Definition from VRML97 - ISO/IEC 14772-1:1997: A Point light node illuminates geometry within radius of its location.
+                ls.Position = ls.Model.CreatePoint(position);
+
+                // The maximum distance from the light source for a surface still to be illuminated. Definition from VRML97 - ISO/IEC 14772-1:1997: A Point light node illuminates geometry within radius of its location.
+                ls.Radius = new IfcPositiveLengthMeasure(radius);
+
+                // Definition from ISO/CD 10303-46:1992: This real indicates the value of the attenuation in the lighting equation that is constant.
+                ls.ConstantAttenuation = constantAttenuation;
+
+                // Definition from ISO/CD 10303-46:1992: This real indicates the value of the attenuation in the lighting equation that proportional to the distance from the light source.
+                ls.DistanceAttenuation = distanceAttenuation;
+                
+                // This real indicates the value of the attenuation in the lighting equation that proportional to the square value of the distance from the light source.
+                ls.QuadricAttenuation = quadricAttenuation;
+            });
+        }
+
+        public static IfcLightSourceSpot CreateLightSourceSpot (this IModel model, C3d color, V3d position, double radius, double constantAttenuation, double distanceAttenuation, double quadricAttenuation, V3d direction, double spreadAngle, double beamWidthAngle, string name = null, double? intensity = null, double? ambientIntensity = null, double? concentrationExponent = null)
+        {
+            // The Point light node specifies a point light source at a 3D location in the local coordinate system.
+            // A point light source emits light equally in all directions; that is, it is omnidirectional.
+
+            return model.New<IfcLightSourceSpot>(ls => {
+                ls.LightColour = model.CreateColor(color);
+
+                if (name != null) ls.Name = name;
+
+                // Light intensity may range from 0.0 (no light emission) to 1.0 (full intensity).
+                // The intensity field specifies the brightness of the direct emission from the ligth.
+                if (intensity.HasValue) ls.Intensity = new IfcNormalisedRatioMeasure(intensity.Value);
+                // The ambientIntensity specifies the intensity of the ambient emission from the light.
+                if (ambientIntensity.HasValue) ls.AmbientIntensity = ambientIntensity.Value;
+
+                // Definition from ISO/CD 10303-46:1992: The Cartesian point indicates the position of the light source. Definition from VRML97 - ISO/IEC 14772-1:1997: A Point light node illuminates geometry within radius of its location.
+                ls.Position = ls.Model.CreatePoint(position);
+
+                // The maximum distance from the light source for a surface still to be illuminated. Definition from VRML97 - ISO/IEC 14772-1:1997: A Point light node illuminates geometry within radius of its location.
+                ls.Radius = new IfcPositiveLengthMeasure(radius);
+
+                // Definition from ISO/CD 10303-46:1992: This real indicates the value of the attenuation in the lighting equation that is constant.
+                ls.ConstantAttenuation = constantAttenuation;
+
+                // Definition from ISO/CD 10303-46:1992: This real indicates the value of the attenuation in the lighting equation that proportional to the distance from the light source.
+                ls.DistanceAttenuation = distanceAttenuation;
+
+                // This real indicates the value of the attenuation in the lighting equation that proportional to the square value of the distance from the light source.
+                ls.QuadricAttenuation = quadricAttenuation;
+
+                //Definition from ISO / CD 10303 - 46:1992: This is the direction of the axis of the cone of the light source specified in the coordinate space of the representation being projected..Definition from VRML97 -ISO / IEC 14772 - 1:1997: The direction field specifies the direction vector of the light's central axis defined in the local coordinate system.	X
+                ls.Orientation = ls.Model.CreateDirection(direction);
+
+                // Definition from ISO / CD 10303 - 46:1992: This real is the exponent on the cosine of the angle between the line that starts at the position of the spot light source and is in the direction of the orientation of the spot light source and a line that starts at the position of the spot light source and goes through a point on the surface being shaded.NOTE This attribute does not exists in ISO / IEC 14772 - 1:1997.X
+                if(concentrationExponent.HasValue) ls.ConcentrationExponent = concentrationExponent.Value;
+                // Definition from ISO / CD 10303 - 46:1992: This planar angle measure is the angle between the line that starts at the position of the spot light source and is in the direction of the spot light source and any line on the boundary of the cone of influence. Definition from VRML97 - ISO / IEC 14772 - 1:1997: The cutOffAngle(name of spread angle in VRML) field specifies the outer bound of the solid angle.The light source does not emit light outside of this solid angle.	X
+                ls.SpreadAngle = new IfcPositivePlaneAngleMeasure(spreadAngle);
+                // Definition from VRML97 - ISO / IEC 14772 - 1:1997: The beamWidth field specifies an inner solid angle in which the light source emits light at uniform full intensity. The light source's emission intensity drops off from the inner solid angle (beamWidthAngle) to the outer solid angle (spreadAngle).	X
+                ls.BeamWidthAngle = new IfcPositivePlaneAngleMeasure(beamWidthAngle);
+            });
+        }
+        
         public readonly struct AngleAndIntensity
         {
             public double AnglesInDegree { get; }
@@ -1475,6 +1557,39 @@ namespace Aardvark.Data.Ifc
 
         #endregion
 
+
+        public static IfcRepresentationMap CreateRepresentationMap(this IfcRepresentation item)
+        {
+            return item.Model.New<IfcRepresentationMap>(map =>
+            {
+                map.MappingOrigin = item.Model.CreateAxis2Placement3D(V3d.Zero);
+                map.MappedRepresentation = item;
+            });
+        }
+
+        public static IfcShapeRepresentation Instantiate(this IfcRepresentationMap map, Trafo3d shift)
+        {
+            var item = map.Model.New<IfcMappedItem>(m =>
+            {
+                m.MappingSource = map;
+                m.MappingTarget = map.Model.New<IfcCartesianTransformationOperator3D>(x =>
+                {
+                    x.Axis1 = map.Model.CreateDirection(shift.Forward.C0.XYZ);  // X - Axis
+                    x.Axis2 = map.Model.CreateDirection(shift.Forward.C1.XYZ);  // Y - Axis
+                    x.Axis3 = map.Model.CreateDirection(shift.Forward.C2.XYZ);  // Z - Axis
+                    x.LocalOrigin = map.Model.CreatePoint(shift.Forward.C3.XYZ);
+                });
+            });
+
+            return item.Model.New<IfcShapeRepresentation>(r =>
+            {
+                r.RepresentationIdentifier = "Body";
+                r.RepresentationType = "MappedRepresentation";
+                r.Items.Add(item);
+                r.ContextOfItems = item.Model.GetGeometricRepresentationContextModel();
+            });
+        }
+
         public static IfcShapeRepresentation CreateShapeRepresentationLighting(this IfcRepresentationItem item)
         {
             return item.Model.New<IfcShapeRepresentation>(r =>
@@ -1503,10 +1618,26 @@ namespace Aardvark.Data.Ifc
             return CreateShapeRepresentationLighting(item);
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationLightingGoniemtric(this IModel model, C3d color, V3d location, double colourTemperature, double luminousFlux, IfcLightIntensityDistribution distribution, IfcPresentationLayerAssignment layer = null)
+        public static IfcShapeRepresentation CreateShapeRepresentationLightingPositional (this IModel model, C3d color, V3d position, double radius, double constantAttenuation, double distanceAttenuation, double quadricAttenuation, string name = null, double? intensity = null, double? ambientIntensity = null, IfcPresentationLayerAssignment layer = null)
+        {
+            IfcGeometricRepresentationItem item = model.CreateLightSourcePositional(color, position, radius, constantAttenuation, distanceAttenuation, quadricAttenuation, name, intensity, ambientIntensity);
+            layer?.AssignedItems.Add(item);
+
+            return CreateShapeRepresentationLighting(item);
+        }
+
+        public static IfcShapeRepresentation CreateShapeRepresentationLightingSpot(this IModel model, C3d color, V3d position, V3d direction, double radius, double constantAttenuation, double distanceAttenuation, double quadricAttenuation, double spreadAngle, double beamWidthAngle, string name = null, double? intensity = null, double? ambientIntensity = null, double? concentrationExponent = null, IfcPresentationLayerAssignment layer = null)
+        {
+            IfcGeometricRepresentationItem item = model.CreateLightSourceSpot(color, position, radius, constantAttenuation, distanceAttenuation, quadricAttenuation, direction, spreadAngle, beamWidthAngle, name, intensity, ambientIntensity, concentrationExponent);
+            layer?.AssignedItems.Add(item);
+
+            return CreateShapeRepresentationLighting(item);
+        }
+
+        public static IfcShapeRepresentation CreateShapeRepresentationLightingGoniometric(this IModel model, C3d color, V3d location, double colourTemperature, double luminousFlux, IfcLightIntensityDistribution distribution, IfcLightEmissionSourceEnum lightEmissionSource = IfcLightEmissionSourceEnum.NOTDEFINED, IfcPresentationLayerAssignment layer = null)
         {
             var placement = model.CreateAxis2Placement3D(location);
-            IfcGeometricRepresentationItem item = model.CreateLightSourceGoniometric(color, colourTemperature, luminousFlux, IfcLightEmissionSourceEnum.NOTDEFINED, distribution, placement);
+            IfcGeometricRepresentationItem item = model.CreateLightSourceGoniometric(color, colourTemperature, luminousFlux, lightEmissionSource, distribution, placement);
             layer?.AssignedItems.Add(item);
 
             return CreateShapeRepresentationLighting(item);
@@ -1831,37 +1962,97 @@ namespace Aardvark.Data.Ifc
                 });
             });
         }
+    }
 
-        public static IfcLightFixture CreateLightAmbient(this IModel model, string name, C3d color, IfcObjectPlacement placement, IfcPresentationLayerAssignment layer)
+    public static class IfcLightingExtensions
+    {
+        public static IfcLightFixtureType CreateLightType(this IModel model, IfcLightFixtureTypeEnum lightType, IEnumerable<IfcRepresentationMap> repMaps, IEnumerable<IfcPropertySetDefinition> properties, string name = "")
         {
-            // box to visualize light dimensions
-            var shape = model.CreateShapeRepresentationSolidBox(new Box3d(V3d.Zero, new V3d(200, 200, 300)), layer);
-
-            //IfcRepresentationItem repItem = shape.Items.First();
-            //repItem.CreateStyleItem(model.Instances.OfType<IfcSurfaceStyle>().First());
-
-            // TODO: for regular grid matrix could be used...
-            var distribution = model.CreateLightIntensityDistribution(IfcLightDistributionCurveEnum.TYPE_C, [
-                // Main plane-angle and its secondary-plane-angles     
-                new IFCHelper.LightIntensityDistributionData(0, [new IFCHelper.AngleAndIntensity(0.0, 100.0), new IFCHelper.AngleAndIntensity(90.0, 200.0), new IFCHelper.AngleAndIntensity(180.0, 100.0)]),
-                new IFCHelper.LightIntensityDistributionData(180, [new IFCHelper.AngleAndIntensity(0.0, 10.0), new IFCHelper.AngleAndIntensity(45.0, 15.0), new IFCHelper.AngleAndIntensity(90.0, 20.0), new IFCHelper.AngleAndIntensity(135.0, 15.0), new IFCHelper.AngleAndIntensity(180.0, 10.0)])
-            ]);
-
-            return model.New<IfcLightFixture>(t =>
+            return model.New<IfcLightFixtureType>(l =>
             {
-                t.Name = name;
-                t.ObjectPlacement = placement;
-                t.Representation = model.New<IfcProductDefinitionShape>(r =>
-                {
-                    r.Representations.AddRange([
-                        model.CreateShapeRepresentationLightingAmbient(color),
-                        model.CreateShapeRepresentationLightingDirectional(color, V3d.ZAxis),
-                        model.CreateShapeRepresentationLightingGoniemtric(color, V3d.Zero, 1000, 1000, distribution),
-                        shape,
-                    ]);
-                });
+                l.Name = name;
+                l.PredefinedType = lightType;
+                if (!repMaps.IsEmptyOrNull()) l.RepresentationMaps.AddRange(repMaps);    // shared geometries
+                if (!properties.IsEmptyOrNull()) l.HasPropertySets.AddRange(properties); // shared properties
+            });
+        }
+
+        public static IfcLightFixture LinkToType(this IfcLightFixture light, IfcLightFixtureType lightType)
+        {
+            if (lightType.PredefinedType != IfcLightFixtureTypeEnum.NOTDEFINED) light.PredefinedType = null; // remove instanced PredefinedType if light-type is NOTDEFINED
+
+            light.Model.New<IfcRelDefinesByType>(t =>
+            {
+                t.RelatingType = lightType;
+                t.RelatedObjects.Add(light);
             });
 
+            return light;
+        }
+
+        public static IfcLightFixture CreateLightEmpty(this IModel model, string name, IfcObjectPlacement placement, IfcShapeRepresentation lightShape, IfcLightFixtureTypeEnum? lightType = null)
+        {
+            return model.New<IfcLightFixture>(t =>
+            {
+                if (lightType != null) t.PredefinedType = lightType.Value;
+                t.Name = name;
+                t.ObjectPlacement = placement;
+                t.Representation = model.New<IfcProductDefinitionShape>(r => r.Representations.Add(lightShape));
+            });
+        }
+
+        public static IfcLightFixture CreateLightAmbient(this IModel model, string name, C3d color, IfcObjectPlacement placement, IfcShapeRepresentation lightShape)
+        {
+            var light = CreateLightEmpty(model, name, placement, lightShape, IfcLightFixtureTypeEnum.POINTSOURCE);
+            light.Representation.Representations.Add(model.CreateShapeRepresentationLightingAmbient(color));
+            return light;
+        }
+
+        public static IfcLightFixture CreateLightPositional(this IModel model, string name, C3d color, V3d position, double radius, V3d attenuation, IfcObjectPlacement placement, IfcShapeRepresentation lightShape)
+        {
+            var light = CreateLightEmpty(model, name, placement, lightShape, IfcLightFixtureTypeEnum.POINTSOURCE);
+            light.Representation.Representations.Add(model.CreateShapeRepresentationLightingPositional(color, position, radius, attenuation.X, attenuation.Y, attenuation.Z));
+            return light;
+        }
+
+        public static IfcLightFixture CreateLightDirectional(this IModel model, string name, C3d color, V3d direction, IfcObjectPlacement placement, IfcShapeRepresentation lightShape)
+        {
+            var light = CreateLightEmpty(model, name, placement, lightShape, IfcLightFixtureTypeEnum.DIRECTIONSOURCE);
+            light.Representation.Representations.Add(model.CreateShapeRepresentationLightingDirectional(color, direction));
+            return light;
+        }
+
+        public static IfcLightFixture CreateLightSpot(this IModel model, string name, C3d color, V3d position, V3d direction, double radius, V3d attenuation, double spreadAngle, double beamWidthAngle, IfcObjectPlacement placement, IfcShapeRepresentation lightShape)
+        {
+            var light = CreateLightEmpty(model, name, placement, lightShape, IfcLightFixtureTypeEnum.DIRECTIONSOURCE);
+            light.Representation.Representations.Add(model.CreateShapeRepresentationLightingSpot(color, position, direction, radius, attenuation.X, attenuation.Y, attenuation.Z, spreadAngle, beamWidthAngle));
+            return light;
+        }
+
+        public static IfcLightIntensityDistribution CreateLightGoniometricDistribution(this IModel model, LightMeasurementData data)
+        {
+            // TODO: resolve symmetry modes from light measurment data 
+            // TODO: convert intensities to candela per lumen
+            
+            throw new NotImplementedException();
+
+            //IEnumerable<IFCHelper.LightIntensityDistributionData> lightData = [
+            //    // Main plane-angle and its secondary-plane-angles     
+            //    new IFCHelper.LightIntensityDistributionData(0, [new IFCHelper.AngleAndIntensity(0.0, 100.0), new IFCHelper.AngleAndIntensity(90.0, 200.0), new IFCHelper.AngleAndIntensity(180.0, 100.0)]),
+            //    new IFCHelper.LightIntensityDistributionData(180, [new IFCHelper.AngleAndIntensity(0.0, 10.0), new IFCHelper.AngleAndIntensity(45.0, 15.0), new IFCHelper.AngleAndIntensity(90.0, 20.0), new IFCHelper.AngleAndIntensity(135.0, 15.0), new IFCHelper.AngleAndIntensity(180.0, 10.0)])
+            //];
+
+            //return model.CreateLightIntensityDistribution(IfcLightDistributionCurveEnum.TYPE_C, lightData);
+        }
+
+        public static IfcLightFixture CreateLightGoniometric(this IModel model, string name, C3d color, V3d position, double colourTemperature, double luminousFlux, LightMeasurementData data, IfcObjectPlacement placement, IfcShapeRepresentation lightShape)
+            => CreateLightGoniometric(model, name, color, position, colourTemperature, luminousFlux, CreateLightGoniometricDistribution(model, data), placement, lightShape);
+
+        public static IfcLightFixture CreateLightGoniometric(this IModel model, string name, C3d color, V3d position, double colourTemperature, double luminousFlux, IfcLightIntensityDistribution distribution, IfcObjectPlacement placement, IfcShapeRepresentation lightShape)
+        {
+            var light = CreateLightEmpty(model, name, placement, lightShape, IfcLightFixtureTypeEnum.POINTSOURCE);
+            light.Representation.Representations.Add(model.CreateShapeRepresentationLightingGoniometric(color, position, colourTemperature, luminousFlux, distribution));
+            return light;
         }
     }
 
