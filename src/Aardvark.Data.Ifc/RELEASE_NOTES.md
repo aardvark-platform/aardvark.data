@@ -1,3 +1,6 @@
+### 1.1.0-prerelease0007
+- Updated xBIM-Essentials to resolve reported bug and added IfcLightingFixture Extensions 
+
 ### 1.1.0-prerelease0006
 - Restored features from v6-branch
 
