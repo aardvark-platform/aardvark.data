@@ -363,6 +363,9 @@ namespace Aardvark.Data.Tests.Ifc
                 var generalInfo = model.CreatePropertySet("General Information", prop);
 
                 var lightType = model.CreateLightType(IfcLightFixtureTypeEnum.POINTSOURCE, [repMap], [generalInfo]);
+                
+                // instantiate via light-type
+                building.AddElement(lightType.Instantiate("Empty_Light_fromtype", model.CreateLocalPlacement(-shiftVec), Trafo3d.RotationZInDegrees(45), IfcLightFixtureTypeEnum.POINTSOURCE));
 
                 // attached property sets
                 building.AddElement(model.CreateLightEmpty("Empty_Light", model.CreateLocalPlacement(V3d.Zero), repMap.Instantiate(trafo1)).AttachPropertySet(generalInfo));
@@ -588,6 +591,50 @@ namespace Aardvark.Data.Tests.Ifc
 
             // Save the IFC file
             model.SaveAs("test_AnnotationGrid.ifc");
+        }
+
+        [Test]
+        public static void AardvarkPrimitivesTest()
+        {
+            using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
+
+            InitScene(model);
+
+            using (var txn = model.BeginTransaction("Convertsion Test"))
+            {
+                V3d[] input = [V3d.Zero, V3d.One, new V3d(1,-5,30)];
+                var test = model.CreateCartesianPointList3D(input);
+                var output = test.ToV3d().ToArray();
+                Assert.AreEqual(input, output);
+
+                var inputLine = model.CreatePolyLine(input);
+                var outputPoints = inputLine.ToV3d();
+                Assert.AreEqual(input, outputPoints);
+
+                var inputBox = Box3d.Unit;
+                var ifcBox = model.New<Xbim.Ifc4.GeometricModelResource.IfcBoundingBox>(b => b.Set(inputBox));
+                var outputBox = ifcBox.ToBox3d();
+                Assert.AreEqual(inputBox, outputBox);
+
+                var inputTrafo = Trafo3d.Translation(new V3d(10, 15, 20)) * Trafo3d.RotationXInDegrees(45);
+                var ifcTrafo = model.CreateAxis2Placement3D(inputTrafo.Forward.GetModelOrigin(), inputTrafo.Forward.C0.XYZ, inputTrafo.Forward.C2.XYZ);
+                var outputTrafo = ifcTrafo.ToTrafo3d();
+                var ifcTrafo2 = model.CreateAxis2Placement3D(inputTrafo);
+                var outputTrafo2 = ifcTrafo2.ToTrafo3d();
+                Assert.IsTrue(inputTrafo.ApproximateEquals(outputTrafo, 0.000001) && inputTrafo.ApproximateEquals(outputTrafo2, 0.000001));
+
+                var inputVec = new V3d(10, 10, 0);
+                var ifcVec = model.CreateVector(inputVec);
+                var outputVec = ifcVec.ToV3d();
+                Assert.AreEqual(inputVec, outputVec);
+
+                var inputColor = C3f.Azure;
+                var ifcCol = model.CreateColor(inputColor);
+                var outputColor = ifcCol.ToC3f();
+                Assert.AreEqual(inputColor, outputColor);
+            }
+
+            ValidateModel(model.Instances);
         }
     }
 }
