@@ -531,8 +531,14 @@ module GLTF =
                         traverse r
                     )
                 else
-                    [||]
-
+                    let node = 
+                        {
+                            Name = None
+                            Trafo = None
+                            Children = []
+                            Meshes = Array.toList (Array.concat meshes)
+                        }
+                    [| node |]
             let root =
                 match roots with
                 | [||] -> { Name = None; Trafo = None; Meshes = []; Children = [] }

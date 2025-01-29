@@ -1,3 +1,6 @@
+### 1.0.1
+- added simple flat scene for files not containing a Sg
+
 ### 1.0.0
 - Updated to NET 8 and Aardvark.Base 5.3
 
