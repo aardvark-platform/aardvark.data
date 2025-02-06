@@ -2,11 +2,14 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Aardvark.Base;
 using Aardvark.Data.Photometry;
 using Aardvark.Geometry;
 
 using Xbim.Common;
+using Xbim.Common.Enumerations;
+using Xbim.Common.ExpressValidation;
 using Xbim.Common.Step21;
 using Xbim.Ifc;
 using Xbim.Ifc.Extensions;
@@ -33,12 +36,12 @@ namespace Aardvark.Data.Ifc
     public static class IFCHelper
     {
         #region Properties
-
         private static bool EqualOrContainsName(this IIfcPropertySingleValue value, string queryString)
            => string.Equals(value.Name, queryString, StringComparison.OrdinalIgnoreCase) || value.Name.ToString().ToLower().Contains(queryString.ToLower());
 
         public static IEnumerable<IIfcPropertySingleValue> GetProperties(this IIfcObject o)
         {
+            // TODO: misses to query for Ifc2x3 IsDefinedByProperties
             return o.IsDefinedBy.Where(r => r.RelatingPropertyDefinition is IIfcPropertySet)
                     .SelectMany(r => ((IIfcPropertySet)r.RelatingPropertyDefinition).HasProperties)
                     .OfType<IIfcPropertySingleValue>();
@@ -1829,6 +1832,42 @@ namespace Aardvark.Data.Ifc
             var element = parent.Model.CreateElement<T>(elementName, position, mesh, surfaceStyle, layer, triangulated);
             parent.AddElement(element);
             return element;
+        }
+        #endregion
+
+        #region Scene
+        public static IEnumerable<ValidationResult> ValidateModel(this IfcStore model)
+        {
+            var validator = new Validator()
+            {
+                CreateEntityHierarchy = true,
+                ValidateLevel = ValidationFlags.All
+            };
+
+            var result = validator.Validate(model.Instances);
+
+            result.ForEach(error =>
+            {
+                Report.Line(error.Message + " with " + error.Details.Count());
+                error.Details.ForEach(detail => Report.Line(detail.IssueSource + " " + detail.IssueType));
+            });
+
+            return result;
+        }
+
+        public static void CreateMinimalProject(this IfcStore model, ProjectUnits units = ProjectUnits.SIUnitsUK, string projectName = "Project", string siteName = "Site")
+        {
+            using var txnInit = model.BeginTransaction("Init Project");
+            // there should always be one project in the model
+            var project = model.New<IfcProject>(p => p.Name = projectName);
+            // our shortcut to define basic default units
+            project.Initialize(units);
+
+            // add site
+            var site = model.New<IfcSite>(w => w.Name = siteName);
+            project.AddSite(site);
+
+            txnInit.Commit();
         }
         #endregion
     }

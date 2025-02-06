@@ -8,9 +8,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Xbim.Common;
-using Xbim.Common.Enumerations;
-using Xbim.Common.ExpressValidation;
 using Xbim.Common.Step21;
 using Xbim.Ifc;
 using Xbim.Ifc4.GeometricConstraintResource;
@@ -30,6 +27,7 @@ namespace Aardvark.Data.Tests.Ifc
     {
         private static void LoadEmbeddedData(string inputString, Action<string> action)
         {
+            // necessary to run tests on github build servers
             var asm = Assembly.GetExecutingAssembly();
             var name = Regex.Replace(asm.ManifestModule.Name, @"\.(exe|dll)$", "", RegexOptions.IgnoreCase);
             var path = Regex.Replace(inputString, @"(\\|\/)", ".");
@@ -125,7 +123,6 @@ namespace Aardvark.Data.Tests.Ifc
                 Assert.AreEqual(26, parsed.Materials.Count);
             });
         }
-        
     }
 
     [TestFixture]
@@ -141,61 +138,20 @@ namespace Aardvark.Data.Tests.Ifc
             EditorsOrganisationName = "Organisation"
         };
         
-
-        private static void ValidateModel(IEntityCollection instances)
-        {
-            var validator = new Validator()
-            {
-                CreateEntityHierarchy = true,
-                ValidateLevel = ValidationFlags.All
-            };
-
-            var result = validator.Validate(instances);
-
-            result.ForEach(error =>
-            {
-                Report.Line(error.Message + " with " + error.Details.Count());
-                error.Details.ForEach(detail => Report.Line(detail.IssueSource + " " + detail.IssueType));
-            });
-
-            Assert.IsEmpty(result);
-        }
-
-        private static void InitScene(IfcStore model)
-        {
-            using var txnInit = model.BeginTransaction("Init Project");
-            // there should always be one project in the model
-            var project = model.New<IfcProject>(p => p.Name = "Project");
-            // our shortcut to define basic default units
-            project.Initialize(ProjectUnits.SIUnitsUK);
-
-            // add site
-            var site = model.New<IfcSite>(w => w.Name = "Site");
-            project.AddSite(site);
-
-            // add building
-            var building = model.New<IfcBuilding>(b => b.Name = "Building");
-            site.AddBuilding(building);
-
-            txnInit.Commit();
-
-            ValidateModel(model.Instances);
-        }
-
         [Test]
         public static void PropertyTest()
         {
             using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
 
-            InitScene(model);
+            model.CreateMinimalProject();
 
             using (var txn = model.BeginTransaction("Create Wall Properties"))
             {
-                var building = model.Instances.OfType<IfcBuilding>().First();
+                var site = model.Instances.OfType<IfcSite>().FirstOrDefault();
 
                 //create simple object and use lambda initializer to set the name
                 var wall = model.New<IfcWall>(w => w.Name = "The very first wall");
-                building.AddElement(wall);
+                site.AddElement(wall);
 
                 var prop = new Dictionary<string, object>
                         {
@@ -230,7 +186,7 @@ namespace Aardvark.Data.Tests.Ifc
                 txn.Commit();
             }
 
-            ValidateModel(model.Instances);
+            Assert.IsEmpty(model.ValidateModel());
             Assert.IsTrue(model.Instances.OfType<IfcWall>().First().PropertySets.Count() == 2); // Set-C with "untouched" and "overrid" AND Set-B
             model.SaveAs("test_Properties.ifc");                                                                                    // 
         }
@@ -240,18 +196,18 @@ namespace Aardvark.Data.Tests.Ifc
         {
             using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
 
-            InitScene(model);
+            model.CreateMinimalProject();
 
             using (var txn = model.BeginTransaction("Create Wall"))
             {
-                var building = model.Instances.OfType<IfcBuilding>().First();
+                var site = model.Instances.OfType<IfcSite>().FirstOrDefault();
 
                 var wall = model.New<IfcWall>(w =>
                 {
                     w.Name = "Test wall";
                     w.ObjectPlacement = model.CreateLocalPlacement(V3d.Zero);  // can be applied later on...
                 });
-                building.AddElement(wall);
+                site.AddElement(wall);
 
                 var box = new Box3d(V3d.Zero, new V3d(200, 100, 500)); // mm
 
@@ -289,7 +245,7 @@ namespace Aardvark.Data.Tests.Ifc
                 txn.Commit();
             }
 
-            ValidateModel(model.Instances);
+            Assert.IsEmpty(model.ValidateModel());
             model.SaveAs("test_TestWall.ifc");
         }
 
@@ -298,32 +254,32 @@ namespace Aardvark.Data.Tests.Ifc
         {
             using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
 
-            InitScene(model);
+            model.CreateMinimalProject();
 
             using (var txn = model.BeginTransaction("Create Geometries"))
             {
-                var building = model.Instances.OfType<IfcBuilding>().First();
+                var site = model.Instances.OfType<IfcSite>().FirstOrDefault();
 
                 var yellowStyle = model.CreateSurfaceStyle(C3d.Yellow);
 
                 var layer = model.CreateLayerWithStyle("Layer green styled", [model.CreateSurfaceStyle(C3d.Green)]);
 
                 var mesh = PolyMeshPrimitives.PlaneXY(new V2d(1000.0));
-                var wall = building.CreateAttachElement<IfcWall>("Mesh1a", new V3d(0, 0, 0), mesh, null, null, true);       // Red (create default-material)
-                var wall1 = building.CreateAttachElement<IfcWall>("Mesh1b", new V3d(1000, 0, 0), mesh, yellowStyle, layer, true);           // Yellow from style
-                var wall2 = building.CreateAttachElement<IfcWall>("Mesh1c", new V3d(2000, 0, 0), mesh, null, layer, true);      // Green from layer
+                var wall = site.CreateAttachElement<IfcWall>("Mesh1a", new V3d(0, 0, 0), mesh, null, null, true);       // Red (create default-material)
+                var wall1 = site.CreateAttachElement<IfcWall>("Mesh1b", new V3d(1000, 0, 0), mesh, yellowStyle, layer, true);           // Yellow from style
+                var wall2 = site.CreateAttachElement<IfcWall>("Mesh1c", new V3d(2000, 0, 0), mesh, null, layer, true);      // Green from layer
 
                 var mesh2 = PolyMeshPrimitives.Sphere(10, 500, C4b.Blue);
-                var window = building.CreateAttachElement<IfcWindow>("Mesh2a", new V3d(-1000, 0, 0), mesh2, null, layer, false); // Blue from mesh
-                var window2 = building.CreateAttachElement<IfcWindow>("Mesh2b", new V3d(-2000, 0, 0), mesh2, yellowStyle, layer, false);    // Yellow from style
+                var window = site.CreateAttachElement<IfcWindow>("Mesh2a", new V3d(-1000, 0, 0), mesh2, null, layer, false); // Blue from mesh
+                var window2 = site.CreateAttachElement<IfcWindow>("Mesh2b", new V3d(-2000, 0, 0), mesh2, yellowStyle, layer, false);    // Yellow from style
 
                 var mesh3 = PolyMeshPrimitives.Box(new Box3d(V3d.Zero, new V3d(500.0, 1500.0, 500.0)), C4b.Brown);
-                var door = building.CreateAttachElement<IfcDoor>("Mesh3a", new V3d(4000, 0, 0), mesh3, yellowStyle, layer);
+                var door = site.CreateAttachElement<IfcDoor>("Mesh3a", new V3d(4000, 0, 0), mesh3, yellowStyle, layer);
 
                 txn.Commit();
             }
 
-            ValidateModel(model.Instances);
+            Assert.IsEmpty(model.ValidateModel());
             model.SaveAs("test_Geometries.ifc");
         }
 
@@ -332,11 +288,11 @@ namespace Aardvark.Data.Tests.Ifc
         {
             using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
 
-            InitScene(model);
+            model.CreateMinimalProject();
 
             using (var txn = model.BeginTransaction("Create Light"))
             {
-                var building = model.Instances.OfType<IfcBuilding>().First();
+                var site = model.Instances.OfType<IfcSite>().FirstOrDefault();
 
                 var layer = model.CreateLayerWithStyle("Layer green styled", [model.CreateSurfaceStyle(C3d.Green)]);
 
@@ -365,25 +321,25 @@ namespace Aardvark.Data.Tests.Ifc
                 var lightType = model.CreateLightType(IfcLightFixtureTypeEnum.POINTSOURCE, [repMap], [generalInfo]);
                 
                 // instantiate via light-type
-                building.AddElement(lightType.Instantiate("Empty_Light_fromtype", model.CreateLocalPlacement(-shiftVec), Trafo3d.RotationZInDegrees(45), IfcLightFixtureTypeEnum.POINTSOURCE));
+                site.AddElement(lightType.Instantiate("Empty_Light_fromtype", model.CreateLocalPlacement(-shiftVec), Trafo3d.RotationZInDegrees(45), IfcLightFixtureTypeEnum.POINTSOURCE));
 
                 // attached property sets
-                building.AddElement(model.CreateLightEmpty("Empty_Light", model.CreateLocalPlacement(V3d.Zero), repMap.Instantiate(trafo1)).AttachPropertySet(generalInfo));
-                building.AddElement(model.CreateLightAmbient("Ambient_Light", C3d.Red, model.CreateLocalPlacement(shiftVec), repMap.Instantiate(trafo2)).AttachPropertySet(generalInfo));
+                site.AddElement(model.CreateLightEmpty("Empty_Light", model.CreateLocalPlacement(V3d.Zero), repMap.Instantiate(trafo1)).AttachPropertySet(generalInfo));
+                site.AddElement(model.CreateLightAmbient("Ambient_Light", C3d.Red, model.CreateLocalPlacement(shiftVec), repMap.Instantiate(trafo2)).AttachPropertySet(generalInfo));
 
                 // properties linked via light-type
-                building.AddElement(model.CreateLightDirectional("Directional_Light", C3d.Blue, V3d.ZAxis, model.CreateLocalPlacement(2*shiftVec), repMap.Instantiate(trafo3)).LinkToType(lightType));
+                site.AddElement(model.CreateLightDirectional("Directional_Light", C3d.Blue, V3d.ZAxis, model.CreateLocalPlacement(2*shiftVec), repMap.Instantiate(trafo3)).LinkToType(lightType));
 
-                building.AddElement(model.CreateLightPositional("Positional_Light", C3d.Green, new V3d(0, 0, 2000), 150, V3d.Zero, model.CreateLocalPlacement(3 * shiftVec), repMap.Instantiate(trafo4)));
-                building.AddElement(model.CreateLightSpot("Spot_Light", C3d.Yellow, new V3d(0, 0, 1000), V3d.ZAxis, 100, V3d.Zero, 50, 20, model.CreateLocalPlacement(4 * shiftVec), repMap.Instantiate(trafo5)));
+                site.AddElement(model.CreateLightPositional("Positional_Light", C3d.Green, new V3d(0, 0, 2000), 150, V3d.Zero, model.CreateLocalPlacement(3 * shiftVec), repMap.Instantiate(trafo4)));
+                site.AddElement(model.CreateLightSpot("Spot_Light", C3d.Yellow, new V3d(0, 0, 1000), V3d.ZAxis, 100, V3d.Zero, 50, 20, model.CreateLocalPlacement(4 * shiftVec), repMap.Instantiate(trafo5)));
                 
                 var dist = model.CreateLightIntensityDistribution(IfcLightDistributionCurveEnum.TYPE_C, []);
-                building.AddElement(model.CreateLightGoniometric("Gonometric_Light", C3d.Orange, new V3d(0, 0, 3000), 3500, 1000, dist, model.CreateLocalPlacement(5 * shiftVec), repMap.Instantiate(trafo6)));
+                site.AddElement(model.CreateLightGoniometric("Gonometric_Light", C3d.Orange, new V3d(0, 0, 3000), 3500, 1000, dist, model.CreateLocalPlacement(5 * shiftVec), repMap.Instantiate(trafo6)));
 
                 txn.Commit();
             }
 
-            ValidateModel(model.Instances);
+            Assert.IsEmpty(model.ValidateModel());
             model.SaveAs("test_Lights.ifc");
         }
 
@@ -395,10 +351,11 @@ namespace Aardvark.Data.Tests.Ifc
             var massDensity = 1234.0;
             var thermalConductivity = 100;
 
-            InitScene(model);
+            model.CreateMinimalProject();
+
             using (var txn = model.BeginTransaction("Create Slab with Material"))
             {
-                var building = model.Instances.OfType<IfcBuilding>().First();
+                var site = model.Instances.OfType<IfcSite>().FirstOrDefault();
 
                 // MATERIAL
                 var material = model.New<IfcMaterial>(m => m.Name = "Carbon");
@@ -406,12 +363,12 @@ namespace Aardvark.Data.Tests.Ifc
                 material.CreateAttachPsetMaterialThermal(thermalConductivity, 500, 99, -10);
                 material.CreateAttachPresentation(C3d.Magenta);
 
-                var slab = building.CreateAttachSlab("Mesh4", null, material);
+                var slab = site.CreateAttachSlab("Mesh4", null, material);
 
                 txn.Commit();
             }
 
-            ValidateModel(model.Instances);
+            Assert.IsEmpty(model.ValidateModel());
 
             var mat = model.Instances.OfType<IfcMaterial>().First();
 
@@ -430,7 +387,7 @@ namespace Aardvark.Data.Tests.Ifc
         public static void GridPlacementTest()
         {
             using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
-            InitScene(model);
+            model.CreateMinimalProject();
 
             var mesh = PolyMeshPrimitives.Box(new Box3d(V3d.Zero, new V3d(100, 100, 1000.0)), C4b.Yellow);
 
@@ -492,7 +449,7 @@ namespace Aardvark.Data.Tests.Ifc
                 txn.Commit();
             }
 
-            ValidateModel(model.Instances);
+            Assert.IsEmpty(model.ValidateModel());
 
             using (var txn2 = model.BeginTransaction("Generate Intersections"))
             {
@@ -512,7 +469,7 @@ namespace Aardvark.Data.Tests.Ifc
                 txn2.Commit();
             }
 
-            ValidateModel(model.Instances);
+            Assert.IsEmpty(model.ValidateModel());
 
             model.SaveAs("test_GridPlacement.ifc");
         }
@@ -521,11 +478,12 @@ namespace Aardvark.Data.Tests.Ifc
         public static void AnnotationTest()
         {
             using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
-            InitScene(model);
+            
+            model.CreateMinimalProject();
 
             using (var txn = model.BeginTransaction("Create Grid with Annotations"))
             {
-                var site = model.Instances.OfType<IfcSite>().First();
+                var site = model.Instances.OfType<IfcSite>().FirstOrDefault();
 
                 var textStyle = model.CreateTextStyle(100, C3f.Red, C3f.Blue, "myFont");
                 var curveStyle = model.CreateCurveStyle(C3d.Magenta, 100.0, 10, 20);
@@ -587,7 +545,7 @@ namespace Aardvark.Data.Tests.Ifc
                 txn.Commit();
             }
 
-            ValidateModel(model.Instances);
+            Assert.IsEmpty(model.ValidateModel());
 
             // Save the IFC file
             model.SaveAs("test_AnnotationGrid.ifc");
@@ -598,7 +556,7 @@ namespace Aardvark.Data.Tests.Ifc
         {
             using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
 
-            InitScene(model);
+            model.CreateMinimalProject();
 
             using (var txn = model.BeginTransaction("Convertsion Test"))
             {
@@ -634,7 +592,7 @@ namespace Aardvark.Data.Tests.Ifc
                 Assert.AreEqual(inputColor, outputColor);
             }
 
-            ValidateModel(model.Instances);
+            Assert.IsEmpty(model.ValidateModel());
         }
     }
 }
