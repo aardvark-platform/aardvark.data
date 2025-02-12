@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using Aardvark.Base;
 using Aardvark.Data.Photometry;
 using Aardvark.Geometry;
@@ -13,12 +12,12 @@ using Xbim.Common.ExpressValidation;
 using Xbim.Common.Step21;
 using Xbim.Ifc;
 using Xbim.Ifc.Extensions;
+using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.DateTimeResource;
 using Xbim.Ifc4.ElectricalDomain;
 using Xbim.Ifc4.GeometricConstraintResource;
 using Xbim.Ifc4.GeometricModelResource;
 using Xbim.Ifc4.GeometryResource;
-using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.Kernel;
 using Xbim.Ifc4.MaterialResource;
 using Xbim.Ifc4.MeasureResource;
@@ -28,6 +27,7 @@ using Xbim.Ifc4.PresentationOrganizationResource;
 using Xbim.Ifc4.ProductExtension;
 using Xbim.Ifc4.ProfileResource;
 using Xbim.Ifc4.PropertyResource;
+using Xbim.Ifc4.QuantityResource;
 using Xbim.Ifc4.RepresentationResource;
 using Xbim.Ifc4.SharedBldgElements;
 
@@ -275,6 +275,34 @@ namespace Aardvark.Data.Ifc
             return false;
         }
 
+        public static bool TryGetSimpleValue<T>(this IIfcPropertySingleValue property, out T result) where T : struct
+        {
+            var isValid = property.NominalValue.TryGetSimpleValue(out T res);
+            result = res;
+
+            return isValid;
+        }
+
+        public static IfcPropertySingleValue CreatePropertySingleValue<V>(this IModel model, string name, V value) where V : IfcValue
+        {
+            return model.New<IfcPropertySingleValue>(p => {
+                p.Name = name;
+                p.NominalValue = value;
+            });
+        }
+
+        public static IfcPropertyEnumeratedValue CreatePropertyEnumeratedValue<V>(this IModel model, string name, V value) where V : IfcValue
+        {
+            return model.New<IfcPropertyEnumeratedValue>(p => {
+                p.Name = name;
+                p.EnumerationValues.Add(value);
+            });
+        }
+
+        #endregion
+
+        #region Quantities
+
         public static bool TryGetSimpleValue<T>(this IIfcPhysicalQuantity ifcQuantity, out T result) where T : struct
         {
             if (ifcQuantity is IIfcQuantityLength ifcQuantityLength)
@@ -294,7 +322,7 @@ namespace Aardvark.Data.Ifc
 
             if (ifcQuantity is IIfcQuantityTime ifcQuantityTime)
                 return TryGetSimpleValue(ifcQuantityTime.TimeValue, out result);
-            
+
             if (ifcQuantity is IIfcPhysicalComplexQuantity)
             {
                 Report.Warn("Complex Types are not supported!");
@@ -303,12 +331,58 @@ namespace Aardvark.Data.Ifc
             return false;
         }
 
-        public static bool TryGetSimpleValue<T>(this IIfcPropertySingleValue property, out T result) where T : struct
+        public static IfcQuantityWeight CreateQuantityWeight(this IModel model, string name, double value)
         {
-            var isValid = property.NominalValue.TryGetSimpleValue(out T res);
-            result = res;
+            return model.New<IfcQuantityWeight>(w =>
+            {
+                w.Name = name;
+                w.WeightValue = new IfcMassMeasure(value);
+            });
+        }
 
-            return isValid;
+        public static IfcQuantityLength CreateQuantityLength(this IModel model, string name, double value)
+        {
+            return model.New<IfcQuantityLength>(w =>
+            {
+                w.Name = name;
+                w.LengthValue = new IfcLengthMeasure(value);
+            });
+        }
+
+        public static IfcQuantityArea CreateQuantityArea(this IModel model, string name, double value)
+        {
+            return model.New<IfcQuantityArea>(w =>
+            {
+                w.Name = name;
+                w.AreaValue = new IfcAreaMeasure(value);
+            });
+        }
+
+        public static IfcQuantityVolume CreateQuantityVolume(this IModel model, string name, double value)
+        {
+            return model.New<IfcQuantityVolume>(w =>
+            {
+                w.Name = name;
+                w.VolumeValue = new IfcVolumeMeasure(value);
+            });
+        }
+
+        public static IfcQuantityCount CreateQuantityCount(this IModel model, string name, double value)
+        {
+            return model.New<IfcQuantityCount>(w =>
+            {
+                w.Name = name;
+                w.CountValue = new IfcCountMeasure(value);
+            });
+        }
+
+        public static IfcQuantityTime CreateQuantityTime(this IModel model, string name, double value)
+        {
+            return model.New<IfcQuantityTime>(w =>
+            {
+                w.Name = name;
+                w.TimeValue = new IfcTimeMeasure(value);
+            });
         }
 
         #endregion
@@ -1573,17 +1647,21 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcShapeRepresentation Instantiate(this IfcRepresentationMap map, Trafo3d shift)
+        public static IfcShapeRepresentation Instantiate(this IfcRepresentationMap map, Trafo3d trafo)
         {
             var item = map.Model.New<IfcMappedItem>(m =>
             {
                 m.MappingSource = map;
-                m.MappingTarget = map.Model.New<IfcCartesianTransformationOperator3D>(x =>
+                m.MappingTarget = map.Model.New<IfcCartesianTransformationOperator3DnonUniform>(x =>
                 {
-                    x.Axis1 = map.Model.CreateDirection(shift.Forward.C0.XYZ);  // X - Axis
-                    x.Axis2 = map.Model.CreateDirection(shift.Forward.C1.XYZ);  // Y - Axis
-                    x.Axis3 = map.Model.CreateDirection(shift.Forward.C2.XYZ);  // Z - Axis
-                    x.LocalOrigin = map.Model.CreatePoint(shift.Forward.C3.XYZ);
+                    var scale = trafo.GetScaleVector();
+                    x.Axis1 = map.Model.CreateDirection(trafo.Forward.C0.XYZ.Normalized);  // X - Axis
+                    x.Axis2 = map.Model.CreateDirection(trafo.Forward.C1.XYZ.Normalized);  // Y - Axis
+                    x.Axis3 = map.Model.CreateDirection(trafo.Forward.C2.XYZ.Normalized);  // Z - Axis
+                    x.LocalOrigin = map.Model.CreatePoint(trafo.Forward.C3.XYZ);
+                    x.Scale = scale.X;
+                    x.Scale2 = scale.Y;
+                    x.Scale3 = scale.Z;
                 });
             });
 
@@ -1833,6 +1911,7 @@ namespace Aardvark.Data.Ifc
             parent.AddElement(element);
             return element;
         }
+        
         #endregion
 
         #region Scene
@@ -1870,6 +1949,64 @@ namespace Aardvark.Data.Ifc
             txnInit.Commit();
         }
         #endregion
+
+        
+        public static T LinkToType<T>(this T obj, IIfcTypeObject objType) where T : IIfcObject
+        {
+            obj.AddDefiningType(objType);
+            return obj;
+        }
+        
+        public static T CreateBuildingElementType<T>(this IModel model, IEnumerable<IfcRepresentationMap> repMaps, IEnumerable<IfcPropertySetDefinition> properties, string name = "") where T : IIfcTypeProduct, IInstantiableEntity
+        {
+            return model.New<T>(l =>
+            {
+                //l.PredefinedType; // Has to be set afterwards!
+                l.Name = name;
+                if (!repMaps.IsEmptyOrNull()) l.RepresentationMaps.AddRange(repMaps);    // shared geometries
+                if (!properties.IsEmptyOrNull()) l.HasPropertySets.AddRange(properties); // shared properties
+            });
+        }
+
+        public static I Instantiate<T, I>(this T objectType, string name, IfcObjectPlacement placement, Trafo3d trafo) where T : IfcElementType where I : IIfcProduct, IInstantiableEntity
+        {
+            // create instance and transform all representations by global trafo
+            var instance = objectType.Model.New<I>(t =>
+            {
+                t.Name = name;
+                t.ObjectPlacement = placement;
+                t.Representation = objectType.Model.New<IfcProductDefinitionShape>(r =>
+                     t.Representation = objectType.Model.New<IfcProductDefinitionShape>(r =>
+                    r.Representations.AddRange(objectType.RepresentationMaps.Select(m => m.Instantiate(trafo)))));
+            });
+
+            return instance.LinkToType(objectType);
+        }
+
+        public static I Instantiate<T, I>(this T objectType, string name, IfcObjectPlacement placement, Dictionary<IfcRepresentationMap, Trafo3d> trafos) where T : IfcElementType where I : IIfcProduct, IInstantiableEntity
+        {
+            // create instance and transform indevidual representations
+            var instance = objectType.Model.New<I>(t =>
+            {
+                t.Name = name;
+                t.ObjectPlacement = placement;
+                t.Representation = objectType.Model.New<IfcProductDefinitionShape>(r =>
+                    r.Representations.AddRange(objectType.RepresentationMaps.Select(m =>
+                        trafos.TryGetValue(m, out Trafo3d trafo) ? m.Instantiate(trafo) : m.Instantiate(Trafo3d.Identity))));
+            });
+            
+            return instance.LinkToType(objectType);
+        }
+
+        public static IfcBuildingElementProxyType CreateProxyType(this IModel model, IfcBuildingElementProxyTypeEnum proxyType, IEnumerable<IfcRepresentationMap> repMaps, IEnumerable<IfcPropertySetDefinition> properties, string name = "")
+        {
+            var asdf = new EntityCreator(model);
+            asdf.Wall(w => w.Name = "");
+
+            var proxy = CreateBuildingElementType<IfcBuildingElementProxyType>(model, repMaps, properties, name);
+            proxy.PredefinedType = proxyType;
+            return proxy;
+        }
     }
 
     public static class IfcObjectExtensions
@@ -2010,42 +2147,50 @@ namespace Aardvark.Data.Ifc
     {
         public static IfcLightFixtureType CreateLightType(this IModel model, IfcLightFixtureTypeEnum lightType, IEnumerable<IfcRepresentationMap> repMaps, IEnumerable<IfcPropertySetDefinition> properties, string name = "")
         {
-            return model.New<IfcLightFixtureType>(l =>
-            {
-                l.Name = name;
-                l.PredefinedType = lightType;
-                if (!repMaps.IsEmptyOrNull()) l.RepresentationMaps.AddRange(repMaps);    // shared geometries
-                if (!properties.IsEmptyOrNull()) l.HasPropertySets.AddRange(properties); // shared properties
-            });
-        }
-
-        public static IfcLightFixture LinkToType(this IfcLightFixture light, IfcLightFixtureType lightType)
-        {
-            if (lightType.PredefinedType != IfcLightFixtureTypeEnum.NOTDEFINED) light.PredefinedType = null; // remove instanced PredefinedType if light-type is NOTDEFINED
-
-            light.Model.New<IfcRelDefinesByType>(t =>
-            {
-                t.RelatingType = lightType;
-                t.RelatedObjects.Add(light);
-            });
-
-            return light;
+            var proxy = IFCHelper.CreateBuildingElementType<IfcLightFixtureType>(model, repMaps, properties, name);
+            proxy.PredefinedType = lightType;
+            return proxy;
         }
 
         public static IfcLightFixture Instantiate(this IfcLightFixtureType lightType, string name, IfcObjectPlacement placement, Trafo3d trafo, IfcLightFixtureTypeEnum? ltenum = null)
         {
-            // create light and transform all representations
-            var light = lightType.Model.New<IfcLightFixture>(t =>
-            {
-                if (lightType.PredefinedType != IfcLightFixtureTypeEnum.NOTDEFINED && ltenum.HasValue) t.PredefinedType = ltenum;
-                t.Name = name;
-                t.ObjectPlacement = placement;
-                t.Representation = lightType.Model.New<IfcProductDefinitionShape>(r =>
-                    r.Representations.AddRange(lightType.RepresentationMaps.Select(m => m.Instantiate(trafo)))); // unsure if all RepresentationMaps should be instantiated and transformed
+            var instance = IFCHelper.Instantiate<IfcLightFixtureType, IfcLightFixture>(lightType, name, placement, trafo);
+            if (lightType.PredefinedType != IfcLightFixtureTypeEnum.NOTDEFINED && ltenum.HasValue) instance.PredefinedType = ltenum;
+            return instance;
+        }
+
+        public static IfcLightFixture Instantiate(this IfcLightFixtureType lightType, string name, IfcObjectPlacement placement, Dictionary<IfcRepresentationMap, Trafo3d> trafos, IfcLightFixtureTypeEnum? ltenum = null)
+        {
+            var instance = IFCHelper.Instantiate<IfcLightFixtureType, IfcLightFixture>(lightType, name, placement, trafos);
+            if (lightType.PredefinedType != IfcLightFixtureTypeEnum.NOTDEFINED && ltenum.HasValue) instance.PredefinedType = ltenum;
+            return instance;
+        }
+
+        public static IfcPropertySet Pset_LightFixtureTypeCommon(this IfcLightFixture light, string reference, int numberOfSources, double totalWattage,
+            double maintenanceFactor, double maximumPlenumSensibleLoad, double maximumSpaceSensibleLoad, double sensibleLoadToRadiant,
+            string status, string lightFixtureMountingType, string lightFixturePlacingType)
+        {
+            var propertySet = light.Model.New<IfcPropertySet>(pset => {
+                pset.Name = "Pset_LightFixtureTypeCommon";
+                pset.HasProperties.Add(light.Model.CreatePropertySingleValue("Reference", new IfcIdentifier(reference)));
+                pset.HasProperties.Add(light.Model.CreatePropertySingleValue("NumberOfSources", new IfcInteger(numberOfSources)));
+                pset.HasProperties.Add(light.Model.CreatePropertySingleValue("TotalWattage", new IfcPowerMeasure(totalWattage)));
+                pset.HasProperties.Add(light.Model.CreatePropertySingleValue("MaintenanceFactor", new IfcReal(maintenanceFactor)));
+                pset.HasProperties.Add(light.Model.CreatePropertySingleValue("MaximumPlenumSensibleLoad", new IfcPowerMeasure(maximumPlenumSensibleLoad)));
+                pset.HasProperties.Add(light.Model.CreatePropertySingleValue("MaximumSpaceSensibleLoad", new IfcPowerMeasure(maximumSpaceSensibleLoad)));
+                pset.HasProperties.Add(light.Model.CreatePropertySingleValue("SensibleLoadToRadiant", new IfcPositiveRatioMeasure(sensibleLoadToRadiant)));
+                pset.HasProperties.Add(light.Model.CreatePropertyEnumeratedValue("Status", new IfcLabel(status)));
+                pset.HasProperties.Add(light.Model.CreatePropertyEnumeratedValue("LightFixtureMountingType", new IfcLabel(lightFixtureMountingType)));
+                pset.HasProperties.Add(light.Model.CreatePropertyEnumeratedValue("LightFixturePlacingType", new IfcLabel(lightFixturePlacingType)));
             });
-            
-            // link light to light-type
-            return light.LinkToType(lightType);
+
+            light.AddPropertySet(propertySet);
+            return propertySet;
+        }
+
+        public static IIfcElementQuantity Qto_LightFixtureBaseQuantities(this IfcLightFixture light, double weight)
+        {
+            return light.AddQuantity("Qto_LightFixtureBaseQuantities", light.Model.CreateQuantityWeight("GrossWeight", weight));
         }
 
         public static IfcLightFixture CreateLightEmpty(this IModel model, string name, IfcObjectPlacement placement, IfcShapeRepresentation lightShape, IfcLightFixtureTypeEnum? lightType = null)
