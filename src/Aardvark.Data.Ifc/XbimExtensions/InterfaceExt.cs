@@ -3,7 +3,7 @@ using Xbim.Ifc4.Interfaces;
 
 namespace Aardvark.Data.Ifc
 {
-    public static class InterfaceExtensions
+    public static class InterfaceExt
     {
         public static IIfcRelDefinesByType AddDefiningType(this IIfcObject obj, IIfcTypeObject theType)
         {

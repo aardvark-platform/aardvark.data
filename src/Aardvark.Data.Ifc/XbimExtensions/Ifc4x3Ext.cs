@@ -7,7 +7,7 @@ using Xbim.Ifc4x3.QuantityResource;
 
 namespace Aardvark.Data.Ifc
 {
-    public static class Ifc4x3Extensions
+    public static class Ifc4x3Ext
     {
         public static IfcRelDefinesByType AddDefiningType(this IfcObject obj, IfcTypeObject theType)
         {

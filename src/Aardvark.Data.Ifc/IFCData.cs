@@ -31,7 +31,7 @@ namespace Aardvark.Data.Ifc
             Content = content;
             UnitScale = scale;
             Hierarchy = hierarchy;
-            Project = IFCHelper.GetProject(m_model);
+            Project = GeneralExt.GetProject(m_model);
             ProjectName = Project.LongName;
             Materials = materials;
         }

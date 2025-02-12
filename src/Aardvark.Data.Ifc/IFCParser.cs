@@ -65,7 +65,7 @@ namespace Aardvark.Data.Ifc
             var cacheEntity = model.BeginEntityCaching();
 
             (content, materials) = ParseIFC(model);
-            var hierarchy = IFCHelper.CreateHierarchy(model);
+            var hierarchy = HierarchyExt.CreateHierarchy(model);
 
             return new IFCData(model, cacheInverse, cacheEntity, content, materials, projectScale, hierarchy);
         }
