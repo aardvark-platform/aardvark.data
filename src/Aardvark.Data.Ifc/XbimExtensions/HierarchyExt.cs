@@ -1,8 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using Aardvark.Base;
 
-using Xbim.Common;
 using Xbim.Ifc;
 using Xbim.Ifc4.Interfaces;
 
@@ -26,6 +24,14 @@ namespace Aardvark.Data.Ifc
 
         public static void PrintHierarchy(IIfcObjectDefinition o, int level)
         {
+            static string GetIndent(int level)
+            {
+                var indent = "";
+                for (int i = 0; i < level; i++)
+                    indent += "  ";
+                return indent;
+            }
+
             Report.Line(string.Format("{0}{1} [{2}]", GetIndent(level), o.Name, o.GetType().Name));
 
             var parent = o.GetParent();
@@ -54,14 +60,6 @@ namespace Aardvark.Data.Ifc
             //using IfcRelAggregares to get spatial decomposition of spatial structure elements
             foreach (var item in o.IsDecomposedBy.SelectMany(r => r.RelatedObjects))
                 PrintHierarchy(item, level + 1);
-        }
-
-        private static string GetIndent(int level)
-        {
-            var indent = "";
-            for (int i = 0; i < level; i++)
-                indent += "  ";
-            return indent;
         }
     }
 }

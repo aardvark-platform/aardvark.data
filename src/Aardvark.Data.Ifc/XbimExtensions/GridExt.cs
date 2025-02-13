@@ -11,7 +11,6 @@ namespace Aardvark.Data.Ifc
 {
     public static class GridExt
     {
-        #region Grid
         public static IfcGridAxis CreateGridAxis(this IModel model, string name, V2d start, V2d end)
         {
             return model.New<IfcGridAxis>(a =>
@@ -40,7 +39,5 @@ namespace Aardvark.Data.Ifc
 
             return grid;
         }
-
-        #endregion
     }
 }

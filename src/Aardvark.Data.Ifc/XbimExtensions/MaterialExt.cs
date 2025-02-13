@@ -41,11 +41,10 @@ namespace Aardvark.Data.Ifc
                 ps.Properties.Add(material.Model.CreatePropertySingleValue("SpecificHeatCapacity", new IfcSpecificHeatCapacityMeasure(specificHeatCapacity)));
                 ps.Properties.Add(material.Model.CreatePropertySingleValue("BoilingPoint", new IfcThermodynamicTemperatureMeasure(boilingPoint)));
                 ps.Properties.Add(material.Model.CreatePropertySingleValue("FreezingPoint", new IfcThermodynamicTemperatureMeasure(freezingPoint)));
-
             });
         }
 
-        public static IfcMaterialDefinitionRepresentation CreateAttachPresentation(this IfcMaterial material, C3d surfaceColor)
+        public static IfcMaterialDefinitionRepresentation CreateAttachStyledRepresentation(this IfcMaterial material, C3d surfaceColor)
         {
             // https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/schema/ifcrepresentationresource/lexical/ifcmaterialdefinitionrepresentation.htm
             return material.Model.New<IfcMaterialDefinitionRepresentation>(def =>

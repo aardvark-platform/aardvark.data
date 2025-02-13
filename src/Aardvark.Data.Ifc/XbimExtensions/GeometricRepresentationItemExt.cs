@@ -22,27 +22,49 @@ namespace Aardvark.Data.Ifc
         public static IfcGeometricRepresentationContext GetGeometricRepresentationContextModel(this IModel model)
             => model.Instances.OfType<IfcGeometricRepresentationContext>().Where(c => c.ContextType == "Model").First();
 
-        #region Placement
+        #region CartesianPoint
+        public static void Set(this IfcCartesianPoint point, V2d vec) 
+            => point.SetXY(vec.X, vec.Y);
+
+        public static void Set(this IfcCartesianPoint point, V3d vec) 
+            => point.SetXYZ(vec.X, vec.Y, vec.Z);
+
+        public static V3d ToV3d(this IIfcCartesianPoint point)
+            => new(point.X, point.Y, point.Z);
+
         public static IfcCartesianPoint CreatePoint(this IModel model, V2d point)
             => model.New<IfcCartesianPoint>(c => c.Set(point));
 
         public static IfcCartesianPoint CreatePoint(this IModel model, V3d point)
             => model.New<IfcCartesianPoint>(c => c.Set(point));
+        #endregion
+
+        #region Direction
+        public static void Set(this IfcDirection dir, V2d d) 
+            => dir.SetXY(d.X, d.Y);
+
+        public static void Set(this IfcDirection dir, V3d d) 
+            => dir.SetXYZ(d.X, d.Y, d.Z);
+
+        public static V2d ToV2d(this IIfcDirection direction)
+            => new(direction.X, direction.Y);
+
+        public static V3d ToV3d(this IIfcDirection direction)
+            => new(direction.X, direction.Y, direction.Z);
 
         public static IfcDirection CreateDirection(this IModel model, V2d direction)
             => model.New<IfcDirection>(rd => rd.Set(direction)); // NOTE: Direction may be normalized!
 
         public static IfcDirection CreateDirection(this IModel model, V3d direction)
             => model.New<IfcDirection>(rd => rd.Set(direction)); // NOTE: Direction may be normalized!
+        #endregion
 
-        public static IfcVector CreateVector(this IModel model, V3d vector)
-        {
-            return model.New<IfcVector>(v =>
-            {
-                v.Magnitude = vector.Length;
-                v.Orientation = model.CreateDirection(vector.Normalized);
-            });
-        }
+        #region Vector
+        public static V2d ToV2d(this IIfcVector vec)
+            => vec.Orientation.ToV2d() * vec.Magnitude;
+
+        public static V3d ToV3d(this IIfcVector vec)
+            => vec.Orientation.ToV3d() * vec.Magnitude;
 
         public static IfcVector CreateVector(this IModel model, V2d vector)
         {
@@ -51,6 +73,24 @@ namespace Aardvark.Data.Ifc
                 v.Magnitude = vector.Length;
                 v.Orientation = model.CreateDirection(vector.Normalized);
             });
+        }
+        public static IfcVector CreateVector(this IModel model, V3d vector)
+        {
+            return model.New<IfcVector>(v =>
+            {
+                v.Magnitude = vector.Length;
+                v.Orientation = model.CreateDirection(vector.Normalized);
+            });
+        }
+        #endregion
+
+        #region Axis2Placement3D
+        public static Trafo3d ToTrafo3d(this IIfcAxis2Placement3D p)
+        {
+            var xAxis = p.RefDirection == null ? V3d.XAxis : p.RefDirection.ToV3d();
+            var zAxis = p.Axis == null ? V3d.ZAxis : p.Axis.ToV3d();
+            var yAxis = zAxis.Cross(xAxis);
+            return Trafo3d.FromBasis(xAxis, yAxis, zAxis, p.Location.ToV3d());
         }
 
         public static IfcAxis2Placement3D CreateAxis2Placement3D(this IModel model, V3d location, V3d refDir, V3d axis)
@@ -84,8 +124,27 @@ namespace Aardvark.Data.Ifc
             => model.New<IfcLocalPlacement>(p => p.RelativePlacement = model.CreateAxis2Placement3D(shift));
         #endregion
 
-        #region Lines
+        #region Line and Curve
+        public static IEnumerable<V3d> ToV3d(this IIfcCartesianPointList list)
+        {
+            return list switch
+            {
+                IIfcCartesianPointList2D list2D => list2D.CoordList.Select(v => new V3d(v[0], v[1], 0.0)),
+                IIfcCartesianPointList3D list3D => list3D.CoordList.Select(v => new V3d(v[0], v[1], v[2])),
+                _ => []
+            };
+        }
 
+        public static IEnumerable<V3d> ToV3d(this IIfcCurve curve)
+        {
+            return curve switch
+            {
+                IIfcPolyline poly => poly.Points.Select(p => p.ToV3d()),
+                IIfcIndexedPolyCurve indexed => indexed.Points.ToV3d(),
+                IIfcCompositeCurve comp => comp.Segments.SelectMany(s => s.ParentCurve.ToV3d()),
+                _ => []
+            };
+        }
         public static IfcCartesianPointList2D CreateCartesianPointList2D(this IModel model, params V2d[] points)
         {
             return model.New<IfcCartesianPointList2D>(pl =>

@@ -1,22 +1,47 @@
 ﻿
+using System.Linq;
 using System.Collections.Generic;
 using Aardvark.Base;
+using Aardvark.Geometry;
 
 using Xbim.Common;
 using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.GeometryResource;
 using Xbim.Ifc4.MeasureResource;
 using Xbim.Ifc4.PresentationAppearanceResource;
+using Xbim.Ifc4.PresentationOrganizationResource;
 
 namespace Aardvark.Data.Ifc
 {
     public static class StylingExt
     {
+        #region Colors
+        public static void Set(this IfcColourRgb c, C3d colour)
+        {
+            c.Red = colour.R;
+            c.Green = colour.G;
+            c.Blue = colour.B;
+        }
+
+        public static void Set(this IfcColourRgb c, C3f colour)
+        {
+            c.Red = colour.R;
+            c.Green = colour.G;
+            c.Blue = colour.B;
+        }
+
+        public static C3d ToC3d(this IIfcColourRgb col)
+            => new(col.Red, col.Green, col.Blue);
+
+        public static C3f ToC3f(this IIfcColourRgb col)
+            => col.ToC3d().ToC3f();
+
         public static IfcColourRgb CreateColor(this IModel model, C3f colour)
             => model.New<IfcColourRgb>(x => x.Set(colour));
 
         public static IfcColourRgb CreateColor(this IModel model, C3d colour)
             => model.New<IfcColourRgb>(x => x.Set(colour));
+        #endregion
 
         #region Text Styling
         public static IfcTextStyleForDefinedFont CreateTextStyleForDefinedFont(this IModel model, C3f colour, C3f background, string name = null)
@@ -202,6 +227,41 @@ namespace Aardvark.Data.Ifc
 
         public static IfcSurfaceStyle CreateSurfaceStyle(this IModel model, C3d surface, double transparency = 0.0, string name = null)
             => CreateSurfaceStyle(model, model.CreateSurfaceStyleShading(surface, transparency), name);
+
+        public static IfcSurfaceStyle CreateSurfaceStyle(this IModel model, C4d surface, string name = null)
+            => model.CreateSurfaceStyle(surface.RGB, (1.0 - surface.A).Clamp(0, 1), name);
+
+        public static bool TryCreateSurfaceStyle(this IModel model, PolyMesh mesh, out IfcSurfaceStyle style)
+        {
+            if (mesh.HasColors)
+            {
+                var col = ((C4b)mesh.VertexAttributes.Get(PolyMesh.Property.Colors).GetValue(0)).ToC4d();
+                style = model.CreateSurfaceStyle(col, "MeshColor");
+                return true;
+            }
+            else
+            {
+                style = null;
+                return false;
+            }
+        }
+
+        public static bool TryCreateSurfaceStyle(this IfcPresentationLayerAssignment layer, out IfcSurfaceStyle style)
+        {
+
+            if (layer is IfcPresentationLayerWithStyle a && a.LayerStyles.OfType<IfcSurfaceStyle>().FirstOrDefault() != null)
+            {
+                style = a.LayerStyles.OfType<IfcSurfaceStyle>().First();
+                return true;
+            }
+            else
+            {
+                style = null;
+                return false;
+            }
+        }
+
+        
 
         #endregion
 

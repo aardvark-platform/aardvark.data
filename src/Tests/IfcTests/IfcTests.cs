@@ -223,7 +223,7 @@ namespace Aardvark.Data.Tests.Ifc
 
                 var repItem = boxShape.Items.First(); // retrieve body of shape
 
-                var defaultStyle = model.CreateSurfaceStyle(C3d.OrangeRed);
+                var defaultStyle = model.CreateSurfaceStyle(C3d.Yellow);
 
                 // create visual style
                 repItem.CreateStyleItem(defaultStyle);
@@ -265,16 +265,16 @@ namespace Aardvark.Data.Tests.Ifc
                 var layer = model.CreateLayerWithStyle("Layer green styled", [model.CreateSurfaceStyle(C3d.Green)]);
 
                 var mesh = PolyMeshPrimitives.PlaneXY(new V2d(1000.0));
-                var wall = site.CreateAttachElement<IfcWall>("Mesh1a", new V3d(0, 0, 0), mesh, null, null, true);       // Red (create default-material)
-                var wall1 = site.CreateAttachElement<IfcWall>("Mesh1b", new V3d(1000, 0, 0), mesh, yellowStyle, layer, true);           // Yellow from style
-                var wall2 = site.CreateAttachElement<IfcWall>("Mesh1c", new V3d(2000, 0, 0), mesh, null, layer, true);      // Green from layer
+                var wall = site.CreateAttachElement<IfcWall>("Mesh1a", new V3d(0, 0, 0), mesh, C4d.Red,null, null, true);       // Red (create default-material)
+                var wall1 = site.CreateAttachElement<IfcWall>("Mesh1b", new V3d(1000, 0, 0), mesh, null, yellowStyle, layer, true);           // Yellow from style
+                var wall2 = site.CreateAttachElement<IfcWall>("Mesh1c", new V3d(2000, 0, 0), mesh, null, null, layer, true);      // Green from layer
 
                 var mesh2 = PolyMeshPrimitives.Sphere(10, 500, C4b.Blue);
-                var window = site.CreateAttachElement<IfcWindow>("Mesh2a", new V3d(-1000, 0, 0), mesh2, null, layer, false); // Blue from mesh
-                var window2 = site.CreateAttachElement<IfcWindow>("Mesh2b", new V3d(-2000, 0, 0), mesh2, yellowStyle, layer, false);    // Yellow from style
+                var window = site.CreateAttachElement<IfcWindow>("Mesh2a", new V3d(-1000, 0, 0), mesh2, null, null, layer, false); // Blue from mesh
+                var window2 = site.CreateAttachElement<IfcWindow>("Mesh2b", new V3d(-2000, 0, 0), mesh2, null, yellowStyle, layer, false);    // Yellow from style
 
                 var mesh3 = PolyMeshPrimitives.Box(new Box3d(V3d.Zero, new V3d(500.0, 1500.0, 500.0)), C4b.Brown);
-                var door = site.CreateAttachElement<IfcDoor>("Mesh3a", new V3d(4000, 0, 0), mesh3, yellowStyle, layer);
+                var door = site.CreateAttachElement<IfcDoor>("Mesh3a", new V3d(4000, 0, 0), mesh3, null, yellowStyle, layer);
 
                 txn.Commit();
             }
@@ -361,9 +361,48 @@ namespace Aardvark.Data.Tests.Ifc
                 var material = model.New<IfcMaterial>(m => m.Name = "Carbon");
                 material.CreateAttachPsetMaterialCommon(98.7654, 0.54, massDensity);
                 material.CreateAttachPsetMaterialThermal(thermalConductivity, 500, 99, -10);
-                material.CreateAttachPresentation(C3d.Magenta);
+                material.CreateAttachStyledRepresentation(C3d.Magenta);
 
-                var slab = site.CreateAttachSlab("Mesh4", null, material);
+                var materialLayerWidth = 300;
+                // NOTE: box.SizeZ must be the layer-thickness
+                var box = new Box3d(V3d.Zero, new V3d(100.0, 100.0, materialLayerWidth));
+
+                var shape = model.CreateShapeRepresentationSolidBox(box); // extrusion along z-axis
+
+                var slab = model.New<IfcSlab>(c => {
+                    c.Name = "Mesh4";
+                    c.Representation = model.New<IfcProductDefinitionShape>(r => r.Representations.Add(shape));
+                    c.ObjectPlacement = model.CreateLocalPlacement(new V3d(500, 500, 500));
+                });
+                site.AddElement(slab);
+
+                // Link Material via RelAssociatesMaterial
+                model.New<IfcRelAssociatesMaterial>(mat =>
+                {
+                    // Material Layer Set Usage (HAS TO BE MANUALLY SYNCHED!)
+                    IfcMaterialLayerSetUsage usage = model.New<IfcMaterialLayerSetUsage>(u =>
+                    {
+                        u.DirectionSense = IfcDirectionSenseEnum.NEGATIVE;
+                        u.LayerSetDirection = IfcLayerSetDirectionEnum.AXIS3;
+                        u.OffsetFromReferenceLine = 0;
+                        u.ForLayerSet = model.New<IfcMaterialLayerSet>(set =>
+                        {
+                            set.LayerSetName = "Carbon Layer Set";
+                            set.MaterialLayers.Add(model.New<IfcMaterialLayer>(layer =>
+                            {
+                                layer.Name = "Layer1";
+                                layer.Material = material;
+                                layer.LayerThickness = materialLayerWidth;
+                                layer.IsVentilated = false;
+                                layer.Category = "Core";
+                            }));
+                        });
+                    });
+
+                    mat.Name = "RelMat";
+                    mat.RelatingMaterial = usage;
+                    mat.RelatedObjects.Add(slab);
+                });
 
                 txn.Commit();
             }
@@ -434,7 +473,7 @@ namespace Aardvark.Data.Tests.Ifc
 
                         // in this example this should match with IfcGridPalcement
                         var position = new V3d(_row % vAxes.Length, _col % uAxes.Length, 0.0) * offset;
-                        site.CreateAttachElement<IfcColumn>("col_calc", position, mesh, surfStyleGreen, localLayer);
+                        site.CreateAttachElement<IfcColumn>("col_calc", position, mesh, C4d.Red, surfStyleGreen, localLayer);
                     }
 
                     // create u-groups (holding v-axis entries)
@@ -464,7 +503,7 @@ namespace Aardvark.Data.Tests.Ifc
 
                 foreach (var placement in placements)
                 {
-                    site.CreateAttachElement<IfcColumn>("col_grid", placement, mesh, surfStyleOrange, gridLayer);
+                    site.CreateAttachElement<IfcColumn>("col_grid", placement, mesh, C4d.Red, surfStyleOrange, gridLayer);
                 }
                 txn2.Commit();
             }

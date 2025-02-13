@@ -15,6 +15,7 @@ using Xbim.Ifc4.PresentationDefinitionResource;
 using Xbim.Ifc4.PresentationOrganizationResource;
 using Xbim.Ifc4.ProfileResource;
 using Xbim.Ifc4.RepresentationResource;
+using Xbim.Ifc4.PresentationAppearanceResource;
 
 namespace Aardvark.Data.Ifc
 {
@@ -276,6 +277,21 @@ namespace Aardvark.Data.Ifc
         #endregion
 
         #region Box
+        public static void Set(this IfcBoundingBox b, Box3d box)
+        {
+            b.Corner = b.Model.CreatePoint(box.Min);
+            b.XDim = box.SizeX;
+            b.YDim = box.SizeY;
+            b.ZDim = box.SizeZ;
+        }
+
+        public static Box3d ToBox3d(this IIfcBoundingBox box)
+        {
+            var min = box.Corner.ToV3d();
+            var max = min + new V3d(box.XDim, box.YDim, box.ZDim);
+            return new Box3d(min, max);
+        }
+
         public static IfcShapeRepresentation CreateShapeRepresentationBoundingBox(this IModel model, Box3d box, IfcPresentationLayerAssignment layer = null)
         {
             IfcGeometricRepresentationItem item = model.New<IfcBoundingBox>(b => b.Set(box));
@@ -299,7 +315,6 @@ namespace Aardvark.Data.Ifc
                 p.ProfileType = IfcProfileTypeEnum.AREA;
                 p.XDim = box.SizeX;
                 p.YDim = box.SizeY;
-                //p.Position = model.CreateAxis2Placement2D(V2d.Zero);
             });
 
             IfcGeometricRepresentationItem item = model.New<IfcExtrudedAreaSolid>(solid =>
@@ -394,6 +409,42 @@ namespace Aardvark.Data.Ifc
                 s.Items.Add(item);
             });
         }
+
+        public static IfcShapeRepresentation CreateShapeRepresentationTessellationStyled(this IModel model, PolyMesh mesh, C4d? fallbackColor, IfcSurfaceStyle surfaceStyle = null, IfcPresentationLayerAssignment layer = null, bool triangulated = true)
+        {
+            IfcGeometricRepresentationItem item = triangulated ? CreateTriangulatedFaceSet(model, mesh) : CreatePolygonalFaceSet(model, mesh);
+            layer?.AssignedItems.Add(item);
+
+            // apply specific surfaceStyle / otherwise use mesh color / apply layer style / fallback-color / otherwise no styling
+            if (surfaceStyle != null)
+            {
+                item.CreateStyleItem(surfaceStyle);
+            }
+            else if (model.TryCreateSurfaceStyle(mesh, out var meshColor))
+            {
+                item.CreateStyleItem(meshColor);
+            }
+            else if (layer.TryCreateSurfaceStyle(out var layerStyle))
+            {
+                item.CreateStyleItem(layerStyle);
+            }
+            else if (fallbackColor != null)
+            {
+                // caching / re-using of default_surfaces
+                var fallbackName = "Default_Surface_" + fallbackColor.ToString();
+                var defaultSurface = model.Instances.OfType<IfcSurfaceStyle>().Where(x => x.Name == fallbackName).FirstOrDefault();
+                item.CreateStyleItem(defaultSurface ?? model.CreateSurfaceStyle(fallbackColor.Value, fallbackName));
+            }
+            // otherwise no styling applied!
+
+            return model.New<IfcShapeRepresentation>(s => {
+                s.ContextOfItems = model.GetGeometricRepresentationContextModel();
+                s.RepresentationType = "Tessellation";
+                s.RepresentationIdentifier = "Body";
+                s.Items.Add(item);
+            });
+        }
+
         #endregion
     }
 }
