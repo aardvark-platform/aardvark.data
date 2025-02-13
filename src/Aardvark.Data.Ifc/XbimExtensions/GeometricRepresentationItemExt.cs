@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using Aardvark.Base;
 
@@ -29,8 +29,10 @@ namespace Aardvark.Data.Ifc
         public static void Set(this IfcCartesianPoint point, V3d vec) 
             => point.SetXYZ(vec.X, vec.Y, vec.Z);
 
+        public static V2d ToV2d(this IIfcCartesianPoint point)
+            => new(point.X, point.Y);
         public static V3d ToV3d(this IIfcCartesianPoint point)
-            => new(point.X, point.Y, point.Z);
+            => new(point.X, point.Y, double.IsNaN(point.Z) ? 0 : point.Z);
 
         public static IfcCartesianPoint CreatePoint(this IModel model, V2d point)
             => model.New<IfcCartesianPoint>(c => c.Set(point));
@@ -50,7 +52,7 @@ namespace Aardvark.Data.Ifc
             => new(direction.X, direction.Y);
 
         public static V3d ToV3d(this IIfcDirection direction)
-            => new(direction.X, direction.Y, direction.Z);
+            => new(direction.X, direction.Y, double.IsNaN(direction.Z) ? 0 : direction.Z);
 
         public static IfcDirection CreateDirection(this IModel model, V2d direction)
             => model.New<IfcDirection>(rd => rd.Set(direction)); // NOTE: Direction may be normalized!
@@ -87,10 +89,25 @@ namespace Aardvark.Data.Ifc
         #region Axis2Placement3D
         public static Trafo3d ToTrafo3d(this IIfcAxis2Placement3D p)
         {
+            if (p.RefDirection == null || p.Axis == null) return Trafo3d.Translation(p.Location.ToV3d());
+            
             var xAxis = p.RefDirection == null ? V3d.XAxis : p.RefDirection.ToV3d();
             var zAxis = p.Axis == null ? V3d.ZAxis : p.Axis.ToV3d();
             var yAxis = zAxis.Cross(xAxis);
             return Trafo3d.FromBasis(xAxis, yAxis, zAxis, p.Location.ToV3d());
+        }
+
+        public static Trafo3d ToTrafo3d(this IIfcAxis2Placement3D p, ConcurrentDictionary<int, object> maps = null)
+        {
+            if (maps == null)
+                return p.ToTrafo3d();
+
+            if (maps.TryGetValue(p.EntityLabel, out object transform)) //already converted it just return cached
+                return (Trafo3d)transform;
+
+            transform = p.ToTrafo3d();
+            maps.TryAdd(p.EntityLabel, transform);
+            return (Trafo3d)transform;
         }
 
         public static IfcAxis2Placement3D CreateAxis2Placement3D(this IModel model, V3d location, V3d refDir, V3d axis)
@@ -109,6 +126,23 @@ namespace Aardvark.Data.Ifc
         public static IfcAxis2Placement3D CreateAxis2Placement3D(this IModel model, V3d location)
             => model.CreateAxis2Placement3D(location, V3d.XAxis, V3d.ZAxis);
 
+        public static Trafo2d ToTrafo2D(this IIfcAxis2Placement2D obj, ConcurrentDictionary<int, object> maps = null)
+        {
+            if (maps != null && maps.TryGetValue(obj.EntityLabel, out object transform)) //already converted it just return cached
+                return (Trafo2d)transform;
+
+            if (obj.RefDirection != null)
+            {
+                var dir = obj.RefDirection.ToV2d();
+                transform = Trafo2d.FromBasis(dir.XY, dir.YX, obj.Location.ToV2d());
+            }
+            else
+                transform = Trafo2d.Translation(obj.Location.ToV2d());
+
+            maps?.TryAdd(obj.EntityLabel, transform);
+            return (Trafo2d)transform;
+        }
+
         public static IfcAxis2Placement2D CreateAxis2Placement2D(this IModel model, V2d location, V2d refDir)
         {
             return model.New<IfcAxis2Placement2D>(a =>
@@ -119,6 +153,25 @@ namespace Aardvark.Data.Ifc
         }
         public static IfcAxis2Placement2D CreateAxis2Placement2D(this IModel model, V2d location)
             => model.CreateAxis2Placement2D(location, V2d.XAxis);
+
+        public static Trafo3d ToTrafo3d(this Trafo2d t)
+        {
+            var x = new V3d(t.Forward.M00, t.Forward.M10, 0.0);
+            var y = new V3d(t.Forward.M01, t.Forward.M11, 0.0);
+            var z = x.Cross(y);
+            var p = new V3d(t.Forward.M02, t.Forward.M12, 0.0);
+            return Trafo3d.FromBasis(x,y,z,p);
+        }
+
+        public static Trafo3d ToTrafo3d(this IIfcAxis2Placement placement)
+        {
+            return placement switch
+            {
+                IIfcAxis2Placement3D ax3 => ax3.ToTrafo3d(),
+                IIfcAxis2Placement2D ax2 => ax2.ToTrafo2D().ToTrafo3d(),
+                _ => Trafo3d.Identity
+            };
+        }
 
         public static IfcLocalPlacement CreateLocalPlacement(this IModel model, V3d shift)
             => model.New<IfcLocalPlacement>(p => p.RelativePlacement = model.CreateAxis2Placement3D(shift));
