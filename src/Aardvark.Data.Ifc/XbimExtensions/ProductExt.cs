@@ -30,6 +30,13 @@ namespace Aardvark.Data.Ifc
             });
         }
 
+        public static IfcBuildingElementProxyType CreateProxyType(this IModel model, IfcBuildingElementProxyTypeEnum proxyType, IEnumerable<IfcRepresentationMap> repMaps, IEnumerable<IfcPropertySetDefinition> properties, string name = "")
+        {
+            var proxy = CreateTypeProduct<IfcBuildingElementProxyType>(model, repMaps, properties, name);
+            proxy.PredefinedType = proxyType;
+            return proxy;
+        }
+
         public static T LinkToType<T>(this T obj, IIfcTypeObject objType) where T : IIfcObject
         {
             obj.AddDefiningType(objType);
@@ -66,13 +73,6 @@ namespace Aardvark.Data.Ifc
             return instance.LinkToType(objectType);
         }
 
-        public static IfcBuildingElementProxyType CreateProxyType(this IModel model, IfcBuildingElementProxyTypeEnum proxyType, IEnumerable<IfcRepresentationMap> repMaps, IEnumerable<IfcPropertySetDefinition> properties, string name = "")
-        {
-            var proxy = CreateTypeProduct<IfcBuildingElementProxyType>(model, repMaps, properties, name);
-            proxy.PredefinedType = proxyType;
-            return proxy;
-        }
-
         public static T CreateElement<T>(this IModel model, string elementName, IfcObjectPlacement placement, PolyMesh mesh, C4d? fallbackColor, IfcSurfaceStyle surfaceStyle = null, IfcPresentationLayerAssignment layer = null, bool triangulated = true) where T : IfcProduct, IInstantiableEntity
         {
             // create a Definition shape to hold the geometry
@@ -107,35 +107,6 @@ namespace Aardvark.Data.Ifc
             var element = parent.Model.CreateElement<T>(elementName, position, mesh, fallbackColor, surfaceStyle, layer, triangulated);
             parent.AddElement(element);
             return element;
-        }
-
-        public static IfcAnnotation CreateAnnotation(this IModel model, string text, IfcObjectPlacement placement, V3d position, IfcPresentationLayerWithStyle layer = null)
-        {
-            // Anotation-Experiments https://ifc43-docs.standards.buildingsmart.org/IFC/RELEASE/IFC4x3/HTML/lexical/IfcAnnotation.htm
-            return model.New<IfcAnnotation>(a =>
-            {
-                var box = new Box3d(V3d.Zero, new V3d(200, 100, 500)); // mm
-
-                a.Name = "Intersection of " + text;
-                a.ObjectPlacement = placement;
-                a.Representation = model.New<IfcProductDefinitionShape>(r => {
-                    r.Representations.AddRange([
-                        model.CreateShapeRepresentationAnnotation2dText(text, position.XY, layer),
-                        model.CreateShapeRepresentationAnnotation2dCurve([position.XY, (position.XY + new V2d(500, 750.0)), (position.XY + new V2d(1000,1000))], [[1,2,3]], layer),
-                        model.CreateShapeRepresentationAnnotation3dCurve([position, (position + new V3d(500, 750.0, 100)), (position + new V3d(1000,1000, 200))], layer),
-                        model.CreateShapeRepresentationAnnotation3dSurface(Plane3d.ZPlane, new Polygon2d(box.XY.Translated(position.XY - box.XY.Center).ComputeCornersCCW()), layer),
-                        model.CreateShapeRepresentationAnnotation3dCross(position, V3d.YAxis, 45, 1000.0, layer)
-                        //// NOT-displayed in BIMVision
-                        //model.CreateShapeRepresentationAnnotation2dPoint(position.XY, layer),
-                        //model.CreateShapeRepresentationAnnotation3dPoint(position, layer),
-                        //model.CreateShapeRepresentationAnnotation2dArea(new Box2d(V2d.Zero, V2d.One*1000.0), layer),
-
-                        // broken
-                        //model.CreateShapeRepresentationSurveyPoints(position.XY),
-                        //model.CreateShapeRepresentationSurveyPoints(position),
-                    ]);
-                });
-            });
         }
     }
 }

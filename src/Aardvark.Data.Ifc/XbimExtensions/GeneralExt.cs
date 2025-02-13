@@ -13,6 +13,15 @@ using Xbim.Common.Enumerations;
 
 namespace Aardvark.Data.Ifc
 {
+    public enum ProjectUnitsExtended
+    {
+        SIUnitsM,          // Xbim.Common.ProjectUnits in m
+        SIUnitsDM,         // Xbim.Common.ProjectUnits in dm
+        SIUnitsCM,         // Xbim.Common.ProjectUnits in cm
+        SIUnitsUK,         // Xbim.Common.ProjectUnits in mm  
+        ImperialUnits,     // Xbim.Common.ProjectUnits
+        USCustomaryUnits   // Xbim.Common.ProjectUnits
+    }
     public static class GeneralExt
     {
         #region Convenient Functions
@@ -65,13 +74,29 @@ namespace Aardvark.Data.Ifc
             return result;
         }
 
-        public static void CreateMinimalProject(this IfcStore model, ProjectUnits units = ProjectUnits.SIUnitsUK, string projectName = "Project", string siteName = "Site")
+        public static void CreateMinimalProject(this IfcStore model, ProjectUnitsExtended units = ProjectUnitsExtended.SIUnitsCM, string projectName = "Project", string siteName = "Site")
         {
             using var txnInit = model.BeginTransaction("Init Project");
             // there should always be one project in the model
             var project = model.New<IfcProject>(p => p.Name = projectName);
             // our shortcut to define basic default units
-            project.Initialize(units);
+            
+            var xBimDefaultUnits = units switch
+            {
+                ProjectUnitsExtended.ImperialUnits => ProjectUnits.ImperialUnits,
+                ProjectUnitsExtended.USCustomaryUnits => ProjectUnits.USCustomaryUnits,
+                ProjectUnitsExtended.SIUnitsUK => ProjectUnits.SIUnitsUK,
+                _ => ProjectUnits.SIUnitsUK,
+            };
+
+            project.Initialize(xBimDefaultUnits);
+
+            switch (units)
+            {
+                case ProjectUnitsExtended.SIUnitsM : project.UnitsInContext.SetOrChangeSiUnit(IfcUnitEnum.LENGTHUNIT, IfcSIUnitName.METRE, IfcSIPrefix.DECA); break;
+                case ProjectUnitsExtended.SIUnitsDM: project.UnitsInContext.SetOrChangeSiUnit(IfcUnitEnum.LENGTHUNIT, IfcSIUnitName.METRE, IfcSIPrefix.DECI); break;
+                case ProjectUnitsExtended.SIUnitsCM : project.UnitsInContext.SetOrChangeSiUnit(IfcUnitEnum.LENGTHUNIT, IfcSIUnitName.METRE, IfcSIPrefix.CENTI); break;
+            };
 
             // add site
             var site = model.New<IfcSite>(w => w.Name = siteName);

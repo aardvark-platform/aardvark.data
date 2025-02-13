@@ -8,6 +8,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+
+using Xbim.Common;
 using Xbim.Common.Step21;
 using Xbim.Ifc;
 using Xbim.Ifc4.GeometricConstraintResource;
@@ -334,7 +336,7 @@ namespace Aardvark.Data.Tests.Ifc
                 site.AddElement(model.CreateLightSpot("Spot_Light", C3d.Yellow, new V3d(0, 0, 1000), V3d.ZAxis, 100, V3d.Zero, 50, 20, model.CreateLocalPlacement(4 * shiftVec), repMap.Instantiate(trafo5)));
                 
                 var dist = model.CreateLightIntensityDistribution(IfcLightDistributionCurveEnum.TYPE_C, []);
-                site.AddElement(model.CreateLightGoniometric("Gonometric_Light", C3d.Orange, new V3d(0, 0, 3000), 3500, 1000, dist, model.CreateLocalPlacement(5 * shiftVec), repMap.Instantiate(trafo6)));
+                site.AddElement(model.CreateLightGoniometric("Goniometric_Light", C3d.Orange, new V3d(0, 0, 3000), 3500, 1000, dist, model.CreateLocalPlacement(5 * shiftVec), repMap.Instantiate(trafo6)));
 
                 txn.Commit();
             }
@@ -516,6 +518,36 @@ namespace Aardvark.Data.Tests.Ifc
         [Test]
         public static void AnnotationTest()
         {
+
+            static IfcAnnotation CreateTestAnnotation(IModel model, string text, IfcObjectPlacement placement, V3d worldPosition, Xbim.Ifc4.PresentationOrganizationResource.IfcPresentationLayerWithStyle layer = null)
+            {
+                // Anotation-Experiments https://ifc43-docs.standards.buildingsmart.org/IFC/RELEASE/IFC4x3/HTML/lexical/IfcAnnotation.htm
+                return model.New<IfcAnnotation>(a =>
+                {
+                    var box = new Box3d(V3d.Zero, new V3d(200, 100, 500)); // mm
+
+                    a.Name = "Intersection of " + text;
+                    a.ObjectPlacement = placement;
+                    a.Representation = model.New<IfcProductDefinitionShape>(r => {
+                        r.Representations.AddRange([
+                            model.CreateShapeRepresentationAnnotation2dText(text, worldPosition.XY, layer),
+                            model.CreateShapeRepresentationAnnotation2dCurve([worldPosition.XY, (worldPosition.XY + new V2d(500, 750.0)), (worldPosition.XY + new V2d(1000,1000))], [[1,2,3]], layer),
+                            model.CreateShapeRepresentationAnnotation3dCurve([worldPosition, (worldPosition + new V3d(500, 750.0, 100)), (worldPosition + new V3d(1000,1000, 200))], layer),
+                            model.CreateShapeRepresentationAnnotation3dSurface(Plane3d.ZPlane, new Polygon2d(box.XY.Translated(worldPosition.XY - box.XY.Center).ComputeCornersCCW()), layer),
+                            model.CreateShapeRepresentationAnnotation3dCross(worldPosition, V3d.YAxis, 45, 1000.0, layer),
+                            //// NOT-displayed in BIMVision
+                            //model.CreateShapeRepresentationAnnotation2dPoint(worldPosition.XY, layer),
+                            //model.CreateShapeRepresentationAnnotation3dPoint(worldPosition, layer),
+                            //model.CreateShapeRepresentationAnnotation2dArea(new Box2d(V2d.Zero, V2d.One*1000.0), layer),
+
+                            //// broken
+                            //model.CreateShapeRepresentationSurveyPoints(worldPosition.XY),
+                            //model.CreateShapeRepresentationSurveyPoints(worldPosition),
+                        ]);
+                    });
+                });
+            }
+
             using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
             
             model.CreateMinimalProject();
@@ -554,16 +586,16 @@ namespace Aardvark.Data.Tests.Ifc
                     {
                         _row++;
 
-                        var position = new V3d(_row % vAxes.Length, _col % uAxes.Length, 0.0) * offset;
+                        var worldPosition = new V3d(_row % vAxes.Length, _col % uAxes.Length, 0.0) * offset;
 
-                        var annotation = model.CreateAnnotation($"{uAxis.AxisTag} / {vAxis.AxisTag}", model.CreateLocalPlacement(V3d.Zero), position, annotationLayer);
+                        var annotation = CreateTestAnnotation(model, $"{uAxis.AxisTag} / {vAxis.AxisTag}", model.CreateLocalPlacement(V3d.Zero), worldPosition, annotationLayer);
 
                         var prop = new Dictionary<string, object>
                             {
                                 { "row", uAxis.AxisTag },
                                 { "col", vAxis.AxisTag },
-                                { "x", position.X },
-                                { "y", position.Y },
+                                { "x", worldPosition.X },
+                                { "y", worldPosition.Y },
                             };
 
                         annotation.AddPropertySet(model.CreatePropertySet("SetA", prop));

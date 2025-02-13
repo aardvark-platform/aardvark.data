@@ -16,8 +16,8 @@ namespace Aardvark.Data.Ifc
         public static Trafo3d ToTrafo3d(this XbimMatrix3D m)
         {
             var mat = m.ToM44d();
-            var inf = mat.Inverse;
-            return new Trafo3d(mat, mat.Inverse);
+            var inv = mat.Inverse;
+            return new Trafo3d(mat, inv);
         }
     }
 }
