@@ -6,24 +6,22 @@ using Aardvark.Geometry;
 
 using Xbim.Common;
 using Xbim.Ifc4.Interfaces;
-using Xbim.Ifc4.GeometryResource;
 using Xbim.Ifc4.MeasureResource;
 using Xbim.Ifc4.PresentationAppearanceResource;
-using Xbim.Ifc4.PresentationOrganizationResource;
 
 namespace Aardvark.Data.Ifc
 {
     public static class StylingExt
     {
         #region Colors
-        public static void Set(this IfcColourRgb c, C3d colour)
+        public static void Set(this IIfcColourRgb c, C3d colour)
         {
             c.Red = colour.R;
             c.Green = colour.G;
             c.Blue = colour.B;
         }
 
-        public static void Set(this IfcColourRgb c, C3f colour)
+        public static void Set(this IIfcColourRgb c, C3f colour)
         {
             c.Red = colour.R;
             c.Green = colour.G;
@@ -36,19 +34,19 @@ namespace Aardvark.Data.Ifc
         public static C3f ToC3f(this IIfcColourRgb col)
             => col.ToC3d().ToC3f();
 
-        public static IfcColourRgb CreateColor(this IModel model, C3f colour)
-            => model.New<IfcColourRgb>(x => x.Set(colour));
+        public static IIfcColourRgb CreateColor(this IModel model, C3f colour)
+            => model.Factory().ColourRgb(x => x.Set(colour));
 
-        public static IfcColourRgb CreateColor(this IModel model, C3d colour)
-            => model.New<IfcColourRgb>(x => x.Set(colour));
+        public static IIfcColourRgb CreateColor(this IModel model, C3d colour)
+            => model.Factory().ColourRgb(x => x.Set(colour));
         #endregion
 
         #region Text Styling
-        public static IfcTextStyleForDefinedFont CreateTextStyleForDefinedFont(this IModel model, C3f colour, C3f background, string name = null)
+        public static IIfcTextStyleForDefinedFont CreateTextStyleForDefinedFont(this IModel model, C3f colour, C3f background, string name = null)
         {
             // https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/schema/ifcpresentationappearanceresource/lexical/ifctextstylefordefinedfont.htm
 
-            return model.New<IfcTextStyleForDefinedFont>(f => {
+            return model.Factory().TextStyleForDefinedFont(f => {
                 f.Colour = model.CreateColor(colour);
                 // optional
                 f.BackgroundColour = model.CreateColor(background);
@@ -59,7 +57,7 @@ namespace Aardvark.Data.Ifc
         public enum TextTransform { Capitalize, Uppercase, Lowercase, None }
         public enum TextAlignment { Left, Right, Center, Justify }
 
-        public static IfcTextStyleTextModel CreateTextStyleTextModel(this IModel model, double textIndent, TextAlignment textAlign, TextDecoration textDecoration, TextTransform textTransform, double letterSpacing, double wordSpacing, double lineHeight)
+        public static IIfcTextStyleTextModel CreateTextStyleTextModel(this IModel model, double textIndent, TextAlignment textAlign, TextDecoration textDecoration, TextTransform textTransform, double letterSpacing, double wordSpacing, double lineHeight)
         {
             // https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/schema/ifcpresentationappearanceresource/lexical/ifctextstyletextmodel.htm
 
@@ -87,7 +85,7 @@ namespace Aardvark.Data.Ifc
                 _ => "justify"
             };
 
-            return model.New<IfcTextStyleTextModel>(tm =>
+            return model.Factory().TextStyleTextModel(tm =>
             {
                 // optional
                 tm.TextIndent = new IfcLengthMeasure(textIndent);           // The property specifies the indentation that appears before the first formatted line.
@@ -103,7 +101,7 @@ namespace Aardvark.Data.Ifc
         public enum FontStyle { Normal, Italic, Oblique }
         public enum FontWeight { Normal, Bold }
         public enum FontVariant { Normal, Smallcaps }
-        public static IfcTextStyleFontModel CreateTextStyleFontModel(this IModel model, double fontSize, string fontFamily, string fontModelName, FontStyle fontStyle = FontStyle.Normal, FontWeight fontWeight = FontWeight.Normal, FontVariant fontVariant = FontVariant.Normal)
+        public static IIfcTextStyleFontModel CreateTextStyleFontModel(this IModel model, double fontSize, string fontFamily, string fontModelName, FontStyle fontStyle = FontStyle.Normal, FontWeight fontWeight = FontWeight.Normal, FontVariant fontVariant = FontVariant.Normal)
         {
             // https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/schema/ifcpresentationappearanceresource/lexical/ifctextstylefontmodel.htm
 
@@ -126,7 +124,7 @@ namespace Aardvark.Data.Ifc
                 _ => "small-caps",
             };
 
-            return model.New<IfcTextStyleFontModel>(f =>
+            return model.Factory().TextStyleFontModel(f =>
             {
                 f.Name = fontModelName;
                 f.FontSize = new IfcLengthMeasure(fontSize);
@@ -138,11 +136,11 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcTextStyle CreateTextStyle(this IModel model, double fontSize, C3f colour, C3f background, string fontModelName, string fontFamily = "serif", bool modelOrDrauting = true, string name = null)
+        public static IIfcTextStyle CreateTextStyle(this IModel model, double fontSize, C3f colour, C3f background, string fontModelName, string fontFamily = "serif", bool modelOrDrauting = true, string name = null)
         {
             // https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/schema/ifcpresentationappearanceresource/lexical/ifctextstyle.htm
 
-            return model.New<IfcTextStyle>(ts =>
+            return model.Factory().TextStyle(ts =>
             {
                 ts.ModelOrDraughting = modelOrDrauting;
 
@@ -159,22 +157,22 @@ namespace Aardvark.Data.Ifc
         #endregion
 
         #region Surface Styling
-        public static IfcSurfaceStyleShading CreateSurfaceStyleShading(this IModel model, C3d surface, double transparency = 0.0)
+        public static IIfcSurfaceStyleShading CreateSurfaceStyleShading(this IModel model, C3d surface, double transparency = 0.0)
         {
             // https://standards.buildingsmart.org/MVD/RELEASE/IFC4/ADD2_TC1/RV1_2/HTML/schema/ifcpresentationappearanceresource/lexical/ifcsurfacestyleshading.htm
 
-            return model.New<IfcSurfaceStyleShading>(l =>
+            return model.Factory().SurfaceStyleShading(l =>
             {
                 l.SurfaceColour = model.CreateColor(surface);
                 l.Transparency = new IfcNormalisedRatioMeasure(transparency); // [0 = opaque .. 1 = transparent]
             });
         }
 
-        public static IfcSurfaceStyleRendering CreateSurfaceStyleRendering(this IModel model, C3d surface, double transparency, C3d diffuse, C3d diffuseTransmission, C3d transmission, C3d specular, double specularHighlight, C3d reflection, IfcReflectanceMethodEnum reflectionType)
+        public static IIfcSurfaceStyleRendering CreateSurfaceStyleRendering(this IModel model, C3d surface, double transparency, C3d diffuse, C3d diffuseTransmission, C3d transmission, C3d specular, double specularHighlight, C3d reflection, IfcReflectanceMethodEnum reflectionType)
         {
             // https://standards.buildingsmart.org/MVD/RELEASE/IFC4/ADD2_TC1/RV1_2/HTML/schema/ifcpresentationappearanceresource/lexical/ifcsurfacestylerendering.htm
 
-            return model.New<IfcSurfaceStyleRendering>(l =>
+            return model.Factory().SurfaceStyleRendering(l =>
             {
                 l.SurfaceColour = model.CreateColor(surface);
                 l.Transparency = new IfcNormalisedRatioMeasure(transparency); // [0 = opaque .. 1 = transparent]
@@ -195,11 +193,11 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcSurfaceStyleLighting CreateSurfaceStyleLighting(this IModel model, C3d diffuseTransmission, C3d diffuseReflection, C3d transmission, C3d reflectance)
+        public static IIfcSurfaceStyleLighting CreateSurfaceStyleLighting(this IModel model, C3d diffuseTransmission, C3d diffuseReflection, C3d transmission, C3d reflectance)
         {
             // https://standards.buildingsmart.org/IFC/RELEASE/IFC4/ADD2/HTML/schema/ifcpresentationappearanceresource/lexical/ifcsurfacestylelighting.htm
 
-            return model.New<IfcSurfaceStyleLighting>(l =>
+            return model.Factory().SurfaceStyleLighting(l =>
             {
                 l.DiffuseTransmissionColour = model.CreateColor(diffuseTransmission);
                 l.DiffuseReflectionColour = model.CreateColor(diffuseReflection);
@@ -208,13 +206,13 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcSurfaceStyle CreateSurfaceStyle(this IModel model, IEnumerable<IfcSurfaceStyleElementSelect> styles, string name = null)
+        public static IIfcSurfaceStyle CreateSurfaceStyle(this IModel model, IEnumerable<IIfcSurfaceStyleElementSelect> styles, string name = null)
         {
             // IfcSurfaceStyle is an assignment of one or many surface style elements to a surface, defined by subtypes of
             //     IfcSurface, IfcFaceBasedSurfaceModel, IfcShellBasedSurfaceModel, or by subtypes of IfcSolidModel. 
             // The positive direction of the surface normal relates to the positive side. In case of solids the outside of the solid is to be taken as positive side.
 
-            return model.New<IfcSurfaceStyle>(style =>
+            return model.Factory().SurfaceStyle(style =>
             {
                 if (name != null) style.Name = name;
                 style.Side = IfcSurfaceSide.BOTH;
@@ -222,16 +220,16 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcSurfaceStyle CreateSurfaceStyle(this IModel model, IfcSurfaceStyleElementSelect style, string name = null)
+        public static IIfcSurfaceStyle CreateSurfaceStyle(this IModel model, IIfcSurfaceStyleElementSelect style, string name = null)
             => CreateSurfaceStyle(model, [style], name);
 
-        public static IfcSurfaceStyle CreateSurfaceStyle(this IModel model, C3d surface, double transparency = 0.0, string name = null)
+        public static IIfcSurfaceStyle CreateSurfaceStyle(this IModel model, C3d surface, double transparency = 0.0, string name = null)
             => CreateSurfaceStyle(model, model.CreateSurfaceStyleShading(surface, transparency), name);
 
-        public static IfcSurfaceStyle CreateSurfaceStyle(this IModel model, C4d surface, string name = null)
+        public static IIfcSurfaceStyle CreateSurfaceStyle(this IModel model, C4d surface, string name = null)
             => model.CreateSurfaceStyle(surface.RGB, (1.0 - surface.A).Clamp(0, 1), name);
 
-        public static bool TryCreateSurfaceStyle(this IModel model, PolyMesh mesh, out IfcSurfaceStyle style)
+        public static bool TryCreateSurfaceStyle(this IModel model, PolyMesh mesh, out IIfcSurfaceStyle style)
         {
             if (mesh.HasColors)
             {
@@ -246,12 +244,12 @@ namespace Aardvark.Data.Ifc
             }
         }
 
-        public static bool TryCreateSurfaceStyle(this IfcPresentationLayerAssignment layer, out IfcSurfaceStyle style)
+        public static bool TryCreateSurfaceStyle(this IIfcPresentationLayerAssignment layer, out IIfcSurfaceStyle style)
         {
 
-            if (layer is IfcPresentationLayerWithStyle a && a.LayerStyles.OfType<IfcSurfaceStyle>().FirstOrDefault() != null)
+            if (layer is IIfcPresentationLayerWithStyle a && a.LayerStyles.OfType<IIfcSurfaceStyle>().FirstOrDefault() != null)
             {
-                style = a.LayerStyles.OfType<IfcSurfaceStyle>().First();
+                style = a.LayerStyles.OfType<IIfcSurfaceStyle>().First();
                 return true;
             }
             else
@@ -261,22 +259,21 @@ namespace Aardvark.Data.Ifc
             }
         }
 
-        
-
         #endregion
 
         #region Curve Styling
-        public static IfcCurveStyle CreateCurveStyle(this IModel model, C3d color, double width, double visibleLengh = 0, double invisibleLength = 0, bool modelOrDraughting = true)
+        public static IIfcCurveStyle CreateCurveStyle(this IModel model, C3d color, double width, double visibleLengh = 0, double invisibleLength = 0, bool modelOrDraughting = true)
         {
-            return model.New<IfcCurveStyle>(c =>
+            var factory = model.Factory();
+            return factory.CurveStyle(c =>
             {
                 c.ModelOrDraughting = modelOrDraughting;
                 c.CurveColour = model.CreateColor(color);
-                c.CurveWidth = new IfcPositiveLengthMeasure(width);
+                c.CurveWidth = (IfcPositiveLengthMeasure) width;
                 if (visibleLengh > 0)
                 {
-                    c.CurveFont = model.New<IfcCurveStyleFont>(f =>
-                        f.PatternList.Add(model.New<IfcCurveStyleFontPattern>(p =>
+                    c.CurveFont = factory.CurveStyleFont(f =>
+                        f.PatternList.Add(factory.CurveStyleFontPattern(p =>
                         {
                             p.VisibleSegmentLength = visibleLengh;
                             if (invisibleLength > 0) p.InvisibleSegmentLength = invisibleLength;
@@ -288,9 +285,9 @@ namespace Aardvark.Data.Ifc
         #endregion
 
         #region Area Styling
-        public static IfcFillAreaStyleHatching CreateFillAreaStyleHatching(this IModel model, double angle, double startOfNextHatchLine, IfcCurveStyle curveStyle)
+        public static IIfcFillAreaStyleHatching CreateFillAreaStyleHatching(this IModel model, double angle, double startOfNextHatchLine, IIfcCurveStyle curveStyle)
         {
-            return model.New<IfcFillAreaStyleHatching>(h =>
+            return model.Factory().FillAreaStyleHatching(h =>
             {
                 h.HatchLineAppearance = curveStyle;
                 h.HatchLineAngle = new IfcPlaneAngleMeasure(angle);
@@ -298,11 +295,11 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcFillAreaStyle CreateFillAreaStyle(this IModel model, C3d backgroundColor, bool modelOrDrauting = true, string name = null)
+        public static IIfcFillAreaStyle CreateFillAreaStyle(this IModel model, C3d backgroundColor, bool modelOrDrauting = true, string name = null)
         {
             // NOTE: Color information of surfaces for rendering is assigned by using IfcSurfaceStyle, not by using IfcFillAreaStyle. 
             // https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/schema/ifcpresentationappearanceresource/lexical/ifcfillareastyle.htm
-            return model.New<IfcFillAreaStyle>(a =>
+            return model.Factory().FillAreaStyle(a =>
             {
                 if (name != null) a.Name = name;
                 a.ModelorDraughting = modelOrDrauting;
@@ -311,11 +308,11 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcFillAreaStyle CreateFillAreaStyle(this IModel model, C3d hatchingColour, double angle, double startOfNextHatchLine, IfcCurveStyle curveStyle, bool modelOrDrauting = true, string name = null)
+        public static IIfcFillAreaStyle CreateFillAreaStyle(this IModel model, C3d hatchingColour, double angle, double startOfNextHatchLine, IIfcCurveStyle curveStyle, bool modelOrDrauting = true, string name = null)
         {
             // https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/schema/ifcpresentationappearanceresource/lexical/ifcfillareastyle.htm
             // 
-            return model.New<IfcFillAreaStyle>(a =>
+            return model.Factory().FillAreaStyle(a =>
             {
                 if (name != null) a.Name = name;
                 a.ModelorDraughting = modelOrDrauting;
@@ -329,16 +326,16 @@ namespace Aardvark.Data.Ifc
         #endregion
 
         #region Style Item
-        public static IfcStyledItem CreateStyleItem(this IfcRepresentationItem item, IEnumerable<IfcPresentationStyle> styles)
+        public static IIfcStyledItem CreateStyleItem(this IIfcRepresentationItem item, IEnumerable<IIfcPresentationStyle> styles)
         {
             // Each subtype of IfcPresentationStyle is assigned to the IfcGeometricRepresentationItem's through an intermediate IfcStyledItem.
-            return item.Model.New<IfcStyledItem>(styleItem => {
+            return item.Model.Factory().StyledItem(styleItem => {
                 styleItem.Styles.AddRange(styles);
                 if (item != null) styleItem.Item = item;
             });
         }
 
-        public static IfcStyledItem CreateStyleItem(this IfcRepresentationItem item, IfcPresentationStyle style)
+        public static IIfcStyledItem CreateStyleItem(this IIfcRepresentationItem item, IIfcPresentationStyle style)
             => CreateStyleItem(item, [style]);
 
         #endregion

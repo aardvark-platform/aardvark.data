@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Xbim.Ifc4.Interfaces;
 
 namespace Aardvark.Data.Ifc
@@ -42,6 +43,22 @@ namespace Aardvark.Data.Ifc
                     o.AddQuantity(qsetName, v); break;
                 default: throw new NotSupportedException($"Schema {obj.Model.SchemaVersion} does not provide AddQuantity or mixed obj and typeobject!");
             };
+        }
+
+        public static void AddElement(this IIfcSpatialStructureElement spat, IIfcProduct product)
+        {
+            var spatialStructure = spat.ContainsElements.FirstOrDefault();
+            if (spatialStructure == null) //none defined create the relationship
+            {
+                var relSe = spat.Model.Factory().RelContainedInSpatialStructure(relSe =>
+                {
+                    relSe.RelatingStructure = spat;
+                    relSe.RelatedElements.Add(product);
+
+                });
+            }
+            else
+                spatialStructure.RelatedElements.Add(product);
         }
     }
 }

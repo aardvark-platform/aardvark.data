@@ -8,25 +8,55 @@ using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.GeometricModelResource;
 using Xbim.Ifc4.GeometryResource;
 using Xbim.Ifc4.MeasureResource;
-using Xbim.Ifc4.PresentationOrganizationResource;
-using Xbim.Ifc4.RepresentationResource;
-using Xbim.Ifc4.GeometricConstraintResource;
 
 namespace Aardvark.Data.Ifc
 {
+    public static class IIfcCartesianPointExtensions
+    {
+        public static void SetXY(this IIfcCartesianPoint obj, double x, double y)
+        {
+            obj.Coordinates.Clear();
+            obj.Coordinates.Add(x);
+            obj.Coordinates.Add(y);
+        }
+
+        public static void SetXYZ(this IIfcCartesianPoint obj, double x, double y, double z)
+        {
+            obj.Coordinates.Clear();
+            obj.Coordinates.Add(x);
+            obj.Coordinates.Add(y);
+            obj.Coordinates.Add(z);
+        }
+
+        public static void SetXY(this IIfcDirection obj, double x, double y)
+        {
+            obj.DirectionRatios.Clear();
+            obj.DirectionRatios.Add(x);
+            obj.DirectionRatios.Add(y);
+        }
+
+        public static void SetXYZ(this IIfcDirection obj, double x, double y, double z)
+        {
+            obj.DirectionRatios.Clear();
+            obj.DirectionRatios.Add(x);
+            obj.DirectionRatios.Add(y);
+            obj.DirectionRatios.Add(z);
+        }
+    }
+        
     public static class GeometricRepresentationItemExt
     {
-        public static IfcGeometricRepresentationContext GetGeometricRepresentationContextPlan(this IModel model)
-            => model.Instances.OfType<IfcGeometricRepresentationContext>().Where(c => c.ContextType == "Plan").First();
+        public static IIfcGeometricRepresentationContext GetGeometricRepresentationContextPlan(this IModel model)
+            => model.Instances.OfType<IIfcGeometricRepresentationContext>().Where(c => c.ContextType == "Plan").First();
 
-        public static IfcGeometricRepresentationContext GetGeometricRepresentationContextModel(this IModel model)
-            => model.Instances.OfType<IfcGeometricRepresentationContext>().Where(c => c.ContextType == "Model").First();
+        public static IIfcGeometricRepresentationContext GetGeometricRepresentationContextModel(this IModel model)
+            => model.Instances.OfType<IIfcGeometricRepresentationContext>().Where(c => c.ContextType == "Model").First();
 
         #region CartesianPoint
-        public static void Set(this IfcCartesianPoint point, V2d vec) 
+        public static void Set(this IIfcCartesianPoint point, V2d vec) 
             => point.SetXY(vec.X, vec.Y);
 
-        public static void Set(this IfcCartesianPoint point, V3d vec) 
+        public static void Set(this IIfcCartesianPoint point, V3d vec) 
             => point.SetXYZ(vec.X, vec.Y, vec.Z);
 
         public static V2d ToV2d(this IIfcCartesianPoint point)
@@ -34,18 +64,18 @@ namespace Aardvark.Data.Ifc
         public static V3d ToV3d(this IIfcCartesianPoint point)
             => new(point.X, point.Y, double.IsNaN(point.Z) ? 0 : point.Z);
 
-        public static IfcCartesianPoint CreatePoint(this IModel model, V2d point)
-            => model.New<IfcCartesianPoint>(c => c.Set(point));
+        public static IIfcCartesianPoint CreatePoint(this IModel model, V2d point)
+            => model.Factory().CartesianPoint(c => c.Set(point));
 
-        public static IfcCartesianPoint CreatePoint(this IModel model, V3d point)
-            => model.New<IfcCartesianPoint>(c => c.Set(point));
+        public static IIfcCartesianPoint CreatePoint(this IModel model, V3d point)
+            => model.Factory().CartesianPoint(c => c.Set(point));
         #endregion
 
         #region Direction
-        public static void Set(this IfcDirection dir, V2d d) 
+        public static void Set(this IIfcDirection dir, V2d d) 
             => dir.SetXY(d.X, d.Y);
 
-        public static void Set(this IfcDirection dir, V3d d) 
+        public static void Set(this IIfcDirection dir, V3d d) 
             => dir.SetXYZ(d.X, d.Y, d.Z);
 
         public static V2d ToV2d(this IIfcDirection direction)
@@ -54,11 +84,11 @@ namespace Aardvark.Data.Ifc
         public static V3d ToV3d(this IIfcDirection direction)
             => new(direction.X, direction.Y, double.IsNaN(direction.Z) ? 0 : direction.Z);
 
-        public static IfcDirection CreateDirection(this IModel model, V2d direction)
-            => model.New<IfcDirection>(rd => rd.Set(direction)); // NOTE: Direction may be normalized!
+        public static IIfcDirection CreateDirection(this IModel model, V2d direction)
+            => model.Factory().Direction(rd => rd.Set(direction)); // NOTE: Direction may be normalized!
 
-        public static IfcDirection CreateDirection(this IModel model, V3d direction)
-            => model.New<IfcDirection>(rd => rd.Set(direction)); // NOTE: Direction may be normalized!
+        public static IIfcDirection CreateDirection(this IModel model, V3d direction)
+            => model.Factory().Direction(rd => rd.Set(direction)); // NOTE: Direction may be normalized!
         #endregion
 
         #region Vector
@@ -68,17 +98,17 @@ namespace Aardvark.Data.Ifc
         public static V3d ToV3d(this IIfcVector vec)
             => vec.Orientation.ToV3d() * vec.Magnitude;
 
-        public static IfcVector CreateVector(this IModel model, V2d vector)
+        public static IIfcVector CreateVector(this IModel model, V2d vector)
         {
-            return model.New<IfcVector>(v =>
+            return model.Factory().Vector(v =>
             {
                 v.Magnitude = vector.Length;
                 v.Orientation = model.CreateDirection(vector.Normalized);
             });
         }
-        public static IfcVector CreateVector(this IModel model, V3d vector)
+        public static IIfcVector CreateVector(this IModel model, V3d vector)
         {
-            return model.New<IfcVector>(v =>
+            return model.Factory().Vector(v =>
             {
                 v.Magnitude = vector.Length;
                 v.Orientation = model.CreateDirection(vector.Normalized);
@@ -110,9 +140,9 @@ namespace Aardvark.Data.Ifc
             return (Trafo3d)transform;
         }
 
-        public static IfcAxis2Placement3D CreateAxis2Placement3D(this IModel model, V3d location, V3d refDir, V3d axis)
+        public static IIfcAxis2Placement3D CreateAxis2Placement3D(this IModel model, V3d location, V3d refDir, V3d axis)
         {
-            return model.New<IfcAxis2Placement3D>(a =>
+            return model.Factory().Axis2Placement3D(a =>
             {
                 a.Location = model.CreatePoint(location);
                 a.RefDirection = model.CreateDirection(refDir); // default x-axis
@@ -123,7 +153,7 @@ namespace Aardvark.Data.Ifc
         public static IIfcAxis2Placement3D CreateAxis2Placement3D(this IModel model, Trafo3d trafo)
             => model.CreateAxis2Placement3D(trafo.Forward.C3.XYZ, trafo.Forward.C0.XYZ, trafo.Forward.C2.XYZ);
 
-        public static IfcAxis2Placement3D CreateAxis2Placement3D(this IModel model, V3d location)
+        public static IIfcAxis2Placement3D CreateAxis2Placement3D(this IModel model, V3d location)
             => model.CreateAxis2Placement3D(location, V3d.XAxis, V3d.ZAxis);
 
         public static Trafo2d ToTrafo2D(this IIfcAxis2Placement2D obj, ConcurrentDictionary<int, object> maps = null)
@@ -143,15 +173,15 @@ namespace Aardvark.Data.Ifc
             return (Trafo2d)transform;
         }
 
-        public static IfcAxis2Placement2D CreateAxis2Placement2D(this IModel model, V2d location, V2d refDir)
+        public static IIfcAxis2Placement2D CreateAxis2Placement2D(this IModel model, V2d location, V2d refDir)
         {
-            return model.New<IfcAxis2Placement2D>(a =>
+            return model.Factory().Axis2Placement2D(a =>
             {
                 a.Location = model.CreatePoint(location);
                 a.RefDirection = model.CreateDirection(refDir);
             });
         }
-        public static IfcAxis2Placement2D CreateAxis2Placement2D(this IModel model, V2d location)
+        public static IIfcAxis2Placement2D CreateAxis2Placement2D(this IModel model, V2d location)
             => model.CreateAxis2Placement2D(location, V2d.XAxis);
 
         public static Trafo3d ToTrafo3d(this Trafo2d t)
@@ -173,8 +203,8 @@ namespace Aardvark.Data.Ifc
             };
         }
 
-        public static IfcLocalPlacement CreateLocalPlacement(this IModel model, V3d shift)
-            => model.New<IfcLocalPlacement>(p => p.RelativePlacement = model.CreateAxis2Placement3D(shift));
+        public static IIfcLocalPlacement CreateLocalPlacement(this IModel model, V3d shift)
+            => model.Factory().LocalPlacement(p => p.RelativePlacement = model.CreateAxis2Placement3D(shift));
         #endregion
 
         #region Line and Curve
@@ -220,54 +250,54 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcLine CreateLine(this IModel model, V2d start, V2d end)
+        public static IIfcLine CreateLine(this IModel model, V2d start, V2d end)
         {
             var diff = end - start;
 
-            return model.New<IfcLine>(line =>
+            return model.Factory().Line(line =>
             {
                 line.Pnt = model.CreatePoint(start);
                 line.Dir = model.CreateVector(diff);
             });
         }
 
-        public static IfcLine CreateLine(this IModel model, V3d start, V3d end)
+        public static IIfcLine CreateLine(this IModel model, V3d start, V3d end)
         {
             var diff = end - start;
 
-            return model.New<IfcLine>(line =>
+            return model.Factory().Line(line =>
             {
                 line.Pnt = model.CreatePoint(start);
                 line.Dir = model.CreateVector(diff);
             });
         }
 
-        public static IfcLine CreateLine(this IModel model, Line2d line)
+        public static IIfcLine CreateLine(this IModel model, Line2d line)
             => model.CreateLine(line.P0, line.P1);
 
-        public static IfcLine CreateLine(this IModel model, Line3d line)
+        public static IIfcLine CreateLine(this IModel model, Line3d line)
             => model.CreateLine(line.P0, line.P1);
 
-        public static IfcPolyline CreatePolyLine(this IModel model, params V2d[] points)
+        public static IIfcPolyline CreatePolyLine(this IModel model, params V2d[] points)
         {
-            return model.New<IfcPolyline>(line =>
+            return model.Factory().Polyline(line =>
             {
                 line.Points.AddRange(points.Select(x => model.CreatePoint(x)));
             });
         }
 
-        public static IfcPolyline CreatePolyLine(this IModel model, params V3d[] points)
+        public static IIfcPolyline CreatePolyLine(this IModel model, params V3d[] points)
         {
-            return model.New<IfcPolyline>(line =>
+            return model.Factory().Polyline(line =>
             {
                 line.Points.AddRange(points.Select(x => model.CreatePoint(x)));
             });
         }
 
-        public static IfcPolyline CreatePolyLine(this IModel model, IEnumerable<V2d> points)
+        public static IIfcPolyline CreatePolyLine(this IModel model, IEnumerable<V2d> points)
             => model.CreatePolyLine(points.ToArray());
 
-        public static IfcPolyline CreatePolyLine(this IModel model, IEnumerable<V3d> points)
+        public static IIfcPolyline CreatePolyLine(this IModel model, IEnumerable<V3d> points)
             => model.CreatePolyLine(points.ToArray());
 
         public static IfcIndexedPolyCurve CreateIndexedPolyCurve(this IModel model, IEnumerable<V2d> points, IEnumerable<int[]> indices = null)
@@ -294,15 +324,15 @@ namespace Aardvark.Data.Ifc
 
         #region Surfaces
 
-        public static IfcPlane CreatePlane(this IModel model, Plane3d plane)
+        public static IIfcPlane CreatePlane(this IModel model, Plane3d plane)
         {
             var refDir = (plane.Normal.MajorDim == 2) ? plane.Normal.ZXY : plane.Normal.YXZ;
-            return model.New<IfcPlane>(pl => pl.Position = model.CreateAxis2Placement3D(plane.Point, refDir, plane.Normal));
+            return model.Factory().Plane(pl => pl.Position = model.CreateAxis2Placement3D(plane.Point, refDir, plane.Normal));
         }
 
-        public static IfcCurveBoundedPlane CreateCurveBoundedPlane(this IModel model, Plane3d plane, Polygon2d poly)
+        public static IIfcCurveBoundedPlane CreateCurveBoundedPlane(this IModel model, Plane3d plane, Polygon2d poly)
         {
-            return model.New<IfcCurveBoundedPlane>(p =>
+            return model.Factory().CurveBoundedPlane(p =>
             {
                 p.BasisSurface = model.CreatePlane(plane);
                 p.OuterBoundary = model.CreatePolyLine(poly.Points);
@@ -315,9 +345,9 @@ namespace Aardvark.Data.Ifc
 
         // https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/link/lighting-geometry.htm
 
-        public static IfcLightSourceAmbient CreateLightSourceAmbient(this IModel model, C3d color, string name = null, double? intensity = null, double? ambientIntensity = null)
+        public static IIfcLightSourceAmbient CreateLightSourceAmbient(this IModel model, C3d color, string name = null, double? intensity = null, double? ambientIntensity = null)
         {
-            return model.New<IfcLightSourceAmbient>(ls =>
+            return model.Factory().LightSourceAmbient(ls =>
             {
                 ls.LightColour = model.CreateColor(color);
 
@@ -331,9 +361,9 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcLightSourceDirectional CreateLightSourceDirectional(this IModel model, C3d color, V3d direction, string name = null, double? intensity = null, double? ambientIntensity = null)
+        public static IIfcLightSourceDirectional CreateLightSourceDirectional(this IModel model, C3d color, V3d direction, string name = null, double? intensity = null, double? ambientIntensity = null)
         {
-            return model.New<IfcLightSourceDirectional>(ls =>
+            return model.Factory().LightSourceDirectional(ls =>
             {
                 ls.LightColour = model.CreateColor(color);
 
@@ -350,12 +380,12 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcLightSourcePositional CreateLightSourcePositional(this IModel model, C3d color, V3d position, double radius, double constantAttenuation, double distanceAttenuation, double quadricAttenuation, string name = null, double? intensity = null, double? ambientIntensity = null)
+        public static IIfcLightSourcePositional CreateLightSourcePositional(this IModel model, C3d color, V3d position, double radius, double constantAttenuation, double distanceAttenuation, double quadricAttenuation, string name = null, double? intensity = null, double? ambientIntensity = null)
         {
             // The Point light node specifies a point light source at a 3D location in the local coordinate system.
             // A point light source emits light equally in all directions; that is, it is omnidirectional.
 
-            return model.New<IfcLightSourcePositional>(ls =>
+            return model.Factory().LightSourcePositional(ls =>
             {
                 ls.LightColour = model.CreateColor(color);
 
@@ -384,12 +414,12 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcLightSourceSpot CreateLightSourceSpot(this IModel model, C3d color, V3d position, double radius, double constantAttenuation, double distanceAttenuation, double quadricAttenuation, V3d direction, double spreadAngle, double beamWidthAngle, string name = null, double? intensity = null, double? ambientIntensity = null, double? concentrationExponent = null)
+        public static IIfcLightSourceSpot CreateLightSourceSpot(this IModel model, C3d color, V3d position, double radius, double constantAttenuation, double distanceAttenuation, double quadricAttenuation, V3d direction, double spreadAngle, double beamWidthAngle, string name = null, double? intensity = null, double? ambientIntensity = null, double? concentrationExponent = null)
         {
             // The Point light node specifies a point light source at a 3D location in the local coordinate system.
             // A point light source emits light equally in all directions; that is, it is omnidirectional.
 
-            return model.New<IfcLightSourceSpot>(ls =>
+            return model.Factory().LightSourceSpot(ls =>
             {
                 ls.LightColour = model.CreateColor(color);
 
@@ -452,9 +482,10 @@ namespace Aardvark.Data.Ifc
             }
         }
 
-        public static IfcLightIntensityDistribution CreateLightIntensityDistribution(this IModel model, IfcLightDistributionCurveEnum distributionEnum, IEnumerable<LightIntensityDistributionData> data)
+        public static IIfcLightIntensityDistribution CreateLightIntensityDistribution(this IModel model, IfcLightDistributionCurveEnum distributionEnum, IEnumerable<LightIntensityDistributionData> data)
         {
-            return model.New<IfcLightIntensityDistribution>(d =>
+            var factory = model.Factory();
+            return factory.LightIntensityDistribution(d =>
             {
                 // Type C is the recommended standard system. The C-Plane system equals a globe with a vertical axis. C-Angles are valid from 0° to 360°, γ-Angles are valid from 0° (south pole) to 180° (north pole).
                 // Type B is sometimes used for floodlights.The B-Plane System has a horizontal axis.B - Angles are valid from - 180° to + 180° with B 0° at the bottom and B180°/ B - 180° at the top, β - Angles are valid from - 90° to + 90°.
@@ -462,7 +493,7 @@ namespace Aardvark.Data.Ifc
                 d.LightDistributionCurve = distributionEnum;
                 d.DistributionData.AddRange(data.Select(a =>
                 {
-                    return model.New<IfcLightDistributionData>(data =>
+                    return factory.LightDistributionData (data =>
                     {
                         // The main plane angle (A, B or C angles, according to the light distribution curve chosen).
                         data.MainPlaneAngle = new IfcPlaneAngleMeasure(a.MainAngleInDegree.RadiansFromDegrees()); // measured in radians
@@ -478,10 +509,10 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcLightSourceGoniometric CreateLightSourceGoniometric(this IModel model, C3d color, double colourTemperature, double luminousFlux,
-            IfcLightEmissionSourceEnum lightEmissionSource, IfcLightIntensityDistribution data, IfcAxis2Placement3D placement, C3d? appearance = null, string name = null, double? intensity = null, double? ambientIntensity = null)
+        public static IIfcLightSourceGoniometric CreateLightSourceGoniometric(this IModel model, C3d color, double colourTemperature, double luminousFlux,
+            IfcLightEmissionSourceEnum lightEmissionSource, IIfcLightIntensityDistribution data, IIfcAxis2Placement3D placement, C3d? appearance = null, string name = null, double? intensity = null, double? ambientIntensity = null)
         {
-            return model.New<IfcLightSourceGoniometric>(ls =>
+            return model.Factory().LightSourceGoniometric(ls =>
             {
 
                 ls.LightColour = model.CreateColor(color);

@@ -10,8 +10,6 @@ using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.DateTimeResource;
 using Xbim.Ifc4.Kernel;
 using Xbim.Ifc4.MeasureResource;
-using Xbim.Ifc4.PropertyResource;
-using Xbim.Ifc4.QuantityResource;
 
 namespace Aardvark.Data.Ifc
 {
@@ -299,17 +297,18 @@ namespace Aardvark.Data.Ifc
             return isValid;
         }
 
-        public static IfcPropertySingleValue CreatePropertySingleValue<V>(this IModel model, string name, V value) where V : IfcValue
+        public static IIfcPropertySingleValue CreatePropertySingleValue<V>(this IModel model, string name, V value) where V : IIfcValue
         {
-            return model.New<IfcPropertySingleValue>(p => {
+            return model.Factory().PropertySingleValue(p => {
                 p.Name = name;
                 p.NominalValue = value;
             });
         }
 
-        public static IfcPropertyEnumeratedValue CreatePropertyEnumeratedValue<V>(this IModel model, string name, V value) where V : IfcValue
+        public static IIfcPropertyEnumeratedValue CreatePropertyEnumeratedValue<V>(this IModel model, string name, V value) where V : IIfcValue
         {
-            return model.New<IfcPropertyEnumeratedValue>(p => {
+            return model.Factory().PropertyEnumeratedValue(p =>
+            {
                 p.Name = name;
                 p.EnumerationValues.Add(value);
             });
@@ -347,58 +346,19 @@ namespace Aardvark.Data.Ifc
             return false;
         }
 
-        public static IfcQuantityWeight CreateQuantityWeight(this IModel model, string name, double value)
+        public static IIfcPhysicalSimpleQuantity CreatePhysicalSimpleQuantity(this IModel model, XbimQuantityTypeEnum quantityType, double value, string name = null)
         {
-            return model.New<IfcQuantityWeight>(w =>
+            var factory = new EntityCreator(model);
+            return quantityType switch
             {
-                w.Name = name;
-                w.WeightValue = new IfcMassMeasure(value);
-            });
-        }
-
-        public static IfcQuantityLength CreateQuantityLength(this IModel model, string name, double value)
-        {
-            return model.New<IfcQuantityLength>(w =>
-            {
-                w.Name = name;
-                w.LengthValue = new IfcLengthMeasure(value);
-            });
-        }
-
-        public static IfcQuantityArea CreateQuantityArea(this IModel model, string name, double value)
-        {
-            return model.New<IfcQuantityArea>(w =>
-            {
-                w.Name = name;
-                w.AreaValue = new IfcAreaMeasure(value);
-            });
-        }
-
-        public static IfcQuantityVolume CreateQuantityVolume(this IModel model, string name, double value)
-        {
-            return model.New<IfcQuantityVolume>(w =>
-            {
-                w.Name = name;
-                w.VolumeValue = new IfcVolumeMeasure(value);
-            });
-        }
-
-        public static IfcQuantityCount CreateQuantityCount(this IModel model, string name, double value)
-        {
-            return model.New<IfcQuantityCount>(w =>
-            {
-                w.Name = name;
-                w.CountValue = new IfcCountMeasure(value);
-            });
-        }
-
-        public static IfcQuantityTime CreateQuantityTime(this IModel model, string name, double value)
-        {
-            return model.New<IfcQuantityTime>(w =>
-            {
-                w.Name = name;
-                w.TimeValue = new IfcTimeMeasure(value);
-            });
+                XbimQuantityTypeEnum.Area => factory.QuantityArea(sq => { if (name != null) sq.Name = name; sq.AreaValue = (IfcAreaMeasure)value; }),
+                XbimQuantityTypeEnum.Length => factory.QuantityLength(sq => { if (name != null) sq.Name = name; sq.LengthValue = (IfcLengthMeasure)value; }),
+                XbimQuantityTypeEnum.Volume => factory.QuantityVolume(sq => { if (name != null) sq.Name = name; sq.VolumeValue = (IfcVolumeMeasure)value; }),
+                XbimQuantityTypeEnum.Count => factory.QuantityCount(sq => { if (name != null) sq.Name = name; sq.CountValue = (IfcCountMeasure)value; }),
+                XbimQuantityTypeEnum.Weight => factory.QuantityWeight(sq => { if (name != null) sq.Name = name; sq.WeightValue = (IfcMassMeasure)value; }),
+                XbimQuantityTypeEnum.Time => factory.QuantityTime(sq => { if (name != null) sq.Name = name; sq.TimeValue = (IfcTimeMeasure)value; }),
+                _ => default,
+            }; 
         }
 
         #endregion
@@ -446,37 +406,37 @@ namespace Aardvark.Data.Ifc
         #endregion
 
         #region PropertySet
-        public static IfcPropertySet CreatePropertySet(this IModel model, string setName, Dictionary<string, object> parameters)
+        public static IIfcPropertySet CreatePropertySet(this IModel model, string setName, Dictionary<string, object> parameters)
         {
             // supports the following types: https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/schema/ifcmeasureresource/lexical/ifcvalue.htm
-            var set = model.New<IfcPropertySet>(pset => {
+            var factory = model.Factory();
+
+            return factory.PropertySet(pset => {
                 pset.Name = setName;
                 pset.HasProperties.AddRange(
-                    parameters.Select(x => model.New<IfcPropertySingleValue>(p =>
+                    parameters.Select(x => factory.PropertySingleValue(p =>
                     {
                         p.Name = x.Key;
                         p.NominalValue = x.Value switch
                         {
-                            double d => new IfcReal(d), //double lum => new IfcLuminousFluxMeasure(lum),
-                            float r => new IfcReal(r),
-                            int i => new IfcInteger(i),
-                            bool b => new IfcBoolean(b),
-                            _ => new IfcText(x.Value.ToString()),
+                            double d => (IfcReal)d, //double lum => new IfcLuminousFluxMeasure(lum),
+                            float r => (IfcReal)r,
+                            int i => (IfcInteger)i,
+                            bool b => (IfcBoolean)b,
+                            _ => (IfcText) x.Value.ToString(),
                         };
                     }))
                 );
             });
-
-            return set;
         }
 
-        public static IfcProduct AttachPropertySet(this IfcProduct o, IfcPropertySet set)
+        public static IIfcProduct AttachPropertySet(this IIfcProduct o, IIfcPropertySet set)
         {
             o.AddPropertySet(set);
             return o;
         }
 
-        public static IfcPropertySet CreateAttachPropertySet(this IfcObject o, string setName, Dictionary<string, object> parameters)
+        public static IIfcPropertySet CreateAttachPropertySet(this IIfcObject o, string setName, Dictionary<string, object> parameters)
         {
             var set = o.Model.CreatePropertySet(setName, parameters);
 

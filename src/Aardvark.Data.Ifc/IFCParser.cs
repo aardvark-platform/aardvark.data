@@ -10,7 +10,6 @@ using Xbim.Common.Metadata;
 using Xbim.Common.XbimExtensions;
 using Xbim.Geometry.Abstractions;
 using Xbim.Ifc;
-using Xbim.Ifc4;
 using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.UtilityResource;
 using Xbim.ModelGeometry.Scene;

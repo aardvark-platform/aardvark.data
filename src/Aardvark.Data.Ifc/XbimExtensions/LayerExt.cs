@@ -3,36 +3,31 @@ using System.Collections.Generic;
 using Aardvark.Base;
 
 using Xbim.Common;
-using Xbim.Ifc;
 using Xbim.Ifc.Extensions;
 using Xbim.Ifc4.Interfaces;
-using Xbim.Ifc4.GeometryResource;
-using Xbim.Ifc4.PresentationAppearanceResource;
-using Xbim.Ifc4.PresentationOrganizationResource;
-using Xbim.Ifc4.RepresentationResource;
 
 namespace Aardvark.Data.Ifc
 {
     public static class LayerExt
     {
-        public static IfcPresentationLayerAssignment CreateLayer(this IModel model, string layerName, IEnumerable<IfcLayeredItem> items = null)
+        public static IIfcPresentationLayerAssignment CreateLayer(this IModel model, string layerName, IEnumerable<IIfcLayeredItem> items = null)
         {
             // IfcPresentationLayerAssignment only allows: IFC4.IFCSHAPEREPRESENTATION", "IFC4.IFCGEOMETRICREPRESENTATIONITEM", "IFC4.IFCMAPPEDITEM
-            return model.New<IfcPresentationLayerAssignment>(layer => {
+            return model.Factory().PresentationLayerAssignment(layer => {
                 layer.Name = layerName;
                 if (!items.IsEmptyOrNull()) layer.AssignedItems.AddRange(items);
             });
         }
 
-        public static IfcPresentationLayerAssignment CreateLayer(this IModel model, string layerName, IfcLayeredItem items)
+        public static IIfcPresentationLayerAssignment CreateLayer(this IModel model, string layerName, IIfcLayeredItem items)
             => model.CreateLayer(layerName, [items]);
 
-        public static IfcPresentationLayerWithStyle CreateLayerWithStyle(this IModel model, string layerName, IEnumerable<IfcPresentationStyle> styles, bool layerVisibility = true, IEnumerable<IfcGeometricRepresentationItem> items = null)
+        public static IIfcPresentationLayerWithStyle CreateLayerWithStyle(this IModel model, string layerName, IEnumerable<IIfcPresentationStyle> styles, bool layerVisibility = true, IEnumerable<IIfcGeometricRepresentationItem> items = null)
         {
             // https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/schema/ifcpresentationorganizationresource/lexical/ifcpresentationlayerwithstyle.htm
             // IfcPresentationLayerWithStyle only allows: "IFC4.IFCGEOMETRICREPRESENTATIONITEM", "IFC4.IFCMAPPEDITEM"
 
-            return model.New<IfcPresentationLayerWithStyle>(layer => {
+            return model.Factory().PresentationLayerWithStyle(layer => {
                 layer.Name = layerName;
 
                 // Visibility Control
@@ -48,12 +43,12 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcPresentationLayerWithStyle CreateLayerWithStyle(this IModel model, string layerName, IEnumerable<IfcPresentationStyle> styles, IfcGeometricRepresentationItem item, bool layerVisibility = true)
+        public static IIfcPresentationLayerWithStyle CreateLayerWithStyle(this IModel model, string layerName, IEnumerable<IIfcPresentationStyle> styles, IIfcGeometricRepresentationItem item, bool layerVisibility = true)
             => model.CreateLayerWithStyle(layerName, styles, layerVisibility, [item]);
 
-        public static IfcLayeredItem AssignLayer(this IfcLayeredItem item, IfcPresentationLayerAssignment layer)
+        public static IIfcLayeredItem AssignLayer(this IIfcLayeredItem item, IIfcPresentationLayerAssignment layer)
         {
-            if (layer is IfcPresentationLayerWithStyle && item is IfcShapeRepresentation)
+            if (layer is IIfcPresentationLayerWithStyle && item is IIfcShapeRepresentation)
             {
                 // IfcPresentationLayerWithStyle only allows "IFC4.IFCGEOMETRICREPRESENTATIONITEM", "IFC4.IFCMAPPEDITEM"
                 throw new ArgumentException("IfcShapeRepresentation cannot be assigened to IfcPresentationLayerWithStyle");
@@ -63,13 +58,13 @@ namespace Aardvark.Data.Ifc
             return item;
         }
 
-        public static IfcGeometricRepresentationItem AssignLayer(this IfcGeometricRepresentationItem item, IfcPresentationLayerAssignment layer)
+        public static IIfcGeometricRepresentationItem AssignLayer(this IIfcGeometricRepresentationItem item, IIfcPresentationLayerAssignment layer)
         {
             if (!layer.AssignedItems.Contains(item)) layer.AssignedItems.Add(item);
             return item;
         }
 
-        public static IfcMappedItem AssignLayer(this IfcMappedItem item, IfcPresentationLayerAssignment layer)
+        public static IIfcMappedItem AssignLayer(this IIfcMappedItem item, IIfcPresentationLayerAssignment layer)
         {
             if (!layer.AssignedItems.Contains(item)) layer.AssignedItems.Add(item);
             return item;

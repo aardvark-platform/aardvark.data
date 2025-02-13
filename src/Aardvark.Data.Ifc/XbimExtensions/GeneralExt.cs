@@ -31,6 +31,9 @@ namespace Aardvark.Data.Ifc
             return model.Instances.New(func);
         }
 
+        public static EntityCreator Factory(this IModel model)
+            => new (model);
+
         public static IIfcProject GetProject(this IfcStore model)
             => model.Instances.FirstOrDefault<IIfcProject>();
 

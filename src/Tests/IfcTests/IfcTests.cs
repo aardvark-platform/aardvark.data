@@ -12,14 +12,10 @@ using System.Text.RegularExpressions;
 using Xbim.Common;
 using Xbim.Common.Step21;
 using Xbim.Ifc;
-using Xbim.Ifc4.GeometricConstraintResource;
-using Xbim.Ifc4.Kernel;
+using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.MaterialResource;
 using Xbim.Ifc4.MeasureResource;
-using Xbim.Ifc4.ProductExtension;
-using Xbim.Ifc4.RepresentationResource;
 using Xbim.Ifc4.SharedBldgElements;
-using Xbim.Ifc4.Interfaces;
 using Xbim.IO;
 
 namespace Aardvark.Data.Tests.Ifc
@@ -149,10 +145,10 @@ namespace Aardvark.Data.Tests.Ifc
 
             using (var txn = model.BeginTransaction("Create Wall Properties"))
             {
-                var site = model.Instances.OfType<IfcSite>().FirstOrDefault();
+                var site = model.Instances.OfType<IIfcSite>().FirstOrDefault();
 
                 //create simple object and use lambda initializer to set the name
-                var wall = model.New<IfcWall>(w => w.Name = "The very first wall");
+                var wall = (IfcWall) model.Factory().Wall(w => w.Name = "The very first wall"); // <- remove cast (necessary for PurgePropertySet, SetPropertySingleValue...)
                 site.AddElement(wall);
 
                 var prop = new Dictionary<string, object>
@@ -199,12 +195,15 @@ namespace Aardvark.Data.Tests.Ifc
             using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
 
             model.CreateMinimalProject();
+            
 
             using (var txn = model.BeginTransaction("Create Wall"))
             {
-                var site = model.Instances.OfType<IfcSite>().FirstOrDefault();
+                var factory = model.Factory();
 
-                var wall = model.New<IfcWall>(w =>
+                var site = model.Instances.OfType<IIfcSite>().FirstOrDefault();
+
+                var wall = factory.Wall(w =>
                 {
                     w.Name = "Test wall";
                     w.ObjectPlacement = model.CreateLocalPlacement(V3d.Zero);  // can be applied later on...
@@ -231,7 +230,7 @@ namespace Aardvark.Data.Tests.Ifc
                 repItem.CreateStyleItem(defaultStyle);
 
                 wall.Representation =
-                    model.New<IfcProductDefinitionShape>(definition =>
+                    factory.ProductDefinitionShape(definition =>
                     {
                         definition.Name = "ShapeName";
                         definition.Description = "ShapeDescription";
@@ -260,7 +259,7 @@ namespace Aardvark.Data.Tests.Ifc
 
             using (var txn = model.BeginTransaction("Create Geometries"))
             {
-                var site = model.Instances.OfType<IfcSite>().FirstOrDefault();
+                var site = model.Instances.OfType<IIfcSite>().FirstOrDefault();
 
                 var yellowStyle = model.CreateSurfaceStyle(C3d.Yellow);
 
@@ -294,7 +293,7 @@ namespace Aardvark.Data.Tests.Ifc
 
             using (var txn = model.BeginTransaction("Create Light"))
             {
-                var site = model.Instances.OfType<IfcSite>().FirstOrDefault();
+                var site = model.Instances.OfType<IIfcSite>().FirstOrDefault();
 
                 var layer = model.CreateLayerWithStyle("Layer green styled", [model.CreateSurfaceStyle(C3d.Green)]);
 
@@ -323,7 +322,10 @@ namespace Aardvark.Data.Tests.Ifc
                 var lightType = model.CreateLightType(IfcLightFixtureTypeEnum.POINTSOURCE, [repMap], [generalInfo]);
                 
                 // instantiate via light-type
-                site.AddElement(lightType.Instantiate("Empty_Light_fromtype", model.CreateLocalPlacement(-shiftVec), Trafo3d.RotationZInDegrees(45), IfcLightFixtureTypeEnum.POINTSOURCE));
+                var li = lightType.Instantiate("Empty_Light_fromtype", model.CreateLocalPlacement(-shiftVec), Trafo3d.RotationZInDegrees(45), IfcLightFixtureTypeEnum.POINTSOURCE);
+                li.Pset_LightFixtureTypeCommon("reference", 1, 1000, 20, 50, 20, 33, "working", "hanging", "ceiling");
+                li.Qto_LightFixtureBaseQuantities(50);
+                site.AddElement(li);
 
                 // attached property sets
                 site.AddElement(model.CreateLightEmpty("Empty_Light", model.CreateLocalPlacement(V3d.Zero), repMap.Instantiate(trafo1)).AttachPropertySet(generalInfo));
@@ -357,10 +359,12 @@ namespace Aardvark.Data.Tests.Ifc
 
             using (var txn = model.BeginTransaction("Create Slab with Material"))
             {
-                var site = model.Instances.OfType<IfcSite>().FirstOrDefault();
+                var factory = model.Factory();
+
+                var site = model.Instances.OfType<IIfcSite>().FirstOrDefault();
 
                 // MATERIAL
-                var material = model.New<IfcMaterial>(m => m.Name = "Carbon");
+                var material = (IfcMaterial) factory.Material(m => m.Name = "Carbon"); // <- remove cast!
                 material.CreateAttachPsetMaterialCommon(98.7654, 0.54, massDensity);
                 material.CreateAttachPsetMaterialThermal(thermalConductivity, 500, 99, -10);
                 material.CreateAttachStyledRepresentation(C3d.Magenta);
@@ -371,26 +375,26 @@ namespace Aardvark.Data.Tests.Ifc
 
                 var shape = model.CreateShapeRepresentationSolidBox(box); // extrusion along z-axis
 
-                var slab = model.New<IfcSlab>(c => {
+                var slab = factory.Slab(c => {
                     c.Name = "Mesh4";
-                    c.Representation = model.New<IfcProductDefinitionShape>(r => r.Representations.Add(shape));
+                    c.Representation = factory.ProductDefinitionShape(r => r.Representations.Add(shape));
                     c.ObjectPlacement = model.CreateLocalPlacement(new V3d(500, 500, 500));
                 });
                 site.AddElement(slab);
 
                 // Link Material via RelAssociatesMaterial
-                model.New<IfcRelAssociatesMaterial>(mat =>
+                factory.RelAssociatesMaterial(mat =>
                 {
                     // Material Layer Set Usage (HAS TO BE MANUALLY SYNCHED!)
-                    IfcMaterialLayerSetUsage usage = model.New<IfcMaterialLayerSetUsage>(u =>
+                    IIfcMaterialLayerSetUsage usage = factory.MaterialLayerSetUsage(u =>
                     {
                         u.DirectionSense = IfcDirectionSenseEnum.NEGATIVE;
                         u.LayerSetDirection = IfcLayerSetDirectionEnum.AXIS3;
                         u.OffsetFromReferenceLine = 0;
-                        u.ForLayerSet = model.New<IfcMaterialLayerSet>(set =>
+                        u.ForLayerSet = factory.MaterialLayerSet(set =>
                         {
                             set.LayerSetName = "Carbon Layer Set";
-                            set.MaterialLayers.Add(model.New<IfcMaterialLayer>(layer =>
+                            set.MaterialLayers.Add(factory.MaterialLayer(layer =>
                             {
                                 layer.Name = "Layer1";
                                 layer.Material = material;
@@ -411,14 +415,14 @@ namespace Aardvark.Data.Tests.Ifc
 
             Assert.IsEmpty(model.ValidateModel());
 
-            var mat = model.Instances.OfType<IfcMaterial>().First();
+            var mat = model.Instances.OfType<IIfcMaterial>().First();
 
             var myMaterial = IFCParser.GetMaterial(mat);
             Assert.IsTrue(myMaterial.MassDensity == massDensity);
             Assert.IsTrue(myMaterial.ThermalConductivity == thermalConductivity);
 
             // Cast to IIfcMaterial results into invalid null values for the first 3 properties in .NET8.0 -> resolved with xbim issue #595 in xbim.essentials 6.0.493
-            var properties = ((Xbim.Ifc4.Interfaces.IIfcMaterial) mat).HasProperties.SelectMany(a => a.Properties).ToArray(); 
+            var properties = mat.HasProperties.SelectMany(a => a.Properties).ToArray(); 
             properties.ForEach(Assert.IsNotNull);
 
             model.SaveAs("test_Material.ifc");
@@ -434,7 +438,9 @@ namespace Aardvark.Data.Tests.Ifc
 
             using (var txn = model.BeginTransaction("Create Grid and Groups"))
             {
-                var site = model.Instances.OfType<IfcSite>().First();
+                var factory = model.Factory();
+
+                var site = model.Instances.OfType<IIfcSite>().First();
 
                 var surfStyleGreen = model.CreateSurfaceStyle(C3d.Green);
 
@@ -450,7 +456,7 @@ namespace Aardvark.Data.Tests.Ifc
                 var grid = model.CreateGrid("MainGrid", uAxes, vAxes, offset);
                 site.AddElement(grid);
 
-                var groups = new List<IfcGroup>();
+                var groups = new List<IIfcGroup>();
                 var _col = -1.0;
                 var _row = -1.0;
 
@@ -459,14 +465,14 @@ namespace Aardvark.Data.Tests.Ifc
                 {
                     _col++;
 
-                    var annotationList = new List<IfcAnnotation>();
+                    var annotationList = new List<IIfcAnnotation>();
 
                     foreach (var vAxis in grid.VAxes)
                     {
                         _row++;
                         // create grid intersections
                         // commit before they can be accessed afterwards
-                        IfcVirtualGridIntersection intersection = model.New<IfcVirtualGridIntersection>(i =>
+                        IIfcVirtualGridIntersection intersection = factory.VirtualGridIntersection(i =>
                         {
                             i.IntersectingAxes.Add(uAxis);
                             i.IntersectingAxes.Add(vAxis);
@@ -494,14 +500,14 @@ namespace Aardvark.Data.Tests.Ifc
 
             using (var txn2 = model.BeginTransaction("Generate Intersections"))
             {
-                var site = model.Instances.OfType<IfcSite>().First();
+                var site = model.Instances.OfType<IIfcSite>().First();
 
                 var surfStyleOrange = model.CreateSurfaceStyle(C3d.Orange);
 
                 var gridLayer = model.CreateLayer("Grid placed obj");
 
-                var gridCheck = model.Instances.OfType<IfcGrid>().First();
-                var placements = gridCheck.UAxes.SelectMany(axis => axis.HasIntersections.Select(i => model.New<IfcGridPlacement>(p => p.PlacementLocation = i))).ToArray();
+                var gridCheck = model.Instances.OfType<IIfcGrid>().First();
+                var placements = gridCheck.UAxes.SelectMany(axis => axis.HasIntersections.Select(i => model.Factory().GridPlacement(p => p.PlacementLocation = i))).ToArray();
 
                 foreach (var placement in placements)
                 {
@@ -519,16 +525,18 @@ namespace Aardvark.Data.Tests.Ifc
         public static void AnnotationTest()
         {
 
-            static IfcAnnotation CreateTestAnnotation(IModel model, string text, IfcObjectPlacement placement, V3d worldPosition, Xbim.Ifc4.PresentationOrganizationResource.IfcPresentationLayerWithStyle layer = null)
+            static IIfcAnnotation CreateTestAnnotation(IModel model, string text, IIfcObjectPlacement placement, V3d worldPosition, IIfcPresentationLayerWithStyle layer = null)
             {
+                var factory = model.Factory();
+
                 // Anotation-Experiments https://ifc43-docs.standards.buildingsmart.org/IFC/RELEASE/IFC4x3/HTML/lexical/IfcAnnotation.htm
-                return model.New<IfcAnnotation>(a =>
+                return factory.Annotation(a =>
                 {
                     var box = new Box3d(V3d.Zero, new V3d(200, 100, 500)); // mm
 
                     a.Name = "Intersection of " + text;
                     a.ObjectPlacement = placement;
-                    a.Representation = model.New<IfcProductDefinitionShape>(r => {
+                    a.Representation = factory.ProductDefinitionShape(r => {
                         r.Representations.AddRange([
                             model.CreateShapeRepresentationAnnotation2dText(text, worldPosition.XY, layer),
                             model.CreateShapeRepresentationAnnotation2dCurve([worldPosition.XY, (worldPosition.XY + new V2d(500, 750.0)), (worldPosition.XY + new V2d(1000,1000))], [[1,2,3]], layer),
@@ -554,7 +562,8 @@ namespace Aardvark.Data.Tests.Ifc
 
             using (var txn = model.BeginTransaction("Create Grid with Annotations"))
             {
-                var site = model.Instances.OfType<IfcSite>().FirstOrDefault();
+                var factory = model.Factory();
+                var site = model.Instances.OfType<IIfcSite>().FirstOrDefault();
 
                 var textStyle = model.CreateTextStyle(100, C3f.Red, C3f.Blue, "myFont");
                 var curveStyle = model.CreateCurveStyle(C3d.Magenta, 100.0, 10, 20);
@@ -571,7 +580,7 @@ namespace Aardvark.Data.Tests.Ifc
                 var grid = model.CreateGrid("MainGrid", uAxes, vAxes, offset);
                 site.AddElement(grid);
 
-                var groups = new List<IfcGroup>();
+                var groups = new List<IIfcGroup>();
                 var _col = -1.0;
                 var _row = -1.0;
 
@@ -580,7 +589,7 @@ namespace Aardvark.Data.Tests.Ifc
                 {
                     _col++;
 
-                    var annotationList = new List<IfcAnnotation>();
+                    var annotationList = new List<IIfcAnnotation>();
 
                     foreach (var vAxis in grid.VAxes)
                     {
@@ -641,7 +650,7 @@ namespace Aardvark.Data.Tests.Ifc
                 Assert.AreEqual(input, outputPoints);
 
                 var inputBox = Box3d.Unit;
-                var ifcBox = model.New<Xbim.Ifc4.GeometricModelResource.IfcBoundingBox>(b => b.Set(inputBox));
+                var ifcBox = model.Factory().BoundingBox(b => b.Set(inputBox));
                 var outputBox = ifcBox.ToBox3d();
                 Assert.AreEqual(inputBox, outputBox);
 

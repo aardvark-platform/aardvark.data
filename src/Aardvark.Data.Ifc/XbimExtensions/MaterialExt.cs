@@ -2,11 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 
+using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.MaterialResource;
 using Xbim.Ifc4.MeasureResource;
-using Xbim.Ifc4.Interfaces;
-using Xbim.Ifc4.PresentationAppearanceResource;
-using Xbim.Ifc4.RepresentationResource;
 
 namespace Aardvark.Data.Ifc
 {
@@ -26,9 +24,9 @@ namespace Aardvark.Data.Ifc
             return material.Model.New<IfcMaterialProperties>(ps => {
                 ps.Name = "Pset_MaterialCommon";
                 ps.Material = material;
-                ps.Properties.Add(material.Model.CreatePropertySingleValue("MolecularWeight", new IfcMolecularWeightMeasure(molecularWeight)));
-                ps.Properties.Add(material.Model.CreatePropertySingleValue("Porosity", new IfcNormalisedRatioMeasure(porosity)));
-                ps.Properties.Add(material.Model.CreatePropertySingleValue("MassDensity", new IfcMassDensityMeasure(massDensity)));
+                ps.Properties.Add((Xbim.Ifc4.PropertyResource.IfcProperty)material.Model.CreatePropertySingleValue("MolecularWeight", new IfcMolecularWeightMeasure(molecularWeight)));
+                ps.Properties.Add((Xbim.Ifc4.PropertyResource.IfcProperty)material.Model.CreatePropertySingleValue("Porosity", new IfcNormalisedRatioMeasure(porosity)));
+                ps.Properties.Add((Xbim.Ifc4.PropertyResource.IfcProperty)material.Model.CreatePropertySingleValue("MassDensity", new IfcMassDensityMeasure(massDensity)));
             });
         }
 
@@ -37,22 +35,23 @@ namespace Aardvark.Data.Ifc
             return material.Model.New<IfcMaterialProperties>(ps => {
                 ps.Name = "Pset_MaterialThermal";
                 ps.Material = material;
-                ps.Properties.Add(material.Model.CreatePropertySingleValue("ThermalConductivity", new IfcThermalConductivityMeasure(thermalConductivity)));
-                ps.Properties.Add(material.Model.CreatePropertySingleValue("SpecificHeatCapacity", new IfcSpecificHeatCapacityMeasure(specificHeatCapacity)));
-                ps.Properties.Add(material.Model.CreatePropertySingleValue("BoilingPoint", new IfcThermodynamicTemperatureMeasure(boilingPoint)));
-                ps.Properties.Add(material.Model.CreatePropertySingleValue("FreezingPoint", new IfcThermodynamicTemperatureMeasure(freezingPoint)));
+                ps.Properties.Add((Xbim.Ifc4.PropertyResource.IfcProperty)material.Model.CreatePropertySingleValue("ThermalConductivity", new IfcThermalConductivityMeasure(thermalConductivity)));
+                ps.Properties.Add((Xbim.Ifc4.PropertyResource.IfcProperty)material.Model.CreatePropertySingleValue("SpecificHeatCapacity", new IfcSpecificHeatCapacityMeasure(specificHeatCapacity)));
+                ps.Properties.Add((Xbim.Ifc4.PropertyResource.IfcProperty)material.Model.CreatePropertySingleValue("BoilingPoint", new IfcThermodynamicTemperatureMeasure(boilingPoint)));
+                ps.Properties.Add((Xbim.Ifc4.PropertyResource.IfcProperty)material.Model.CreatePropertySingleValue("FreezingPoint", new IfcThermodynamicTemperatureMeasure(freezingPoint)));
             });
         }
 
-        public static IfcMaterialDefinitionRepresentation CreateAttachStyledRepresentation(this IfcMaterial material, C3d surfaceColor)
+        public static IIfcMaterialDefinitionRepresentation CreateAttachStyledRepresentation(this IIfcMaterial material, C3d surfaceColor)
         {
+            var factory = material.Model.Factory();
             // https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/schema/ifcrepresentationresource/lexical/ifcmaterialdefinitionrepresentation.htm
-            return material.Model.New<IfcMaterialDefinitionRepresentation>(def =>
+            return factory.MaterialDefinitionRepresentation(def =>
             {
                 def.RepresentedMaterial = material;
-                def.Representations.Add(material.Model.New<IfcStyledRepresentation>(rep => {
+                def.Representations.Add(factory.StyledRepresentation(rep => {
                     rep.ContextOfItems = material.Model.GetGeometricRepresentationContextModel();
-                    rep.Items.Add(material.Model.New<IfcStyledItem>(styleItem => {
+                    rep.Items.Add(factory.StyledItem(styleItem => {
                         //styleItem.Item -> NOTE: If the IfcStyledItem is used within a reference from an IfcMaterialDefinitionRepresentation then no Item shall be provided.
                         styleItem.Styles.Add(material.Model.CreateSurfaceStyle(surfaceColor));
                     }));

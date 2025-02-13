@@ -1,6 +1,5 @@
 ﻿
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using Aardvark.Base;
 using Aardvark.Geometry;
@@ -9,25 +8,19 @@ using Xbim.Common;
 using Xbim.Common.Step21;
 using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.GeometricModelResource;
-using Xbim.Ifc4.GeometryResource;
 using Xbim.Ifc4.MeasureResource;
-using Xbim.Ifc4.PresentationDefinitionResource;
-using Xbim.Ifc4.PresentationOrganizationResource;
-using Xbim.Ifc4.ProfileResource;
-using Xbim.Ifc4.RepresentationResource;
-using Xbim.Ifc4.PresentationAppearanceResource;
 
 namespace Aardvark.Data.Ifc
 {
     public static class ShapeRepresentationExt
     {
         #region SurveyPoints (broken)
-        public static IfcShapeRepresentation CreateShapeRepSurveyPoints(this IModel model, IfcPresentationLayerWithStyle layer, params V2d[] points)
+        public static IIfcShapeRepresentation CreateShapeRepSurveyPoints(this IModel model, IIfcPresentationLayerWithStyle layer, params V2d[] points)
         {
             // Set of Survey points 2D https://ifc43-docs.standards.buildingsmart.org/IFC/RELEASE/IFC4x3/HTML/concepts/Product_Shape/Product_Geometric_Representation/Annotation_Geometry/Set_Of_Survey_Points/content.html
-            IfcGeometricRepresentationItem item = model.CreateCartesianPointList2D(points).AssignLayer(layer);
+            IIfcGeometricRepresentationItem item = model.CreateCartesianPointList2D(points).AssignLayer(layer);
 
-            return model.New<IfcShapeRepresentation>(r =>
+            return model.Factory().ShapeRepresentation(r =>
             {
                 r.RepresentationIdentifier = "Annotation";
                 r.RepresentationType = "Point";
@@ -36,15 +29,15 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationSurveyPoints(this IModel model, params V2d[] points)
+        public static IIfcShapeRepresentation CreateShapeRepresentationSurveyPoints(this IModel model, params V2d[] points)
             => CreateShapeRepSurveyPoints(model, null, points);
 
-        public static IfcShapeRepresentation CreateShapeRepresentationSurveyPoints(this IModel model, IfcPresentationLayerWithStyle layer, params V3d[] points)
+        public static IIfcShapeRepresentation CreateShapeRepresentationSurveyPoints(this IModel model, IIfcPresentationLayerWithStyle layer, params V3d[] points)
         {
             // Set of Survey points 3D https://ifc43-docs.standards.buildingsmart.org/IFC/RELEASE/IFC4x3/HTML/concepts/Product_Shape/Product_Geometric_Representation/Annotation_Geometry/Set_Of_Survey_Points/content.html
-            IfcGeometricRepresentationItem item = model.CreateCartesianPointList3D(points).AssignLayer(layer);
+            IIfcGeometricRepresentationItem item = model.CreateCartesianPointList3D(points).AssignLayer(layer);
 
-            return model.New<IfcShapeRepresentation>(r =>
+            return model.Factory().ShapeRepresentation(r =>
             {
                 r.RepresentationIdentifier = "Annotation";
                 r.RepresentationType = "Point";
@@ -53,15 +46,15 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationSurveyPoints(this IModel model, params V3d[] points)
+        public static IIfcShapeRepresentation CreateShapeRepresentationSurveyPoints(this IModel model, params V3d[] points)
             => CreateShapeRepresentationSurveyPoints(model, null, points);
 
         #endregion
 
         #region 3D Annotations
-        public static IfcShapeRepresentation CreateShapeRepresentationAnnotation3d(this IfcRepresentationItem item)
+        public static IIfcShapeRepresentation CreateShapeRepresentationAnnotation3d(this IIfcRepresentationItem item)
         {
-            return item.Model.New<IfcShapeRepresentation>(r =>
+            return item.Model.Factory().ShapeRepresentation(r =>
             {
                 r.RepresentationIdentifier = "Annotation";
                 r.RepresentationType = "GeometricSet";
@@ -70,7 +63,7 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationAnnotation3dPoint(this IModel model, V3d point, IfcPresentationLayerWithStyle layer = null)
+        public static IIfcShapeRepresentation CreateShapeRepresentationAnnotation3dPoint(this IModel model, V3d point, IIfcPresentationLayerWithStyle layer = null)
         {
             var content = model.CreatePoint(point);
             layer?.AssignedItems.Add(content);
@@ -78,15 +71,15 @@ namespace Aardvark.Data.Ifc
             return content.CreateShapeRepresentationAnnotation3d();
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationAnnotation3dCurve(this IModel model, V3d[] points, IfcPresentationLayerWithStyle layer = null)
+        public static IIfcShapeRepresentation CreateShapeRepresentationAnnotation3dCurve(this IModel model, V3d[] points, IIfcPresentationLayerWithStyle layer = null)
         {
-            IfcGeometricRepresentationItem content = model.CreatePolyLine(points);
+            IIfcGeometricRepresentationItem content = model.CreatePolyLine(points);
             layer?.AssignedItems.Add(content);
 
             return content.CreateShapeRepresentationAnnotation3d();
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationAnnotation3dCross(this IModel model, V3d origin, V3d normal, double angleInDegree, double scale, IfcPresentationLayerWithStyle layer = null)
+        public static IIfcShapeRepresentation CreateShapeRepresentationAnnotation3dCross(this IModel model, V3d origin, V3d normal, double angleInDegree, double scale, IIfcPresentationLayerWithStyle layer = null)
         {
             //var crossPoints = new V3d[] {
             //    origin, origin+(axis1.Normalized * scale),
@@ -104,15 +97,15 @@ namespace Aardvark.Data.Ifc
                 origin, origin+plane.Unproject( d.YX * new V2d(1,-1)),      //+dir.YXO * new V3d(1,-1,0)
             };
 
-            IfcGeometricRepresentationItem content = model.CreatePolyLine(crossPoints);
+            IIfcGeometricRepresentationItem content = model.CreatePolyLine(crossPoints);
             layer?.AssignedItems.Add(content);
 
             return content.CreateShapeRepresentationAnnotation3d();
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationAnnotation3dSurface(this IModel model, Plane3d plane, Polygon2d poly, IfcPresentationLayerWithStyle layer = null)
+        public static IIfcShapeRepresentation CreateShapeRepresentationAnnotation3dSurface(this IModel model, Plane3d plane, Polygon2d poly, IIfcPresentationLayerWithStyle layer = null)
         {
-            IfcGeometricRepresentationItem content = model.CreateCurveBoundedPlane(plane, poly);
+            IIfcGeometricRepresentationItem content = model.CreateCurveBoundedPlane(plane, poly);
             layer?.AssignedItems.Add(content);
 
             return content.CreateShapeRepresentationAnnotation3d();
@@ -120,9 +113,9 @@ namespace Aardvark.Data.Ifc
         #endregion
 
         #region 2D Annotations
-        public static IfcShapeRepresentation CreateShapeRepresentationAnnotation2D(this IfcRepresentationItem item)
+        public static IIfcShapeRepresentation CreateShapeRepresentationAnnotation2D(this IIfcRepresentationItem item)
         {
-            return item.Model.New<IfcShapeRepresentation>(r =>
+            return item.Model.Factory().ShapeRepresentation(r =>
             {
                 r.RepresentationIdentifier = "Annotation";
                 r.RepresentationType = "Annotation2D";
@@ -131,7 +124,7 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationAnnotation2dPoint(this IModel model, V2d point, IfcPresentationLayerWithStyle layer = null)
+        public static IIfcShapeRepresentation CreateShapeRepresentationAnnotation2dPoint(this IModel model, V2d point, IIfcPresentationLayerWithStyle layer = null)
         {
             var item = model.CreatePoint(point);
             layer?.AssignedItems.Add(item);
@@ -139,18 +132,18 @@ namespace Aardvark.Data.Ifc
             return item.CreateShapeRepresentationAnnotation2D();
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationAnnotation2dCurve(this IModel model, V2d[] points, IEnumerable<int[]> indices = null, IfcPresentationLayerWithStyle layer = null)
+        public static IIfcShapeRepresentation CreateShapeRepresentationAnnotation2dCurve(this IModel model, V2d[] points, IEnumerable<int[]> indices = null, IIfcPresentationLayerWithStyle layer = null)
         {
-            IfcGeometricRepresentationItem item = model.CreateIndexedPolyCurve(points, indices);
+            IIfcGeometricRepresentationItem item = model.CreateIndexedPolyCurve(points, indices);
             layer?.AssignedItems.Add(item);
 
             return item.CreateShapeRepresentationAnnotation2D();
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationAnnotation2dText(this IModel model, string label, V2d position, IfcPresentationLayerWithStyle layer = null)
+        public static IIfcShapeRepresentation CreateShapeRepresentationAnnotation2dText(this IModel model, string label, V2d position, IIfcPresentationLayerWithStyle layer = null)
         {
             // ONLY visible in "BIMVISION"
-            IfcGeometricRepresentationItem item = model.New<IfcTextLiteral>(l =>
+            IIfcGeometricRepresentationItem item = model.Factory().TextLiteral(l =>
             {
                 // https://standards.buildingsmart.org/IFC/RELEASE/IFC4/ADD1/HTML/schema/ifcpresentationdefinitionresource/lexical/ifctextliteral.htm
                 l.Path = IfcTextPath.RIGHT;
@@ -169,9 +162,9 @@ namespace Aardvark.Data.Ifc
             return item.CreateShapeRepresentationAnnotation2D();
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationAnnotation2dArea(this IModel model, Box2d rect, IfcPresentationLayerWithStyle layer = null)
+        public static IIfcShapeRepresentation CreateShapeRepresentationAnnotation2dArea(this IModel model, Box2d rect, IIfcPresentationLayerWithStyle layer = null)
         {
-            IfcGeometricRepresentationItem item = model.New<IfcAnnotationFillArea>(l =>
+            IIfcGeometricRepresentationItem item = model.Factory().AnnotationFillArea(l =>
             {
                 l.OuterBoundary = model.CreateIndexedPolyCurve(rect.ComputeCornersCCW());
                 l.InnerBoundaries.Add(model.CreateIndexedPolyCurve(rect.ShrunkBy(new V2d(0.3)).ComputeCornersCCW()));
@@ -184,21 +177,23 @@ namespace Aardvark.Data.Ifc
         #endregion
 
         #region RepresentationMap (instancing)
-        public static IfcRepresentationMap CreateRepresentationMap(this IfcRepresentation item)
+        public static IIfcRepresentationMap CreateRepresentationMap(this IIfcRepresentation item)
         {
-            return item.Model.New<IfcRepresentationMap>(map =>
+            return item.Model.Factory().RepresentationMap(map =>
             {
                 map.MappingOrigin = item.Model.CreateAxis2Placement3D(V3d.Zero);
                 map.MappedRepresentation = item;
             });
         }
 
-        public static IfcShapeRepresentation Instantiate(this IfcRepresentationMap map, Trafo3d trafo)
+        public static IIfcShapeRepresentation Instantiate(this IIfcRepresentationMap map, Trafo3d trafo)
         {
-            var item = map.Model.New<IfcMappedItem>(m =>
+            var factory = map.Model.Factory();
+
+            var item = factory.MappedItem(m =>
             {
                 m.MappingSource = map;
-                m.MappingTarget = map.Model.New<IfcCartesianTransformationOperator3DnonUniform>(x =>
+                m.MappingTarget = factory.CartesianTransformationOperator3DnonUniform(x =>
                 {
                     var scale = trafo.GetScaleVector();
                     x.Axis1 = map.Model.CreateDirection(trafo.Forward.C0.XYZ.Normalized);  // X - Axis
@@ -211,7 +206,7 @@ namespace Aardvark.Data.Ifc
                 });
             });
 
-            return item.Model.New<IfcShapeRepresentation>(r =>
+            return factory.ShapeRepresentation(r =>
             {
                 r.RepresentationIdentifier = "Body";
                 r.RepresentationType = "MappedRepresentation";
@@ -222,9 +217,9 @@ namespace Aardvark.Data.Ifc
         #endregion
 
         #region Lights
-        public static IfcShapeRepresentation CreateShapeRepresentationLighting(this IfcRepresentationItem item)
+        public static IIfcShapeRepresentation CreateShapeRepresentationLighting(this IIfcRepresentationItem item)
         {
-            return item.Model.New<IfcShapeRepresentation>(r =>
+            return item.Model.Factory().ShapeRepresentation(r =>
             {
                 r.RepresentationIdentifier = "Lighting";
                 r.RepresentationType = "LightSource";
@@ -233,43 +228,43 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationLightingAmbient(this IModel model, C3d color, string name = null, double? intensity = null, double? ambientIntensity = null, IfcPresentationLayerAssignment layer = null)
+        public static IIfcShapeRepresentation CreateShapeRepresentationLightingAmbient(this IModel model, C3d color, string name = null, double? intensity = null, double? ambientIntensity = null, IIfcPresentationLayerAssignment layer = null)
         {
 
-            IfcGeometricRepresentationItem item = model.CreateLightSourceAmbient(color, name, intensity, ambientIntensity);
+            IIfcGeometricRepresentationItem item = model.CreateLightSourceAmbient(color, name, intensity, ambientIntensity);
             layer?.AssignedItems.Add(item);
 
             return CreateShapeRepresentationLighting(item);
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationLightingDirectional(this IModel model, C3d color, V3d direction, string name = null, double? intensity = null, double? ambientIntensity = null, IfcPresentationLayerAssignment layer = null)
+        public static IIfcShapeRepresentation CreateShapeRepresentationLightingDirectional(this IModel model, C3d color, V3d direction, string name = null, double? intensity = null, double? ambientIntensity = null, IIfcPresentationLayerAssignment layer = null)
         {
-            IfcGeometricRepresentationItem item = model.CreateLightSourceDirectional(color, direction, name, intensity, ambientIntensity);
+            IIfcGeometricRepresentationItem item = model.CreateLightSourceDirectional(color, direction, name, intensity, ambientIntensity);
             layer?.AssignedItems.Add(item);
 
             return CreateShapeRepresentationLighting(item);
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationLightingPositional(this IModel model, C3d color, V3d position, double radius, double constantAttenuation, double distanceAttenuation, double quadricAttenuation, string name = null, double? intensity = null, double? ambientIntensity = null, IfcPresentationLayerAssignment layer = null)
+        public static IIfcShapeRepresentation CreateShapeRepresentationLightingPositional(this IModel model, C3d color, V3d position, double radius, double constantAttenuation, double distanceAttenuation, double quadricAttenuation, string name = null, double? intensity = null, double? ambientIntensity = null, IIfcPresentationLayerAssignment layer = null)
         {
-            IfcGeometricRepresentationItem item = model.CreateLightSourcePositional(color, position, radius, constantAttenuation, distanceAttenuation, quadricAttenuation, name, intensity, ambientIntensity);
+            IIfcGeometricRepresentationItem item = model.CreateLightSourcePositional(color, position, radius, constantAttenuation, distanceAttenuation, quadricAttenuation, name, intensity, ambientIntensity);
             layer?.AssignedItems.Add(item);
 
             return CreateShapeRepresentationLighting(item);
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationLightingSpot(this IModel model, C3d color, V3d position, V3d direction, double radius, double constantAttenuation, double distanceAttenuation, double quadricAttenuation, double spreadAngle, double beamWidthAngle, string name = null, double? intensity = null, double? ambientIntensity = null, double? concentrationExponent = null, IfcPresentationLayerAssignment layer = null)
+        public static IIfcShapeRepresentation CreateShapeRepresentationLightingSpot(this IModel model, C3d color, V3d position, V3d direction, double radius, double constantAttenuation, double distanceAttenuation, double quadricAttenuation, double spreadAngle, double beamWidthAngle, string name = null, double? intensity = null, double? ambientIntensity = null, double? concentrationExponent = null, IIfcPresentationLayerAssignment layer = null)
         {
-            IfcGeometricRepresentationItem item = model.CreateLightSourceSpot(color, position, radius, constantAttenuation, distanceAttenuation, quadricAttenuation, direction, spreadAngle, beamWidthAngle, name, intensity, ambientIntensity, concentrationExponent);
+            IIfcGeometricRepresentationItem item = model.CreateLightSourceSpot(color, position, radius, constantAttenuation, distanceAttenuation, quadricAttenuation, direction, spreadAngle, beamWidthAngle, name, intensity, ambientIntensity, concentrationExponent);
             layer?.AssignedItems.Add(item);
 
             return CreateShapeRepresentationLighting(item);
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationLightingGoniometric(this IModel model, C3d color, V3d location, double colourTemperature, double luminousFlux, IfcLightIntensityDistribution distribution, IfcLightEmissionSourceEnum lightEmissionSource = IfcLightEmissionSourceEnum.NOTDEFINED, IfcPresentationLayerAssignment layer = null)
+        public static IIfcShapeRepresentation CreateShapeRepresentationLightingGoniometric(this IModel model, C3d color, V3d location, double colourTemperature, double luminousFlux, IIfcLightIntensityDistribution distribution, IfcLightEmissionSourceEnum lightEmissionSource = IfcLightEmissionSourceEnum.NOTDEFINED, IIfcPresentationLayerAssignment layer = null)
         {
             var placement = model.CreateAxis2Placement3D(location);
-            IfcGeometricRepresentationItem item = model.CreateLightSourceGoniometric(color, colourTemperature, luminousFlux, lightEmissionSource, distribution, placement);
+            IIfcGeometricRepresentationItem item = model.CreateLightSourceGoniometric(color, colourTemperature, luminousFlux, lightEmissionSource, distribution, placement);
             layer?.AssignedItems.Add(item);
 
             return CreateShapeRepresentationLighting(item);
@@ -277,7 +272,7 @@ namespace Aardvark.Data.Ifc
         #endregion
 
         #region Box
-        public static void Set(this IfcBoundingBox b, Box3d box)
+        public static void Set(this IIfcBoundingBox b, Box3d box)
         {
             b.Corner = b.Model.CreatePoint(box.Min);
             b.XDim = box.SizeX;
@@ -292,12 +287,14 @@ namespace Aardvark.Data.Ifc
             return new Box3d(min, max);
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationBoundingBox(this IModel model, Box3d box, IfcPresentationLayerAssignment layer = null)
+        public static IIfcShapeRepresentation CreateShapeRepresentationBoundingBox(this IModel model, Box3d box, IIfcPresentationLayerAssignment layer = null)
         {
-            IfcGeometricRepresentationItem item = model.New<IfcBoundingBox>(b => b.Set(box));
+            var factory = model.Factory();
+
+            IIfcGeometricRepresentationItem item = factory.BoundingBox(b => b.Set(box));
             layer?.AssignedItems.Add(item);
 
-            return model.New<IfcShapeRepresentation>(r =>
+            return factory.ShapeRepresentation (r =>
             {
                 r.RepresentationIdentifier = "Box";
                 r.RepresentationType = "BoundingBox";
@@ -306,10 +303,12 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationSolidBox(this IModel model, Box3d box, IfcPresentationLayerAssignment layer = null)
+        public static IIfcShapeRepresentation CreateShapeRepresentationSolidBox(this IModel model, Box3d box, IIfcPresentationLayerAssignment layer = null)
         {
+            var factory = model.Factory();
+
             // Box creation by extruding box-base along Z-Axis
-            var rectProf = model.New<IfcRectangleProfileDef>(p =>
+            var rectProf = factory.RectangleProfileDef (p =>
             {
                 p.ProfileName = "RectArea";
                 p.ProfileType = IfcProfileTypeEnum.AREA;
@@ -317,7 +316,7 @@ namespace Aardvark.Data.Ifc
                 p.YDim = box.SizeY;
             });
 
-            IfcGeometricRepresentationItem item = model.New<IfcExtrudedAreaSolid>(solid =>
+            IIfcGeometricRepresentationItem item = factory.ExtrudedAreaSolid(solid =>
             {
                 solid.Position = model.CreateAxis2Placement3D(box.Min);
                 solid.Depth = box.SizeZ;
@@ -326,7 +325,7 @@ namespace Aardvark.Data.Ifc
             });
             layer?.AssignedItems.Add(item);
 
-            return model.New<IfcShapeRepresentation>(s => {
+            return factory.ShapeRepresentation(s => {
                 s.ContextOfItems = model.GetGeometricRepresentationContextModel();
                 s.RepresentationType = "SweptSolid";
                 s.RepresentationIdentifier = "Body";
@@ -336,18 +335,18 @@ namespace Aardvark.Data.Ifc
         #endregion
 
         #region Surface
-        public static IfcShapeRepresentation CreateShapeRepresentationSurface(this IModel model, Plane3d plane, Polygon2d poly, IfcPresentationLayerAssignment layer = null)
+        public static IIfcShapeRepresentation CreateShapeRepresentationSurface(this IModel model, Plane3d plane, Polygon2d poly, IIfcPresentationLayerAssignment layer = null)
         {
             if (!poly.IsCcw())
             {
                 poly.Reverse();
             }
 
-            IfcGeometricRepresentationItem item = model.CreateCurveBoundedPlane(plane, poly);
+            IIfcGeometricRepresentationItem item = model.CreateCurveBoundedPlane(plane, poly);
             layer?.AssignedItems.Add(item);
 
             // Box creation by extruding box-base along Z-Axis
-            return model.New<IfcShapeRepresentation>(r =>
+            return model.Factory().ShapeRepresentation(r =>
             {
                 r.RepresentationIdentifier = "Surface";
                 r.RepresentationType = "Surface3D";
@@ -397,12 +396,12 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationTessellation(this IModel model, PolyMesh mesh, IfcPresentationLayerAssignment layer = null, bool triangulated = true)
+        public static IIfcShapeRepresentation CreateShapeRepresentationTessellation(this IModel model, PolyMesh mesh, IIfcPresentationLayerAssignment layer = null, bool triangulated = true)
         {
-            IfcGeometricRepresentationItem item = triangulated ? CreateTriangulatedFaceSet(model, mesh) : CreatePolygonalFaceSet(model, mesh);
+            IIfcGeometricRepresentationItem item = triangulated ? CreateTriangulatedFaceSet(model, mesh) : CreatePolygonalFaceSet(model, mesh);
             layer?.AssignedItems.Add(item);
 
-            return model.New<IfcShapeRepresentation>(s => {
+            return model.Factory().ShapeRepresentation(s => {
                 s.ContextOfItems = model.GetGeometricRepresentationContextModel();
                 s.RepresentationType = "Tessellation";
                 s.RepresentationIdentifier = "Body";
@@ -410,9 +409,9 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcShapeRepresentation CreateShapeRepresentationTessellationStyled(this IModel model, PolyMesh mesh, C4d? fallbackColor, IfcSurfaceStyle surfaceStyle = null, IfcPresentationLayerAssignment layer = null, bool triangulated = true)
+        public static IIfcShapeRepresentation CreateShapeRepresentationTessellationStyled(this IModel model, PolyMesh mesh, C4d? fallbackColor, IIfcSurfaceStyle surfaceStyle = null, IIfcPresentationLayerAssignment layer = null, bool triangulated = true)
         {
-            IfcGeometricRepresentationItem item = triangulated ? CreateTriangulatedFaceSet(model, mesh) : CreatePolygonalFaceSet(model, mesh);
+            IIfcGeometricRepresentationItem item = triangulated ? CreateTriangulatedFaceSet(model, mesh) : CreatePolygonalFaceSet(model, mesh);
             layer?.AssignedItems.Add(item);
 
             // apply specific surfaceStyle / otherwise use mesh color / apply layer style / fallback-color / otherwise no styling
@@ -432,12 +431,12 @@ namespace Aardvark.Data.Ifc
             {
                 // caching / re-using of default_surfaces
                 var fallbackName = "Default_Surface_" + fallbackColor.ToString();
-                var defaultSurface = model.Instances.OfType<IfcSurfaceStyle>().Where(x => x.Name == fallbackName).FirstOrDefault();
+                var defaultSurface = model.Instances.OfType<IIfcSurfaceStyle>().Where(x => x.Name == fallbackName).FirstOrDefault();
                 item.CreateStyleItem(defaultSurface ?? model.CreateSurfaceStyle(fallbackColor.Value, fallbackName));
             }
             // otherwise no styling applied!
 
-            return model.New<IfcShapeRepresentation>(s => {
+            return model.Factory().ShapeRepresentation(s => {
                 s.ContextOfItems = model.GetGeometricRepresentationContextModel();
                 s.RepresentationType = "Tessellation";
                 s.RepresentationIdentifier = "Body";
