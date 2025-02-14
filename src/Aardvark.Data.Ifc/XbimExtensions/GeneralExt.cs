@@ -5,8 +5,6 @@ using Aardvark.Base;
 
 using Xbim.Common;
 using Xbim.Ifc4.Interfaces;
-using Xbim.Ifc4.Kernel;
-using Xbim.Ifc4.ProductExtension;
 using Xbim.Ifc;
 using Xbim.Common.ExpressValidation;
 using Xbim.Common.Enumerations;
@@ -28,6 +26,7 @@ namespace Aardvark.Data.Ifc
         public static T New<T>(this IModel model, Action<T> func) where T : IInstantiableEntity
         {
             // Convenient function to directly create entities from model
+            // TODO...should not be used -> use model.Factory to guarantee ifc-schema independent creation!
             return model.Instances.New(func);
         }
 
@@ -81,9 +80,10 @@ namespace Aardvark.Data.Ifc
         {
             using var txnInit = model.BeginTransaction("Init Project");
             // there should always be one project in the model
-            var project = model.New<IfcProject>(p => p.Name = projectName);
+            var project = model.Factory().Project(p => p.Name = projectName);
+
             // our shortcut to define basic default units
-            
+
             var xBimDefaultUnits = units switch
             {
                 ProjectUnitsExtended.ImperialUnits => ProjectUnits.ImperialUnits,
@@ -102,7 +102,7 @@ namespace Aardvark.Data.Ifc
             };
 
             // add site
-            var site = model.New<IfcSite>(w => w.Name = siteName);
+            var site = model.Factory().Site(w => w.Name = siteName);
             project.AddSite(site);
 
             txnInit.Commit();

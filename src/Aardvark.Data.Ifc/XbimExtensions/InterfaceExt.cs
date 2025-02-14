@@ -60,5 +60,38 @@ namespace Aardvark.Data.Ifc
             else
                 spatialStructure.RelatedElements.Add(product);
         }
+
+        public static void AddSite(this IIfcProject proj, IIfcSite site)
+        {
+            switch (proj, site)
+            {
+                case (Xbim.Ifc2x3.Kernel.IfcProject p, Xbim.Ifc2x3.ProductExtension.IfcSite s):
+                    p.AddSite(s); break;
+                case (Xbim.Ifc4.Kernel.IfcProject p, Xbim.Ifc4.ProductExtension.IfcSite s):
+                    p.AddSite(s); break;
+                case (Xbim.Ifc4x3.Kernel.IfcProject p, Xbim.Ifc4x3.ProductExtension.IfcSite s):
+                    p.AddSite(s); break;
+                default: throw new NotSupportedException($"Schema {proj.Model.SchemaVersion} does not provide AddPropertySet or mixed obj and typeobject!");
+            };
+        }
+
+        public static void SetOrChangeSiUnit(this IIfcUnitAssignment ua, IfcUnitEnum unitType, IfcSIUnitName siUnitName, IfcSIPrefix? siUnitPrefix)
+        {
+            var si = ua.Units.OfType<IIfcSIUnit>().FirstOrDefault(u => u.UnitType == unitType);
+            if (si != null)
+            {
+                si.Prefix = siUnitPrefix;
+                si.Name = siUnitName;
+            }
+            else
+            {
+                ua.Units.Add(ua.Model.Factory().SIUnit(s =>
+                {
+                    s.UnitType = unitType;
+                    s.Name = siUnitName;
+                    s.Prefix = siUnitPrefix;
+                }));
+            }
+        }
     }
 }

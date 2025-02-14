@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4x3.Kernel;
 using Xbim.Ifc4x3.ProductExtension;
@@ -9,6 +8,8 @@ namespace Aardvark.Data.Ifc
 {
     public static class Ifc4x3Ext
     {
+        #region Xbim.Ifc4x3.Kernel.IfcObject
+
         public static IfcRelDefinesByType AddDefiningType(this IfcObject obj, IfcTypeObject theType)
         {
             var typedefs = obj.Model.Instances.Where<IfcRelDefinesByType>(r => r.RelatingType == theType).ToList();
@@ -28,11 +29,9 @@ namespace Aardvark.Data.Ifc
 
         public static void AddPropertySet(this IfcObject obj, IfcPropertySet pSet)
         {
-
             var relDef = obj.Model.Instances.OfType<IfcRelDefinesByProperties>().FirstOrDefault(r => pSet.Equals(r.RelatingPropertyDefinition));
             if (relDef == null)
             {
-
                 relDef = obj.Model.Instances.New<IfcRelDefinesByProperties>();
                 relDef.RelatingPropertyDefinition = pSet;
             }
@@ -45,7 +44,7 @@ namespace Aardvark.Data.Ifc
             return qSets.FirstOrDefault(qset => string.Compare(pSetName, qset.Name, !caseSensitive) == 0);
         }
 
-        public static IIfcElementQuantity AddQuantity(this IfcObject obj, string propertySetName, IfcPhysicalQuantity quantity, string methodOfMeasurement = null)
+        public static IfcElementQuantity AddQuantity(this IfcObject obj, string propertySetName, IfcPhysicalQuantity quantity, string methodOfMeasurement = null)
         {
             var pset = obj.GetElementQuantity(propertySetName);
 
@@ -61,5 +60,26 @@ namespace Aardvark.Data.Ifc
             if (!string.IsNullOrEmpty(methodOfMeasurement)) pset.MethodOfMeasurement = methodOfMeasurement;
             return pset;
         }
+
+        #endregion
+
+        #region IfcProject
+
+        public static void AddSite(this IfcProject proj, IfcSite site)
+        {
+            var decomposition = proj.IsDecomposedBy.FirstOrDefault();
+            if (decomposition == null) //none defined create the relationship
+            {
+                var relSub = proj.Model.New<IfcRelAggregates>(relSub =>
+                {
+                    relSub.RelatingObject = proj;
+                    relSub.RelatedObjects.Add(site);
+                });
+            }
+            else
+                decomposition.RelatedObjects.Add(site);
+        }
+
+        #endregion
     }
 }

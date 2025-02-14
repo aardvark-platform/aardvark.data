@@ -15,23 +15,33 @@ namespace Aardvark.Data.Ifc
 {
     public static class IfcLightingExtensions
     {
-        public static IfcLightFixtureType CreateLightType(this IModel model, IfcLightFixtureTypeEnum lightType, IEnumerable<IIfcRepresentationMap> repMaps, IEnumerable<IIfcPropertySetDefinition> properties, string name = "")
+        public static IIfcLightFixtureType CreateLightType(this IModel model, IfcLightFixtureTypeEnum lightType, IEnumerable<IIfcRepresentationMap> repMaps, IEnumerable<IIfcPropertySetDefinition> properties, string name = "")
         {
-            var proxy = ProductExt.CreateTypeProduct<IfcLightFixtureType>(model, repMaps, properties, name);
-            proxy.PredefinedType = lightType;
+            var proxy = model.Factory().LightFixtureType(p =>
+            {
+                p.PredefinedType = lightType;
+                p.Name = name;
+            });
+            proxy.AttachGeometriesAndProperties(repMaps, properties);
             return proxy;
         }
 
-        public static IIfcLightFixture Instantiate(this IfcLightFixtureType lightType, string name, IIfcObjectPlacement placement, Trafo3d trafo, IfcLightFixtureTypeEnum? ltenum = null)
+        public static IIfcLightFixture Instantiate(this IIfcLightFixtureType lightType, string name, IIfcObjectPlacement placement, Trafo3d trafo, IfcLightFixtureTypeEnum? ltenum = null)
         {
-            var instance = ProductExt.Instantiate<IfcLightFixtureType, IfcLightFixture>(lightType, name, placement, trafo);
+            var light = lightType.Model.New<IfcLightFixture>(l => l.Name = name); // TODO <- ifcLightFixture is currently not available in EntityCreation
+            
+            var instance = (IIfcLightFixture) light.CreateAttachInstancedRepresentation(lightType, placement, trafo);
+
             if (lightType.PredefinedType != IfcLightFixtureTypeEnum.NOTDEFINED && ltenum.HasValue) instance.PredefinedType = ltenum;
             return instance;
         }
 
         public static IIfcLightFixture Instantiate(this IfcLightFixtureType lightType, string name, IIfcObjectPlacement placement, Dictionary<IIfcRepresentationMap, Trafo3d> trafos, IfcLightFixtureTypeEnum? ltenum = null)
         {
-            var instance = ProductExt.Instantiate<IfcLightFixtureType, IfcLightFixture>(lightType, name, placement, trafos);
+            var light = lightType.Model.New<IfcLightFixture>(l => l.Name = name); // TODO <- ifcLightFixture is currently not available in EntityCreation
+
+            var instance = (IIfcLightFixture) light.CreateAttachInstancedRepresentation(lightType, placement, trafos);
+
             if (lightType.PredefinedType != IfcLightFixtureTypeEnum.NOTDEFINED && ltenum.HasValue) instance.PredefinedType = ltenum;
             return instance;
         }

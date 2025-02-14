@@ -1,3 +1,6 @@
+### 1.1.0-prerelease0008
+- Refactored to support cross schema creation
+
 ### 1.1.0-prerelease0007
 - Updated xBIM-Essentials to resolve reported bug and added IfcLightingFixture Extensions 
 
