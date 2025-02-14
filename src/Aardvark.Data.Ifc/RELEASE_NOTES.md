@@ -1,3 +1,6 @@
+### 1.1.0-prerelease0009
+- Fixed broken build
+
 ### 1.1.0-prerelease0008
 - Refactored extensions to support cross schema creation
 

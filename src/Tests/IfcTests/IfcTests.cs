@@ -326,7 +326,7 @@ namespace Aardvark.Data.Tests.Ifc
                 var li = lightType.Instantiate("Empty_Light_fromtype", model.CreateLocalPlacement(-shiftVec), Trafo3d.RotationZInDegrees(45), IfcLightFixtureTypeEnum.POINTSOURCE);
                 li.AddPropertySet(model.Pset_LightFixtureTypeCommon("reference", 1, 1000, 20, 50, 20, 33, "working", "hanging", "ceiling"));
                 li.Qto_LightFixtureBaseQuantities(50);
-                site.AddElement(li);s
+                site.AddElement(li);
 
                 // attached property sets
                 site.AddElement(model.CreateLightEmpty("Empty_Light", model.CreateLocalPlacement(V3d.Zero), repMap.Instantiate(trafo1)).AttachPropertySet(generalInfo));
