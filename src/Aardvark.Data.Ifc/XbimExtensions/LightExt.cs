@@ -36,7 +36,7 @@ namespace Aardvark.Data.Ifc
             return instance;
         }
 
-        public static IIfcLightFixture Instantiate(this IfcLightFixtureType lightType, string name, IIfcObjectPlacement placement, Dictionary<IIfcRepresentationMap, Trafo3d> trafos, IfcLightFixtureTypeEnum? ltenum = null)
+        public static IIfcLightFixture Instantiate(this IIfcLightFixtureType lightType, string name, IIfcObjectPlacement placement, Dictionary<IIfcRepresentationMap, Trafo3d> trafos, IfcLightFixtureTypeEnum? ltenum = null)
         {
             var light = lightType.Model.New<IfcLightFixture>(l => l.Name = name); // TODO <- ifcLightFixture is currently not available in EntityCreation
 
@@ -46,27 +46,24 @@ namespace Aardvark.Data.Ifc
             return instance;
         }
 
-        public static IIfcPropertySet Pset_LightFixtureTypeCommon(this IIfcLightFixture light, string reference, int numberOfSources, double totalWattage,
+        public static IIfcPropertySet Pset_LightFixtureTypeCommon(this IModel model, string reference, int numberOfSources, double totalWattage,
             double maintenanceFactor, double maximumPlenumSensibleLoad, double maximumSpaceSensibleLoad, double sensibleLoadToRadiant,
             string status, string lightFixtureMountingType, string lightFixturePlacingType)
         {
-            var propertySet = new EntityCreator(light.Model).PropertySet(pset =>
+            return model.Factory().PropertySet(pset =>
             {
                 pset.Name = "Pset_LightFixtureTypeCommon";
-                pset.HasProperties.Add(light.Model.CreatePropertySingleValue("Reference", new IfcIdentifier(reference)));
-                pset.HasProperties.Add(light.Model.CreatePropertySingleValue("NumberOfSources", new IfcInteger(numberOfSources)));
-                pset.HasProperties.Add(light.Model.CreatePropertySingleValue("TotalWattage", new IfcPowerMeasure(totalWattage)));
-                pset.HasProperties.Add(light.Model.CreatePropertySingleValue("MaintenanceFactor", new IfcReal(maintenanceFactor)));
-                pset.HasProperties.Add(light.Model.CreatePropertySingleValue("MaximumPlenumSensibleLoad", new IfcPowerMeasure(maximumPlenumSensibleLoad)));
-                pset.HasProperties.Add(light.Model.CreatePropertySingleValue("MaximumSpaceSensibleLoad", new IfcPowerMeasure(maximumSpaceSensibleLoad)));
-                pset.HasProperties.Add(light.Model.CreatePropertySingleValue("SensibleLoadToRadiant", new IfcPositiveRatioMeasure(sensibleLoadToRadiant)));
-                pset.HasProperties.Add(light.Model.CreatePropertyEnumeratedValue("Status", new IfcLabel(status)));
-                pset.HasProperties.Add(light.Model.CreatePropertyEnumeratedValue("LightFixtureMountingType", new IfcLabel(lightFixtureMountingType)));
-                pset.HasProperties.Add(light.Model.CreatePropertyEnumeratedValue("LightFixturePlacingType", new IfcLabel(lightFixturePlacingType)));
+                pset.HasProperties.Add(model.CreatePropertySingleValue("Reference", new IfcIdentifier(reference)));
+                pset.HasProperties.Add(model.CreatePropertySingleValue("NumberOfSources", new IfcInteger(numberOfSources)));
+                pset.HasProperties.Add(model.CreatePropertySingleValue("TotalWattage", new IfcPowerMeasure(totalWattage)));
+                pset.HasProperties.Add(model.CreatePropertySingleValue("MaintenanceFactor", new IfcReal(maintenanceFactor)));
+                pset.HasProperties.Add(model.CreatePropertySingleValue("MaximumPlenumSensibleLoad", new IfcPowerMeasure(maximumPlenumSensibleLoad)));
+                pset.HasProperties.Add(model.CreatePropertySingleValue("MaximumSpaceSensibleLoad", new IfcPowerMeasure(maximumSpaceSensibleLoad)));
+                pset.HasProperties.Add(model.CreatePropertySingleValue("SensibleLoadToRadiant", new IfcPositiveRatioMeasure(sensibleLoadToRadiant)));
+                pset.HasProperties.Add(model.CreatePropertyEnumeratedValue("Status", new IfcLabel(status)));
+                pset.HasProperties.Add(model.CreatePropertyEnumeratedValue("LightFixtureMountingType", new IfcLabel(lightFixtureMountingType)));
+                pset.HasProperties.Add(model.CreatePropertyEnumeratedValue("LightFixturePlacingType", new IfcLabel(lightFixturePlacingType)));
             });
-
-            light.AddPropertySet(propertySet);
-            return propertySet;
         }
 
         public static void Qto_LightFixtureBaseQuantities(this IIfcLightFixture light, double weight)
