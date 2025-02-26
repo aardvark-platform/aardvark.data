@@ -157,6 +157,8 @@ namespace Aardvark.Data.Ifc
         #endregion
 
         #region Surface Styling
+
+        #region Shading
         public static IIfcSurfaceStyleShading CreateSurfaceStyleShading(this IModel model, C3d surface, double transparency = 0.0)
         {
             // https://standards.buildingsmart.org/MVD/RELEASE/IFC4/ADD2_TC1/RV1_2/HTML/schema/ifcpresentationappearanceresource/lexical/ifcsurfacestyleshading.htm
@@ -168,6 +170,17 @@ namespace Aardvark.Data.Ifc
             });
         }
 
+        public static IIfcSurfaceStyle CreateSurfaceStyle(this IIfcSurfaceStyleShading shading)
+            => shading.Model.CreateSurfaceStyle(shading);
+
+        public static IIfcSurfaceStyle CreateSurfaceStyle(this IModel model, C3d surface, double transparency = 0.0, string name = null)
+            => CreateSurfaceStyle(model, model.CreateSurfaceStyleShading(surface, transparency), name);
+
+        public static IIfcSurfaceStyle CreateSurfaceStyle(this IModel model, C4d surface, string name = null)
+            => model.CreateSurfaceStyle(surface.RGB, (1.0 - surface.A).Clamp(0, 1), name);
+        #endregion
+
+        #region Rendering
         public static IIfcSurfaceStyleRendering CreateSurfaceStyleRendering(this IModel model, C3d surface, double transparency, C3d diffuse, C3d diffuseTransmission, C3d transmission, C3d specular, double specularHighlight, C3d reflection, IfcReflectanceMethodEnum reflectionType)
         {
             // https://standards.buildingsmart.org/MVD/RELEASE/IFC4/ADD2_TC1/RV1_2/HTML/schema/ifcpresentationappearanceresource/lexical/ifcsurfacestylerendering.htm
@@ -193,6 +206,11 @@ namespace Aardvark.Data.Ifc
             });
         }
 
+        public static IIfcSurfaceStyle CreateSurfaceStyle(this IIfcSurfaceStyleRendering rendering)
+            => rendering.Model.CreateSurfaceStyle(rendering);
+        #endregion
+
+        #region Lighting
         public static IIfcSurfaceStyleLighting CreateSurfaceStyleLighting(this IModel model, C3d diffuseTransmission, C3d diffuseReflection, C3d transmission, C3d reflectance)
         {
             // https://standards.buildingsmart.org/IFC/RELEASE/IFC4/ADD2/HTML/schema/ifcpresentationappearanceresource/lexical/ifcsurfacestylelighting.htm
@@ -205,6 +223,10 @@ namespace Aardvark.Data.Ifc
                 l.ReflectanceColour = model.CreateColor(reflectance);
             });
         }
+
+        public static IIfcSurfaceStyle CreateSurfaceStyle(this IIfcSurfaceStyleLighting lighting)
+            => lighting.Model.CreateSurfaceStyle(lighting);
+        #endregion
 
         public static IIfcSurfaceStyle CreateSurfaceStyle(this IModel model, IEnumerable<IIfcSurfaceStyleElementSelect> styles, string name = null)
         {
@@ -222,12 +244,6 @@ namespace Aardvark.Data.Ifc
 
         public static IIfcSurfaceStyle CreateSurfaceStyle(this IModel model, IIfcSurfaceStyleElementSelect style, string name = null)
             => CreateSurfaceStyle(model, [style], name);
-
-        public static IIfcSurfaceStyle CreateSurfaceStyle(this IModel model, C3d surface, double transparency = 0.0, string name = null)
-            => CreateSurfaceStyle(model, model.CreateSurfaceStyleShading(surface, transparency), name);
-
-        public static IIfcSurfaceStyle CreateSurfaceStyle(this IModel model, C4d surface, string name = null)
-            => model.CreateSurfaceStyle(surface.RGB, (1.0 - surface.A).Clamp(0, 1), name);
 
         public static bool TryCreateSurfaceStyle(this IModel model, PolyMesh mesh, out IIfcSurfaceStyle style)
         {

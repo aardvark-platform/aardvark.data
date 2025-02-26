@@ -425,7 +425,8 @@ namespace Aardvark.Data.Ifc
             }
             else if (layer.TryCreateSurfaceStyle(out var layerStyle))
             {
-                item.CreateStyleItem(layerStyle);
+                //item.CreateStyleItem(layerStyle);
+                // styling is applied via layer -> styled item not necessary
             }
             else if (fallbackColor != null)
             {
