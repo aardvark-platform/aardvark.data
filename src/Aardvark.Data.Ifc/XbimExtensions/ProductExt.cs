@@ -35,9 +35,9 @@ namespace Aardvark.Data.Ifc
 
         public static IIfcProduct CreateAttachInstancedRepresentation(this IIfcProduct product, IIfcElementType objectType, IIfcObjectPlacement placement, Trafo3d trafo)
         {
-            var shapes = objectType.RepresentationMaps.Select(m => 
+            var shapes = objectType.RepresentationMaps.Select(m =>
                 m.Instantiate(trafo));
-            
+
             // attach instanced representation (transformed by global trafo)
             product.ObjectPlacement = placement;
             product.Representation = objectType.Model.Factory().ProductDefinitionShape(r => r.Representations.AddRange(shapes));
@@ -48,7 +48,16 @@ namespace Aardvark.Data.Ifc
         public static IIfcProduct CreateAttachInstancedRepresentation(this IIfcProduct product, IIfcElementType objectType, IIfcObjectPlacement placement, Dictionary<IIfcRepresentationMap, Trafo3d> trafos)
         {
             var shapes = objectType.RepresentationMaps.Select(m =>
-                trafos.TryGetValue(m, out Trafo3d trafo) ? m.Instantiate(trafo) : m.Instantiate(Trafo3d.Identity));
+            {
+                if (trafos.TryGetValue(m, out Trafo3d trafo))
+                {
+                    return m.Instantiate(trafo);
+                }
+                else
+                {
+                    return m.Instantiate(Trafo3d.Identity);
+                }
+            });
 
             // attach instanced representation (transformed by indevidual trafos)
             product.ObjectPlacement = placement;
