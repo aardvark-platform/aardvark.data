@@ -357,10 +357,51 @@ namespace Aardvark.Data.Ifc
         #endregion
 
         #region PolyMesh
-        private static IfcTriangulatedFaceSet CreateTriangulatedFaceSet(IModel model, PolyMesh inputMesh)
+
+        public static IIfcConnectedFaceSet CreateConnectedFaceSet(IModel model, PolyMesh inputMesh)
         {
+            // deprecated only use for IFC2x3!
+            var factory = model.Factory();
+
             var triangleMesh = inputMesh.TriangulatedCopy();
 
+            return factory.ConnectedFaceSet(faceSet =>
+            {
+                var points = triangleMesh.PositionArray.Map(p => model.CreatePoint(p));
+
+                var indexes = new List<int[]>();
+                for (int i = 0; i < triangleMesh.FirstIndexArray.Length - 1; i++)
+                {
+                    var firstIndex = triangleMesh.FirstIndexArray[i];
+                    var values = new int[3].SetByIndex(x => triangleMesh.VertexIndexArray[firstIndex + x]);
+                    indexes.Add(values);
+                }
+
+                foreach (var t in indexes)
+                {
+                    // Create face loop by given boundary points
+                    var polyLoop = factory.PolyLoop(poly => poly.Polygon.AddRange(t.Select(k => points[k])));
+
+                    // Create bounds
+                    var bound = factory.FaceOuterBound(bound => bound.Bound = polyLoop);
+
+                    // Create face
+                    var face = factory.Face(face => face.Bounds.Add(bound));
+                    
+                    // Add face to outer shell
+                    faceSet.CfsFaces.Add(face);
+                }
+            });
+        }
+
+        private static IfcTriangulatedFaceSet CreateTriangulatedFaceSet(IModel model, PolyMesh inputMesh)
+        {
+            // only available in IFC4+
+            if (model.SchemaVersion == XbimSchemaVersion.Ifc2X3)
+                return null;
+
+            var triangleMesh = inputMesh.TriangulatedCopy();
+            
             return model.New<IfcTriangulatedFaceSet>(tfs =>
             {
                 tfs.Closed = true;
@@ -377,8 +418,8 @@ namespace Aardvark.Data.Ifc
 
         private static IfcPolygonalFaceSet CreatePolygonalFaceSet(IModel model, PolyMesh inputMesh)
         {
-            // only available in IFC4
-            if (model.SchemaVersion != XbimSchemaVersion.Ifc4)
+            // only available in IFC4+
+            if (model.SchemaVersion == XbimSchemaVersion.Ifc2X3)
                 return null;
 
             var faces = new List<IfcIndexedPolygonalFace>(inputMesh.Faces.Count());
@@ -396,6 +437,57 @@ namespace Aardvark.Data.Ifc
             });
         }
 
+        public static IIfcShapeRepresentation CreateStyleForShape(this IIfcShapeRepresentation shape, PolyMesh mesh, C4d? fallbackColor, IIfcSurfaceStyle surfaceStyle = null, IIfcPresentationLayerAssignment layer = null)
+        {
+            // style shape (should only hold one item)
+            foreach (var item in shape.Items.ToArray())
+            {
+                // apply specific surfaceStyle / otherwise use mesh color / apply layer style / fallback-color / otherwise no styling
+                if (surfaceStyle != null)
+                {
+                    item.CreateStyleItem(surfaceStyle);
+                }
+                else if (shape.Model.TryCreateSurfaceStyle(mesh, out var meshColor))
+                {
+                    item.CreateStyleItem(meshColor);
+                }
+                else if (layer.TryCreateSurfaceStyle(out var layerStyle))
+                {
+                    //item.CreateStyleItem(layerStyle);
+                    // styling is applied via layer -> styled item not necessary
+                }
+                else if (fallbackColor != null)
+                {
+                    // caching / re-using of default_surfaces
+                    var fallbackName = "Default_Surface_" + fallbackColor.ToString();
+                    var defaultSurface = shape.Model.Instances.OfType<IIfcSurfaceStyle>().Where(x => x.Name == fallbackName).FirstOrDefault();
+                    var style = defaultSurface ?? shape.Model.CreateSurfaceStyle(fallbackColor.Value, fallbackName);
+                    var res = item.CreateStyleItem(style);
+                }
+            }
+
+            return shape;
+        }
+
+        public static IIfcShapeRepresentation CreateShapeRepresentationFaceBasedSurface(this IModel model, PolyMesh mesh, IIfcPresentationLayerAssignment layer = null)
+        {
+            IIfcGeometricRepresentationItem item = model.Factory().FaceBasedSurfaceModel(fbs => fbs.FbsmFaces.Add(CreateConnectedFaceSet(model, mesh)));
+            layer?.AssignedItems.Add(item);
+
+            return model.Factory().ShapeRepresentation(s => {
+                s.ContextOfItems = model.GetGeometricRepresentationContextModel();
+                s.RepresentationType = "SurfaceModel";
+                s.RepresentationIdentifier = "Body";
+                s.Items.Add(item);
+            });
+        }
+
+        public static IIfcShapeRepresentation CreateShapeRepresentationFaceBasedSurfaceStyled(this IModel model, PolyMesh mesh, C4d? fallbackColor, IIfcSurfaceStyle surfaceStyle = null, IIfcPresentationLayerAssignment layer = null)
+        {
+            var shape = model.CreateShapeRepresentationFaceBasedSurface(mesh, layer);
+            return shape.CreateStyleForShape(mesh, fallbackColor, surfaceStyle, layer);
+        }
+
         public static IIfcShapeRepresentation CreateShapeRepresentationTessellation(this IModel model, PolyMesh mesh, IIfcPresentationLayerAssignment layer = null, bool triangulated = true)
         {
             IIfcGeometricRepresentationItem item = triangulated ? CreateTriangulatedFaceSet(model, mesh) : CreatePolygonalFaceSet(model, mesh);
@@ -411,38 +503,8 @@ namespace Aardvark.Data.Ifc
 
         public static IIfcShapeRepresentation CreateShapeRepresentationTessellationStyled(this IModel model, PolyMesh mesh, C4d? fallbackColor, IIfcSurfaceStyle surfaceStyle = null, IIfcPresentationLayerAssignment layer = null, bool triangulated = true)
         {
-            IIfcGeometricRepresentationItem item = triangulated ? CreateTriangulatedFaceSet(model, mesh) : CreatePolygonalFaceSet(model, mesh);
-            layer?.AssignedItems.Add(item);
-
-            // apply specific surfaceStyle / otherwise use mesh color / apply layer style / fallback-color / otherwise no styling
-            if (surfaceStyle != null)
-            {
-                item.CreateStyleItem(surfaceStyle);
-            }
-            else if (model.TryCreateSurfaceStyle(mesh, out var meshColor))
-            {
-                item.CreateStyleItem(meshColor);
-            }
-            else if (layer.TryCreateSurfaceStyle(out var layerStyle))
-            {
-                //item.CreateStyleItem(layerStyle);
-                // styling is applied via layer -> styled item not necessary
-            }
-            else if (fallbackColor != null)
-            {
-                // caching / re-using of default_surfaces
-                var fallbackName = "Default_Surface_" + fallbackColor.ToString();
-                var defaultSurface = model.Instances.OfType<IIfcSurfaceStyle>().Where(x => x.Name == fallbackName).FirstOrDefault();
-                item.CreateStyleItem(defaultSurface ?? model.CreateSurfaceStyle(fallbackColor.Value, fallbackName));
-            }
-            // otherwise no styling applied!
-
-            return model.Factory().ShapeRepresentation(s => {
-                s.ContextOfItems = model.GetGeometricRepresentationContextModel();
-                s.RepresentationType = "Tessellation";
-                s.RepresentationIdentifier = "Body";
-                s.Items.Add(item);
-            });
+            var shape = model.CreateShapeRepresentationTessellation(mesh, layer, triangulated);
+            return shape.CreateStyleForShape(mesh, fallbackColor, surfaceStyle, layer);
         }
 
         #endregion

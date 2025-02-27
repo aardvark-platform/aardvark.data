@@ -22,7 +22,7 @@ namespace Aardvark.Data.Ifc
         public static IIfcPresentationLayerAssignment CreateLayer(this IModel model, string layerName, IIfcLayeredItem items)
             => model.CreateLayer(layerName, [items]);
 
-        public static IIfcPresentationLayerWithStyle CreateLayerWithStyle(this IModel model, string layerName, IEnumerable<IIfcPresentationStyle> styles, bool layerVisibility = true, IEnumerable<IIfcGeometricRepresentationItem> items = null)
+        public static IIfcPresentationLayerWithStyle CreateLayerWithStyle(this IModel model, string layerName, IEnumerable<IIfcPresentationStyle> styles, bool layerVisibility = true, bool layerFrozen = false, bool layerBlocked = false, IEnumerable<IIfcGeometricRepresentationItem> items = null)
         {
             // https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/schema/ifcpresentationorganizationresource/lexical/ifcpresentationlayerwithstyle.htm
             // IfcPresentationLayerWithStyle only allows: "IFC4.IFCGEOMETRICREPRESENTATIONITEM", "IFC4.IFCMAPPEDITEM"
@@ -32,10 +32,10 @@ namespace Aardvark.Data.Ifc
 
                 // Visibility Control
                 layer.LayerOn = layerVisibility; // visibility control allows to define a layer to be either 'on' or 'off', and/or 'frozen' or 'not frozen'
-                //layer.LayerFrozen = true;
+                layer.LayerFrozen = layerFrozen;
 
                 // Access control
-                //layer.LayerBlocked = true;    // access control allows to block graphical entities from manipulations
+                layer.LayerBlocked = layerBlocked;    // access control allows to block graphical entities from manipulations
 
                 // NOTE: ORDER seems to be important! BIM-Viewer tend to use only color information of first item!
                 layer.LayerStyles.AddRange(styles);
@@ -43,8 +43,8 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IIfcPresentationLayerWithStyle CreateLayerWithStyle(this IModel model, string layerName, IEnumerable<IIfcPresentationStyle> styles, IIfcGeometricRepresentationItem item, bool layerVisibility = true)
-            => model.CreateLayerWithStyle(layerName, styles, layerVisibility, [item]);
+        public static IIfcPresentationLayerWithStyle CreateLayerWithStyle(this IModel model, string layerName, IEnumerable<IIfcPresentationStyle> styles, IIfcGeometricRepresentationItem item, bool layerVisibility = true, bool layerFrozen = false, bool layerBlocked = false)
+            => model.CreateLayerWithStyle(layerName, styles, layerVisibility, layerFrozen, layerBlocked, [item]);
 
         public static IIfcLayeredItem AssignLayer(this IIfcLayeredItem item, IIfcPresentationLayerAssignment layer)
         {

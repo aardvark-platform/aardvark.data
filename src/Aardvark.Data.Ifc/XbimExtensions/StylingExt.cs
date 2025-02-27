@@ -342,7 +342,7 @@ namespace Aardvark.Data.Ifc
         #endregion
 
         #region Style Item
-        public static IIfcStyledItem CreateStyleItem(this IIfcRepresentationItem item, IEnumerable<IIfcPresentationStyle> styles)
+        public static IIfcStyledItem CreateStyleItem(this IIfcRepresentationItem item, IIfcPresentationStyle[] styles)
         {
             // Each subtype of IfcPresentationStyle is assigned to the IfcGeometricRepresentationItem's through an intermediate IfcStyledItem.
             return item.Model.Factory().StyledItem(styleItem => {

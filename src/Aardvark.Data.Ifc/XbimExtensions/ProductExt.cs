@@ -69,7 +69,15 @@ namespace Aardvark.Data.Ifc
         public static IIfcProduct CreateAttachRepresentation(this IIfcProduct product, IIfcObjectPlacement placement, PolyMesh mesh, C4d? fallbackColor, IIfcSurfaceStyle surfaceStyle = null, IIfcPresentationLayerAssignment layer = null, bool triangulated = true)
         {
 
-            var shape = product.Model.CreateShapeRepresentationTessellationStyled(mesh, fallbackColor, surfaceStyle, layer, triangulated);
+            IIfcShapeRepresentation shape = null;
+            if (product.Model.SchemaVersion == Xbim.Common.Step21.XbimSchemaVersion.Ifc2X3)
+            {
+                shape = product.Model.CreateShapeRepresentationFaceBasedSurfaceStyled(mesh, fallbackColor, surfaceStyle, layer);    // fallback for Ifc2x3
+            }
+            else
+            {
+                shape = product.Model.CreateShapeRepresentationTessellationStyled(mesh, fallbackColor, surfaceStyle, layer, triangulated);  // only supported for Ifc4 and newer
+            }
 
             // attached creaded shapes
             product.ObjectPlacement = placement;

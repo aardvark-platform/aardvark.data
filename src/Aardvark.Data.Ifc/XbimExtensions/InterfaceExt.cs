@@ -71,7 +71,7 @@ namespace Aardvark.Data.Ifc
                     p.AddSite(s); break;
                 case (Xbim.Ifc4x3.Kernel.IfcProject p, Xbim.Ifc4x3.ProductExtension.IfcSite s):
                     p.AddSite(s); break;
-                default: throw new NotSupportedException($"Schema {proj.Model.SchemaVersion} does not provide AddPropertySet or mixed obj and typeobject!");
+                default: throw new NotSupportedException($"Schema {proj.Model.SchemaVersion} does not provide AddSite!");
             };
         }
 
