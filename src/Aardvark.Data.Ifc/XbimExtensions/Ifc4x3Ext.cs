@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4x3.Kernel;
 using Xbim.Ifc4x3.ProductExtension;
 using Xbim.Ifc4x3.QuantityResource;

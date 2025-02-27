@@ -28,7 +28,7 @@ namespace Aardvark.Data.Ifc
         public static IIfcLightFixture Instantiate(this IIfcLightFixtureType lightType, string name, IIfcObjectPlacement placement, Trafo3d trafo, IfcLightFixtureTypeEnum? ltenum = null)
         {
             // only support for IFC4+
-            var light = lightType.Model.LightFixtureExt();
+            var light = lightType.Model.LightFixtureFactory();
             light.Name = name;
             
             var instance = (IIfcLightFixture) light.CreateAttachInstancedRepresentation(lightType, placement, trafo);
@@ -40,7 +40,7 @@ namespace Aardvark.Data.Ifc
         public static IIfcLightFixture Instantiate(this IIfcLightFixtureType lightType, string name, IIfcObjectPlacement placement, IDictionary<IIfcRepresentationMap, Trafo3d> trafos, IfcLightFixtureTypeEnum? ltenum = null)
         {
             // only support for IFC4+
-            var light = lightType.Model.LightFixtureExt();
+            var light = lightType.Model.LightFixtureFactory();
             light.Name = name;
 
             var instance = (IIfcLightFixture) light.CreateAttachInstancedRepresentation(lightType, placement, trafos);
@@ -79,7 +79,7 @@ namespace Aardvark.Data.Ifc
         public static IIfcLightFixture CreateLightEmpty(this IModel model, string name, IIfcObjectPlacement placement, IIfcShapeRepresentation lightShape, IfcLightFixtureTypeEnum? lightType = null)
         {
             // CAUTION only supports IFC4+
-            return model.LightFixtureExt(t =>
+            return model.LightFixtureFactory(t =>
             {
                 if (lightType != null) t.PredefinedType = lightType.Value;
                 t.Name = name;
@@ -147,7 +147,7 @@ namespace Aardvark.Data.Ifc
 
         public static IIfcFlowTerminal InstantiateIFC2x3(this IIfcLightFixtureType lightType, string name, IIfcObjectPlacement placement, Trafo3d trafo, IfcLightFixtureTypeEnum? ltenum = null)
         {
-            var light = lightType.Model.LightFixtureExtIFC2x3();
+            var light = lightType.Model.LightFixtureIFC2x3Factory();
             light.Name = name;
 
             var instance = (IIfcFlowTerminal)light.CreateAttachInstancedRepresentation(lightType, placement, trafo);
@@ -160,7 +160,7 @@ namespace Aardvark.Data.Ifc
 
         public static IIfcFlowTerminal InstantiateIFC2x3(this IIfcLightFixtureType lightType, string name, IIfcObjectPlacement placement, IDictionary<IIfcRepresentationMap, Trafo3d> trafos, IfcLightFixtureTypeEnum? ltenum = null)
         {
-            var light = lightType.Model.LightFixtureExtIFC2x3();
+            var light = lightType.Model.LightFixtureIFC2x3Factory();
             light.Name = name;
 
             var instance = (IIfcFlowTerminal)light.CreateAttachInstancedRepresentation(lightType, placement, trafos);
@@ -193,7 +193,7 @@ namespace Aardvark.Data.Ifc
                 }
             }
 
-            var t = model.LightFixtureExtIFC2x3(ifc2x3LightType);
+            var t = model.LightFixtureIFC2x3Factory(ifc2x3LightType);
 
             t.Name = name;
             t.ObjectPlacement = placement;

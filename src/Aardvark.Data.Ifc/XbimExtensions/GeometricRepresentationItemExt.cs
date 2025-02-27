@@ -5,7 +5,6 @@ using Aardvark.Base;
 
 using Xbim.Common;
 using Xbim.Ifc4.Interfaces;
-using Xbim.Ifc4.GeometricModelResource;
 using Xbim.Ifc4.GeometryResource;
 using Xbim.Ifc4.MeasureResource;
 
@@ -228,9 +227,9 @@ namespace Aardvark.Data.Ifc
                 _ => []
             };
         }
-        public static IfcCartesianPointList2D CreateCartesianPointList2D(this IModel model, params V2d[] points)
+        public static IIfcCartesianPointList2D CreateCartesianPointList2D(this IModel model, params V2d[] points)
         {
-            return model.New<IfcCartesianPointList2D>(pl =>
+            return model.CartesianPointList2DFactory(pl =>
             {
                 for (int i = 0; i < points.Length; i++)
                 {
@@ -239,9 +238,9 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        public static IfcCartesianPointList3D CreateCartesianPointList3D(this IModel model, params V3d[] points)
+        public static IIfcCartesianPointList3D CreateCartesianPointList3D(this IModel model, params V3d[] points)
         {
-            return model.New<IfcCartesianPointList3D>(pl =>
+            return model.CartesianPointList3DFactory(pl =>
             {
                 for (int i = 0; i < points.Length; i++)
                 {
@@ -300,10 +299,10 @@ namespace Aardvark.Data.Ifc
         public static IIfcPolyline CreatePolyLine(this IModel model, IEnumerable<V3d> points)
             => model.CreatePolyLine(points.ToArray());
 
-        public static IfcIndexedPolyCurve CreateIndexedPolyCurve(this IModel model, IEnumerable<V2d> points, IEnumerable<int[]> indices = null)
+        public static IIfcIndexedPolyCurve CreateIndexedPolyCurve(this IModel model, IEnumerable<V2d> points, IEnumerable<int[]> indices = null)
         {
             // NOTE: Indices start with 1!
-            return model.New<IfcIndexedPolyCurve>(poly =>
+            return model.IndexedPolyCurveFactory(poly =>
             {
                 poly.Points = model.CreateCartesianPointList2D(points.ToArray());
 

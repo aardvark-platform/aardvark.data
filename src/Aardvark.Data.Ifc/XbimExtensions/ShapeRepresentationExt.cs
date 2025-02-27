@@ -7,7 +7,6 @@ using Aardvark.Geometry;
 using Xbim.Common;
 using Xbim.Common.Step21;
 using Xbim.Ifc4.Interfaces;
-using Xbim.Ifc4.GeometricModelResource;
 using Xbim.Ifc4.MeasureResource;
 
 namespace Aardvark.Data.Ifc
@@ -396,7 +395,7 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        private static IfcTriangulatedFaceSet CreateTriangulatedFaceSet(IModel model, PolyMesh inputMesh)
+        private static IIfcTriangulatedFaceSet CreateTriangulatedFaceSet(IModel model, PolyMesh inputMesh)
         {
             // only available in IFC4+
             if (model.SchemaVersion == XbimSchemaVersion.Ifc2X3)
@@ -404,7 +403,7 @@ namespace Aardvark.Data.Ifc
 
             var triangleMesh = inputMesh.TriangulatedCopy();
             
-            return model.New<IfcTriangulatedFaceSet>(tfs =>
+            return model.TriangulatedFaceSetFactory(tfs =>
             {
                 tfs.Closed = true;
                 tfs.Coordinates = model.CreateCartesianPointList3D(triangleMesh.PositionArray);
@@ -418,20 +417,20 @@ namespace Aardvark.Data.Ifc
             });
         }
 
-        private static IfcPolygonalFaceSet CreatePolygonalFaceSet(IModel model, PolyMesh inputMesh)
+        private static IIfcPolygonalFaceSet CreatePolygonalFaceSet(IModel model, PolyMesh inputMesh)
         {
             // only available in IFC4+
             if (model.SchemaVersion == XbimSchemaVersion.Ifc2X3)
                 return null;
 
-            var faces = new List<IfcIndexedPolygonalFace>(inputMesh.Faces.Count());
+            var faces = new List<IIfcIndexedPolygonalFace>(inputMesh.Faces.Count());
 
             foreach (var face in inputMesh.Faces)
             {
-                faces.Add(model.New<IfcIndexedPolygonalFace>(f => f.CoordIndex.AddRange(face.VertexIndices.Select(v => new IfcPositiveInteger(v + 1))))); // CAUTION! Indices are 1 based in IFC!
+                faces.Add(model.IndexedPolygonalFaceFactory(f => f.CoordIndex.AddRange(face.VertexIndices.Select(v => new IfcPositiveInteger(v + 1))))); // CAUTION! Indices are 1 based in IFC!
             }
 
-            return model.New<IfcPolygonalFaceSet>(p =>
+            return model.PolygonalFaceSetFactory(p =>
             {
                 p.Closed = true;
                 p.Coordinates = model.CreateCartesianPointList3D(inputMesh.PositionArray);

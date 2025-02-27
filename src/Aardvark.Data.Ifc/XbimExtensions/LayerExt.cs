@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Aardvark.Base;
 
 using Xbim.Common;
-using Xbim.Ifc.Extensions;
 using Xbim.Ifc4.Interfaces;
 
 namespace Aardvark.Data.Ifc

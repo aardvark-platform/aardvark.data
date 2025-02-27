@@ -69,7 +69,7 @@ namespace Aardvark.Data.Ifc
         public static IIfcProduct CreateAttachRepresentation(this IIfcProduct product, IIfcObjectPlacement placement, PolyMesh mesh, C4d? fallbackColor, IIfcSurfaceStyle surfaceStyle = null, IIfcPresentationLayerAssignment layer = null, bool triangulated = true)
         {
 
-            var shape = product.Model.CreateShapeRepresentationCompatible(mesh, fallbackColor, surfaceStyle, layer, triangulated);
+            var shape = product.Model.CreateShapeRepresentationCompatibleStyled(mesh, fallbackColor, surfaceStyle, layer, triangulated);
             
             product.ObjectPlacement = placement;
             product.Representation = product.Model.Factory().ProductDefinitionShape(r => r.Representations.Add(shape));
