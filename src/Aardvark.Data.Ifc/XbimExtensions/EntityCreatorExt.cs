@@ -12,10 +12,9 @@ namespace Aardvark.Data.Ifc
         {
             return model.SchemaVersion switch
             {
-                // IfcLightFixture Not supported in 2x3
                 XbimSchemaVersion.Ifc4 => model.Instances.New<Xbim.Ifc4.ElectricalDomain.IfcLightFixture>(init),
                 XbimSchemaVersion.Ifc4x3 => model.Instances.New<Xbim.Ifc4x3.ElectricalDomain.IfcLightFixture>(init),
-                _ => throw new NotSupportedException($"Type IfcLightFixture is not supported in schema {model.SchemaVersion}")
+                _ => throw new NotSupportedException($"Type IfcLightFixture is not supported in schema {model.SchemaVersion}") // IfcLightFixture Not supported in 2x3
             };
         }
 
@@ -23,11 +22,11 @@ namespace Aardvark.Data.Ifc
         {
             return model.SchemaVersion switch
             {
-                XbimSchemaVersion.Ifc2X3 => 
+                XbimSchemaVersion.Ifc2X3 =>
                     // NOTE: Ifc2X3 requires a LightFixtureType to type FlowTerminal as Light
-            
-                    // CAUTION: Instantiation-Routine links LightFixtureType to Flowterminal! (via CreateAttachInstancedRepresentation) => lightType = null
-                    // CAUTION: Direct Creation of Lights require for IFC2x3 a IfcLightFixtureTypeEnum!
+
+                    // CAUTION - Instantiation from LightFixtureType: CreateAttachInstancedRepresentation links LightFixtureType to Flowterminal! (lightType == null)
+                    // CAUTION - Direct light creation: IFC2x3 requires an IfcLightFixtureTypeEnum! (lightType != null)
                     model.Instances.New<Xbim.Ifc2x3.SharedBldgServiceElements.IfcFlowTerminal>(o => {
                         if (lightType != null)
                         {

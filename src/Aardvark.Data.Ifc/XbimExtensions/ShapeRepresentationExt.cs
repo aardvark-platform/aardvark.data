@@ -358,7 +358,8 @@ namespace Aardvark.Data.Ifc
         #endregion
 
         #region PolyMesh
-
+        
+        #region FaceSets
         public static IIfcConnectedFaceSet CreateConnectedFaceSet(IModel model, PolyMesh inputMesh)
         {
             // deprecated only use for IFC2x3!
@@ -437,7 +438,47 @@ namespace Aardvark.Data.Ifc
                 p.Faces.AddRange(faces);
             });
         }
+        #endregion
 
+        public static IIfcShapeRepresentation CreateShapeRepresentationFaceBasedSurface(this IModel model, PolyMesh mesh, IIfcPresentationLayerAssignment layer = null)
+        {
+            IIfcGeometricRepresentationItem item = model.Factory().FaceBasedSurfaceModel(fbs => fbs.FbsmFaces.Add(CreateConnectedFaceSet(model, mesh)));
+            layer?.AssignedItems.Add(item);
+
+            return model.Factory().ShapeRepresentation(s => {
+                s.ContextOfItems = model.GetGeometricRepresentationContextModel();
+                s.RepresentationType = "SurfaceModel";
+                s.RepresentationIdentifier = "Body";
+                s.Items.Add(item);
+            });
+        }
+
+        public static IIfcShapeRepresentation CreateShapeRepresentationTessellation(this IModel model, PolyMesh mesh, IIfcPresentationLayerAssignment layer = null, bool triangulated = true)
+        {
+            IIfcGeometricRepresentationItem item = triangulated ? CreateTriangulatedFaceSet(model, mesh) : CreatePolygonalFaceSet(model, mesh);
+            layer?.AssignedItems.Add(item);
+
+            return model.Factory().ShapeRepresentation(s => {
+                s.ContextOfItems = model.GetGeometricRepresentationContextModel();
+                s.RepresentationType = "Tessellation";
+                s.RepresentationIdentifier = "Body";
+                s.Items.Add(item);
+            });
+        }
+
+        public static IIfcShapeRepresentation CreateShapeRepresentationCompatible(this IModel model, PolyMesh mesh, IIfcPresentationLayerAssignment layer = null, bool triangulated = true)
+        {
+            if (model.SchemaVersion == XbimSchemaVersion.Ifc2X3)
+            {
+                return model.CreateShapeRepresentationFaceBasedSurface(mesh, layer);    // fallback for Ifc2x3
+            }
+            else
+            {
+                return model.CreateShapeRepresentationTessellation(mesh, layer, triangulated);  // only supported for Ifc4 and newer
+            }
+        }
+
+        #region Styled Surfaces
         public static IIfcShapeRepresentation CreateStyleForShape(this IIfcShapeRepresentation shape, PolyMesh mesh, C4d? fallbackColor, IIfcSurfaceStyle surfaceStyle = null, IIfcPresentationLayerAssignment layer = null)
         {
             // style shape (should only hold one item)
@@ -470,36 +511,10 @@ namespace Aardvark.Data.Ifc
             return shape;
         }
 
-        public static IIfcShapeRepresentation CreateShapeRepresentationFaceBasedSurface(this IModel model, PolyMesh mesh, IIfcPresentationLayerAssignment layer = null)
-        {
-            IIfcGeometricRepresentationItem item = model.Factory().FaceBasedSurfaceModel(fbs => fbs.FbsmFaces.Add(CreateConnectedFaceSet(model, mesh)));
-            layer?.AssignedItems.Add(item);
-
-            return model.Factory().ShapeRepresentation(s => {
-                s.ContextOfItems = model.GetGeometricRepresentationContextModel();
-                s.RepresentationType = "SurfaceModel";
-                s.RepresentationIdentifier = "Body";
-                s.Items.Add(item);
-            });
-        }
-
         public static IIfcShapeRepresentation CreateShapeRepresentationFaceBasedSurfaceStyled(this IModel model, PolyMesh mesh, C4d? fallbackColor, IIfcSurfaceStyle surfaceStyle = null, IIfcPresentationLayerAssignment layer = null)
         {
             var shape = model.CreateShapeRepresentationFaceBasedSurface(mesh, layer);
             return shape.CreateStyleForShape(mesh, fallbackColor, surfaceStyle, layer);
-        }
-
-        public static IIfcShapeRepresentation CreateShapeRepresentationTessellation(this IModel model, PolyMesh mesh, IIfcPresentationLayerAssignment layer = null, bool triangulated = true)
-        {
-            IIfcGeometricRepresentationItem item = triangulated ? CreateTriangulatedFaceSet(model, mesh) : CreatePolygonalFaceSet(model, mesh);
-            layer?.AssignedItems.Add(item);
-
-            return model.Factory().ShapeRepresentation(s => {
-                s.ContextOfItems = model.GetGeometricRepresentationContextModel();
-                s.RepresentationType = "Tessellation";
-                s.RepresentationIdentifier = "Body";
-                s.Items.Add(item);
-            });
         }
 
         public static IIfcShapeRepresentation CreateShapeRepresentationTessellationStyled(this IModel model, PolyMesh mesh, C4d? fallbackColor, IIfcSurfaceStyle surfaceStyle = null, IIfcPresentationLayerAssignment layer = null, bool triangulated = true)
@@ -507,6 +522,19 @@ namespace Aardvark.Data.Ifc
             var shape = model.CreateShapeRepresentationTessellation(mesh, layer, triangulated);
             return shape.CreateStyleForShape(mesh, fallbackColor, surfaceStyle, layer);
         }
+
+        public static IIfcShapeRepresentation CreateShapeRepresentationCompatibleStyled(this IModel model, PolyMesh mesh, C4d? fallbackColor, IIfcSurfaceStyle surfaceStyle = null, IIfcPresentationLayerAssignment layer = null, bool triangulated = true)
+        {
+            if (model.SchemaVersion == XbimSchemaVersion.Ifc2X3)
+            {
+                return model.CreateShapeRepresentationFaceBasedSurfaceStyled(mesh, fallbackColor, surfaceStyle, layer);    // fallback for Ifc2x3
+            }
+            else
+            {
+                return model.CreateShapeRepresentationTessellationStyled(mesh, fallbackColor, surfaceStyle, layer, triangulated);  // only supported for Ifc4 and newer
+            }
+        }
+        #endregion
 
         #endregion
     }
