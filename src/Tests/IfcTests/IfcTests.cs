@@ -10,12 +10,11 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 
 using Xbim.Common;
+using Xbim.Common.Enumerations;
 using Xbim.Common.Step21;
 using Xbim.Ifc;
 using Xbim.Ifc4.Interfaces;
-using Xbim.Ifc4.MaterialResource;
 using Xbim.Ifc4.MeasureResource;
-using Xbim.Ifc4.SharedBldgElements;
 using Xbim.IO;
 
 namespace Aardvark.Data.Tests.Ifc
@@ -148,7 +147,7 @@ namespace Aardvark.Data.Tests.Ifc
                 var site = model.Instances.OfType<IIfcSite>().FirstOrDefault();
 
                 //create simple object and use lambda initializer to set the name
-                var wall = (IfcWall) model.Factory().Wall(w => w.Name = "The very first wall"); // <- remove cast (necessary for PurgePropertySet, SetPropertySingleValue...)
+                var wall = (Xbim.Ifc4.SharedBldgElements.IfcWall) model.Factory().Wall(w => w.Name = "The very first wall"); // <- remove cast (necessary for PurgePropertySet, SetPropertySingleValue...)
                 site.AddElement(wall);
 
                 var prop = new Dictionary<string, object>
@@ -185,7 +184,7 @@ namespace Aardvark.Data.Tests.Ifc
             }
 
             Assert.IsEmpty(model.ValidateModel());
-            Assert.IsTrue(model.Instances.OfType<IfcWall>().First().PropertySets.Count() == 2); // Set-C with "untouched" and "overrid" AND Set-B
+            Assert.IsTrue(model.Instances.OfType<Xbim.Ifc4.SharedBldgElements.IfcWall>().First().PropertySets.Count() == 2); // Set-C with "untouched" and "overrid" AND Set-B
             model.SaveAs("test_Properties.ifc");                                                                                    // 
         }
 
@@ -249,6 +248,139 @@ namespace Aardvark.Data.Tests.Ifc
             Assert.IsEmpty(model.ValidateModel());
             model.SaveAs("test_TestWall.ifc");
         }
+
+        [Test]
+        public static void WallTest2X3()
+        {
+            using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc2X3, XbimStoreType.InMemoryModel);
+
+            var factory = new EntityCreator(model);
+
+            using var txnInit = model.BeginTransaction("Init Project");
+
+            var project = factory.Project(p => p.Name = "TestProject");
+
+            project.Initialize(ProjectUnits.SIUnitsUK);
+
+            // add site
+            var site = factory.Site(w => w.Name = "Site1");
+
+            switch (project, site)
+            {
+                case (Xbim.Ifc2x3.Kernel.IfcProject p, Xbim.Ifc2x3.ProductExtension.IfcSite si):
+                    p.AddSite(si); break;
+                case (Xbim.Ifc4.Kernel.IfcProject p, Xbim.Ifc4.ProductExtension.IfcSite si):
+                    p.AddSite(si); break;
+                case (Xbim.Ifc4x3.Kernel.IfcProject p, Xbim.Ifc4x3.ProductExtension.IfcSite si):
+                    p.AddSite(si); break;
+                default: throw new NotSupportedException($"Schema {model.SchemaVersion} does not provide AddPropertySet or mixed obj and typeobject!");
+            };
+
+            var proxy = factory.BuildingElementProxy(w =>
+            {
+                w.Name = "Proxy";
+                w.ObjectPlacement = factory.LocalPlacement(p =>
+                {
+                    p.RelativePlacement = factory.Axis2Placement3D(a =>
+                    {
+                        a.Location = factory.CartesianPoint(c => c.SetXYZ(0, 0, 0));
+                        a.RefDirection = factory.Direction(rd => rd.SetXYZ(1.0, 0, 0)); // default x-axis
+                        a.Axis = factory.Direction(rd => rd.SetXYZ(0, 0, 1.0));         // default z-axis
+                    });
+                });
+            });
+
+            factory.RelContainedInSpatialStructure(relSe => {
+                relSe.RelatingStructure = site;
+                relSe.RelatedElements.Add(proxy);
+            });
+
+            site.AddElement(proxy);
+
+            var rectProf = factory.RectangleProfileDef(p =>
+            {
+                p.ProfileName = "RectArea";
+                p.ProfileType = IfcProfileTypeEnum.AREA;
+                p.XDim = new IfcPositiveLengthMeasure(10);
+                p.YDim = new IfcPositiveLengthMeasure(10);
+                p.Position = factory.Axis2Placement2D(a => {
+                    a.Location = factory.CartesianPoint(c => c.SetXY(0, 0));
+                    a.RefDirection = factory.Direction(rd => rd.SetXY(1.0, 0)); // default x-axis
+                });
+            });
+
+            var item = factory.ExtrudedAreaSolid(solid =>
+            {
+                solid.Position = factory.Axis2Placement3D(a => {
+                    a.Location = factory.CartesianPoint(c => c.SetXYZ(0, 0, 0));
+                    a.RefDirection = factory.Direction(rd => rd.SetXYZ(1.0, 0, 0)); // default x-axis
+                    a.Axis = factory.Direction(rd => rd.SetXYZ(0, 0, 1.0));         // default z-axis
+                });
+                solid.Depth = new IfcPositiveLengthMeasure(10);
+                solid.ExtrudedDirection = factory.Direction(rd => rd.SetXYZ(0, 0, 1.0));
+                solid.SweptArea = rectProf;
+            });
+
+            var boxShape = factory.ShapeRepresentation(s =>
+            {
+                s.ContextOfItems = model.Instances.OfType<IIfcGeometricRepresentationContext>().Where(c => c.ContextType == "Model").First();
+                s.RepresentationType = "SweptSolid";
+                s.RepresentationIdentifier = "Body";
+                s.Items.Add(item);
+            });
+
+            var style = factory.SurfaceStyle(style =>
+            {
+                var defaultStyle = factory.SurfaceStyleShading(l =>
+                {
+                    l.SurfaceColour = factory.ColourRgb(rgb =>
+                    {
+                        rgb.Red = 1.0;
+                        rgb.Green = 0.0;
+                        rgb.Blue = 0.0;
+                    });
+                    l.Transparency = new IfcNormalisedRatioMeasure(0.0); // [0 = opaque .. 1 = transparent]
+                });
+
+                style.Side = IfcSurfaceSide.BOTH;
+                style.Styles.Add(defaultStyle);
+            });
+
+            var s = factory.StyledItem(styleItem => {
+                styleItem.Styles.Add(style);    // <---- THIS style is empty in IFC2x3
+                styleItem.Item = item;
+            });
+
+            proxy.Representation = factory.ProductDefinitionShape(definition =>
+            {
+                definition.Name = "ShapeName";
+                definition.Description = "ShapeDescription";
+                definition.Representations.Add(boxShape);
+            });
+
+            txnInit.Commit();
+
+            var validator = new Xbim.Common.ExpressValidation.Validator() {
+                CreateEntityHierarchy = true,
+                ValidateLevel = ValidationFlags.All
+            };
+
+            var result = validator.Validate(model.Instances);
+
+            result.ForEach(error =>
+            {
+                Report.Line(error.Message + " with " + error.Details.Count());
+                error.Details.ForEach(detail => Report.Line(detail.IssueSource + " " + detail.IssueType));
+            });
+
+            //// OUTPUT: 
+            //  0: Entity #49=IFCSTYLEDITEM(#40,(),$); has validation failures. with 1
+            //  0: IfcStyledItem.WR11 EntityWhereClauses
+
+            model.SaveAs("test_TestWall2x3.ifc");
+            Assert.IsEmpty(result);
+        }
+
 
         [Test]
         public static void GeometryTest()
@@ -365,7 +497,7 @@ namespace Aardvark.Data.Tests.Ifc
                 var site = model.Instances.OfType<IIfcSite>().FirstOrDefault();
 
                 // MATERIAL
-                var material = (IfcMaterial) factory.Material(m => m.Name = "Carbon"); // <- remove cast!
+                var material = (Xbim.Ifc4.MaterialResource.IfcMaterial) factory.Material(m => m.Name = "Carbon"); // <- remove cast!
                 material.CreateAttachPsetMaterialCommon(98.7654, 0.54, massDensity);
                 material.CreateAttachPsetMaterialThermal(thermalConductivity, 500, 99, -10);
                 material.CreateAttachStyledRepresentation(C3d.Magenta);
