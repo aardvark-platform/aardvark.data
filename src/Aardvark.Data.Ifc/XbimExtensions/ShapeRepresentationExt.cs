@@ -314,6 +314,7 @@ namespace Aardvark.Data.Ifc
                 p.ProfileType = IfcProfileTypeEnum.AREA;
                 p.XDim = box.SizeX;
                 p.YDim = box.SizeY;
+                p.Position = model.CreateAxis2Placement2D(box.Min.XY);
             });
 
             IIfcGeometricRepresentationItem item = factory.ExtrudedAreaSolid(solid =>

@@ -45,7 +45,7 @@ namespace Aardvark.Data.Ifc
             return product.LinkToType(objectType);
         }
 
-        public static IIfcProduct CreateAttachInstancedRepresentation(this IIfcProduct product, IIfcElementType objectType, IIfcObjectPlacement placement, Dictionary<IIfcRepresentationMap, Trafo3d> trafos)
+        public static IIfcProduct CreateAttachInstancedRepresentation(this IIfcProduct product, IIfcElementType objectType, IIfcObjectPlacement placement, IDictionary<IIfcRepresentationMap, Trafo3d> trafos)
         {
             var shapes = objectType.RepresentationMaps.Select(m =>
             {

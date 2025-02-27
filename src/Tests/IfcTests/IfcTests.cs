@@ -481,6 +481,69 @@ namespace Aardvark.Data.Tests.Ifc
         }
 
         [Test]
+        public static void LightTest2x3()
+        {
+            using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc2X3, XbimStoreType.InMemoryModel);
+
+            model.CreateMinimalProject();
+
+            using (var txn = model.BeginTransaction("Create Light"))
+            {
+                var site = model.Instances.OfType<IIfcSite>().FirstOrDefault();
+
+                var layer = model.CreateLayerWithStyle("Layer green styled", [model.CreateSurfaceStyle(C3d.Green)]);
+
+                var shiftVec = new V3d(0, 300, 0);
+
+                var baseShape = model.CreateShapeRepresentationSolidBox(new Box3d(V3d.Zero, new V3d(200, 100, 500)), layer);
+
+                var repMap = baseShape.CreateRepresentationMap();
+
+                var trafo1 = Trafo3d.RotationYInDegrees(-10);
+                var trafo2 = Trafo3d.RotationYInDegrees(45);
+                var trafo3 = Trafo3d.RotationYInDegrees(90);
+                var trafo4 = Trafo3d.RotationYInDegrees(125);
+                var trafo5 = Trafo3d.RotationYInDegrees(180);
+                var trafo6 = Trafo3d.RotationYInDegrees(270);
+
+                var prop = new Dictionary<string, object> {
+                    { "p1", "A" },
+                    { "p2", 123.15 },
+                    { "p3", false }
+                };
+
+                var generalInfo = model.CreatePropertySet("General Information", prop);
+
+                var lightType = model.CreateLightType(IfcLightFixtureTypeEnum.POINTSOURCE, [repMap], [generalInfo]);
+
+                // instantiate via light-type
+                var li = lightType.InstantiateIFC2x3("Empty_Light_fromtype", model.CreateLocalPlacement(-shiftVec), Trafo3d.RotationZInDegrees(45), IfcLightFixtureTypeEnum.POINTSOURCE);
+                li.AddPropertySet(model.Pset_LightFixtureTypeCommon("reference", 1, 1000, 20, 50, 20, 33, "working", "hanging", "ceiling"));
+                li.Qto_LightFixtureBaseQuantities(50);
+                site.AddElement(li);
+
+                // attached property sets
+                site.AddElement(model.CreateLightEmptyIFC2x3("Empty_Light", model.CreateLocalPlacement(V3d.Zero), repMap.Instantiate(trafo1)).AttachPropertySet(generalInfo));
+                site.AddElement(model.CreateLightAmbientIFC2x3("Ambient_Light", C3d.Red, model.CreateLocalPlacement(shiftVec), repMap.Instantiate(trafo2)).AttachPropertySet(generalInfo));
+
+                // properties linked via light-type
+                site.AddElement(model.CreateLightDirectionalIFC2x3("Directional_Light", C3d.Blue, V3d.ZAxis, model.CreateLocalPlacement(2 * shiftVec), repMap.Instantiate(trafo3))); 
+                // .LinkToType(lightType) <- Only maximum of one relationship to an underlying type (by an IfcRelDefinesByType relationship) should be given for an object instance. In case for IFC2x3 an ObjectType is created by default!
+
+                site.AddElement(model.CreateLightPositionalIFC2x3("Positional_Light", C3d.Green, new V3d(0, 0, 2000), 150, V3d.Zero, model.CreateLocalPlacement(3 * shiftVec), repMap.Instantiate(trafo4)));
+                site.AddElement(model.CreateLightSpotIFC2x3("Spot_Light", C3d.Yellow, new V3d(0, 0, 1000), V3d.ZAxis, 100, V3d.Zero, 50, 20, model.CreateLocalPlacement(4 * shiftVec), repMap.Instantiate(trafo5)));
+
+                var dist = model.CreateLightIntensityDistribution(IfcLightDistributionCurveEnum.TYPE_C, []);
+                site.AddElement(model.CreateLightGoniometricIFC2x3("Goniometric_Light", C3d.Orange, new V3d(0, 0, 3000), 3500, 1000, dist, model.CreateLocalPlacement(5 * shiftVec), repMap.Instantiate(trafo6)));
+
+                txn.Commit();
+            }
+
+            Assert.IsEmpty(model.ValidateModel());
+            model.SaveAs("test_Lights2x3.ifc");
+        }
+
+        [Test]
         public static void MaterialTest()
         {
             using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
