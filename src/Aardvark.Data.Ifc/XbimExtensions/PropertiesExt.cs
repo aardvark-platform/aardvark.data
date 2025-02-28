@@ -406,7 +406,8 @@ namespace Aardvark.Data.Ifc
         #endregion
 
         #region PropertySet
-        public static IIfcPropertySet CreatePropertySet(this IModel model, string setName, Dictionary<string, object> parameters)
+        
+        public static IIfcPropertySet CreatePropertySet(this IModel model, string setName, IDictionary<string, object> parameters)
         {
             // supports the following types: https://standards.buildingsmart.org/IFC/DEV/IFC4_2/FINAL/HTML/schema/ifcmeasureresource/lexical/ifcvalue.htm
             var factory = model.Factory();
@@ -419,11 +420,12 @@ namespace Aardvark.Data.Ifc
                         p.Name = x.Key;
                         p.NominalValue = x.Value switch
                         {
-                            double d => (IfcReal)d, //double lum => new IfcLuminousFluxMeasure(lum),
+                            IIfcValue v => v,
+                            double d => (IfcReal)d,
                             float r => (IfcReal)r,
                             int i => (IfcInteger)i,
                             bool b => (IfcBoolean)b,
-                            _ => (IfcText) x.Value.ToString(),
+                            _ => (IfcText)x.Value.ToString(),
                         };
                     }))
                 );
