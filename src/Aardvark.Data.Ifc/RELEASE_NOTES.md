@@ -1,5 +1,5 @@
 ### 1.1.0-prerelease0010
-- Extended IFC cross schema support
+- Extend IFC cross schema support
 
 ### 1.1.0-prerelease0009
 - Fixed broken build
