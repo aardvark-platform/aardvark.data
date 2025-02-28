@@ -64,20 +64,8 @@ namespace Aardvark.Data.Ifc
 
         #region IfcProject
 
-        public static void AddSite(this IfcProject proj, IfcSite site)
-        {
-            var decomposition = proj.IsDecomposedBy.FirstOrDefault();
-            if (decomposition == null) //none defined create the relationship
-            {
-                var relSub = proj.Model.New<IfcRelAggregates>(relSub =>
-                {
-                    relSub.RelatingObject = proj;
-                    relSub.RelatedObjects.Add(site);
-                });
-            }
-            else
-                decomposition.RelatedObjects.Add(site);
-        }
+        public static void AddSite(this IfcProject proj, IfcSite site) 
+            => proj.AddRelAggregates(site);
 
         #endregion
     }

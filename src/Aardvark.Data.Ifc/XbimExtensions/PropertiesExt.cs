@@ -421,6 +421,7 @@ namespace Aardvark.Data.Ifc
                         p.NominalValue = x.Value switch
                         {
                             IIfcValue v => v,
+                            decimal d => (IfcReal) (double) d,
                             double d => (IfcReal)d,
                             float r => (IfcReal)r,
                             int i => (IfcInteger)i,
@@ -438,7 +439,7 @@ namespace Aardvark.Data.Ifc
             return o;
         }
 
-        public static IIfcPropertySet CreateAttachPropertySet(this IIfcObject o, string setName, Dictionary<string, object> parameters)
+        public static IIfcPropertySet CreateAttachPropertySet(this IIfcObject o, string setName, IDictionary<string, object> parameters)
         {
             var set = o.Model.CreatePropertySet(setName, parameters);
 

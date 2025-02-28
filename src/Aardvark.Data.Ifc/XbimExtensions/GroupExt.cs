@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-
+using System.Linq;
 using Xbim.Common;
 using Xbim.Ifc4.Interfaces;
 
@@ -27,5 +27,18 @@ namespace Aardvark.Data.Ifc
 
         public static IIfcGroup CreateGroup(this IModel model, string groupName, IEnumerable<IIfcGroup> relatedObjects)
             => model.CreateGroup(groupName, relatedObjects, IfcObjectTypeEnum.GROUP);
+
+        public static void AddRelAssignsToGroup(this IIfcObjectDefinition obj, IIfcGroup group, IfcObjectTypeEnum groupEnum = IfcObjectTypeEnum.GROUP)
+        {
+            // check for existing RelAssignsToGroup for this group
+            var grouping = group.IsGroupedBy.FirstOrDefault();
+
+            // create relationship
+            grouping ??= group.Model.Factory().RelAssignsToGroup(g => g.RelatingGroup = group);
+
+            // update relationship
+            grouping.RelatedObjects.Add(obj);
+            grouping.RelatedObjectsType = groupEnum;
+        }
     }
 }
