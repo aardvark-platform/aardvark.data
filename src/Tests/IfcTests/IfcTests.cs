@@ -185,7 +185,7 @@ namespace Aardvark.Data.Tests.Ifc
 
             Assert.IsEmpty(model.ValidateModel());
             Assert.IsTrue(model.Instances.OfType<Xbim.Ifc4.SharedBldgElements.IfcWall>().First().PropertySets.Count() == 2); // Set-C with "untouched" and "overrid" AND Set-B
-            model.SaveAs("test_Properties.ifc");                                                                                    // 
+            model.SaveAs("test_Properties.ifc");
         }
 
         [Test]

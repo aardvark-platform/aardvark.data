@@ -133,6 +133,7 @@ namespace Aardvark.Data.Ifc
 
         public static IIfcShapeRepresentation CreateShapeRepresentationAnnotation2dCurve(this IModel model, V2d[] points, IEnumerable<int[]> indices = null, IIfcPresentationLayerWithStyle layer = null)
         {
+            // only available in IFC4+
             IIfcGeometricRepresentationItem item = model.CreateIndexedPolyCurve(points, indices);
             layer?.AssignedItems.Add(item);
 
@@ -163,6 +164,7 @@ namespace Aardvark.Data.Ifc
 
         public static IIfcShapeRepresentation CreateShapeRepresentationAnnotation2dArea(this IModel model, Box2d rect, IIfcPresentationLayerWithStyle layer = null)
         {
+            // only available in IFC4+
             IIfcGeometricRepresentationItem item = model.Factory().AnnotationFillArea(l =>
             {
                 l.OuterBoundary = model.CreateIndexedPolyCurve(rect.ComputeCornersCCW());
@@ -454,6 +456,7 @@ namespace Aardvark.Data.Ifc
 
         public static IIfcShapeRepresentation CreateShapeRepresentationTessellation(this IModel model, PolyMesh mesh, IIfcPresentationLayerAssignment layer = null, bool triangulated = true)
         {
+            // only available in IFC4+
             IIfcGeometricRepresentationItem item = triangulated ? CreateTriangulatedFaceSet(model, mesh) : CreatePolygonalFaceSet(model, mesh);
             layer?.AssignedItems.Add(item);
 

@@ -227,6 +227,7 @@ namespace Aardvark.Data.Ifc
                 _ => []
             };
         }
+
         public static IIfcCartesianPointList2D CreateCartesianPointList2D(this IModel model, params V2d[] points)
         {
             return model.CartesianPointList2DFactory(pl =>
@@ -301,6 +302,7 @@ namespace Aardvark.Data.Ifc
 
         public static IIfcIndexedPolyCurve CreateIndexedPolyCurve(this IModel model, IEnumerable<V2d> points, IEnumerable<int[]> indices = null)
         {
+            // only available in IFC4+
             // NOTE: Indices start with 1!
             return model.IndexedPolyCurveFactory(poly =>
             {

@@ -25,6 +25,7 @@ namespace Aardvark.Data.Ifc
             return proxy;
         }
 
+        #region Lights (IFC4+)
         public static IIfcLightFixture Instantiate(this IIfcLightFixtureType lightType, string name, IIfcObjectPlacement placement, Trafo3d trafo, IfcLightFixtureTypeEnum? ltenum = null)
         {
             // only support for IFC4+
@@ -141,7 +142,7 @@ namespace Aardvark.Data.Ifc
             light.Representation.Representations.Add(model.CreateShapeRepresentationLightingGoniometric(color, position, colourTemperature, luminousFlux, distribution));
             return light;
         }
-
+    #endregion
 
         #region Lights with BackWardCompability (IFC2x3 - FlowTerminal)
 
