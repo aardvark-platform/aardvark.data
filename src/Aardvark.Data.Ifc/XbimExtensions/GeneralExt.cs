@@ -96,7 +96,7 @@ namespace Aardvark.Data.Ifc
 
             switch (units)
             {
-                case ProjectUnitsExtended.SIUnitsM : project.UnitsInContext.SetOrChangeSiUnit(IfcUnitEnum.LENGTHUNIT, IfcSIUnitName.METRE, IfcSIPrefix.DECA); break;
+                case ProjectUnitsExtended.SIUnitsM : project.UnitsInContext.SetOrChangeSiUnit(IfcUnitEnum.LENGTHUNIT, IfcSIUnitName.METRE, null); break;
                 case ProjectUnitsExtended.SIUnitsDM: project.UnitsInContext.SetOrChangeSiUnit(IfcUnitEnum.LENGTHUNIT, IfcSIUnitName.METRE, IfcSIPrefix.DECI); break;
                 case ProjectUnitsExtended.SIUnitsCM : project.UnitsInContext.SetOrChangeSiUnit(IfcUnitEnum.LENGTHUNIT, IfcSIUnitName.METRE, IfcSIPrefix.CENTI); break;
             };

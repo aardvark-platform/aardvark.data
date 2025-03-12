@@ -1,3 +1,6 @@
+### 1.1.0-prerelease0011
+- Fixed project length unit scale
+
 ### 1.1.0-prerelease0010
 - Extend IFC cross schema support
 
