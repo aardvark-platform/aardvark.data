@@ -1,0 +1,118 @@
+name: Build FreeImage Binaries
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - vcpkg
+    paths:
+      - .github/workflows/build-freeimage.yml
+jobs:
+  windows-x64:
+    name: Windows (x64)
+    runs-on: windows-2019
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build
+        run:  vcpkg install --host-triplet=windows-x64-release-mt
+        working-directory: .\vcpkg\FreeImage
+      - name: Upload Windows native libs
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: vcpkg/FreeImage/vcpkg_installed/windows-x64-release-mt/bin/FreeImage.dll
+  linux-x64:
+    name: Linux (x64)
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install CMake
+        uses: ssrobins/install-cmake@v1
+        with:
+          version: 3.31.6
+      - name: CMake
+        run: cmake --version
+      - name: Build
+        run: |
+          export VCPKG_FORCE_SYSTEM_BINARIES=1
+            vcpkg install --host-triplet=linux-x64-release
+        working-directory: ./vcpkg/FreeImage
+      - name: Upload Linux native libs
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: vcpkg/FreeImage/vcpkg_installed/linux-x64-release/lib/libFreeImage.so
+  macos-x64:
+    name: MacOS (x64)
+    runs-on: macos-13
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build
+        run: vcpkg install --host-triplet=darwin-x64-release
+        working-directory: ./vcpkg/FreeImage
+      - name: Upload MacOS native libs
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-x64
+          path: vcpkg/FreeImage/vcpkg_installed/darwin-x64-release/lib/libFreeImage.dylib
+  macos-arm64:
+    name: MacOS (ARM64)
+    runs-on: macos-14
+    steps:  
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Clone vcpkg
+        run: git clone https://github.com/microsoft/vcpkg.git vcpkg-tool
+      - name: Setup vcpkg
+        run: ./bootstrap-vcpkg.sh
+        working-directory: ./vcpkg-tool
+      - name: Build
+        run: |
+          export VCPKG_ROOT=`realpath ../../vcpkg-tool`
+            export PATH=$VCPKG_ROOT:$PATH
+            vcpkg install --host-triplet=darwin-arm64-release
+        working-directory: ./vcpkg/FreeImage
+      - name: Upload MacOS native libs
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-arm64
+          path: vcpkg/FreeImage/vcpkg_installed/darwin-arm64-release/lib/libFreeImage.dylib
+  build:
+    name: Build
+    runs-on: windows-latest
+    needs: 
+      - windows-x64
+      - linux-x64
+      - macos-x64
+      - macos-arm64
+    steps:  
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download MacOS dependencies (x64)
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-x64
+          path: lib/Native/Aardvark.PixImage.FreeImage/mac/AMD64/
+      - name: Download MacOS dependencies (arm64)
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-arm64
+          path: lib/Native/Aardvark.PixImage.FreeImage/mac/ARM64/
+      - name: Download Linux dependencies 
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-x64
+          path: lib/Native/Aardvark.PixImage.FreeImage/linux/AMD64/
+      - name: Download Windows dependencies
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-x64
+          path: lib/Native/Aardvark.PixImage.FreeImage/windows/AMD64/
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "[FreeImage] Update native libraries"
+          branch: freeimage-ci-build
+          title: "[FreeImage] Update native libraries"

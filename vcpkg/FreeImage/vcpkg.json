@@ -1,0 +1,8 @@
+{
+  "dependencies": [
+    "freeimage"
+  ],
+  "overrides": [
+    { "name": "freeimage", "version": "3.18.0#27" }
+  ]
+}
