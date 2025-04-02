@@ -1,3 +1,7 @@
+### 5.3.6
+- Added MacOS binaries
+- Removed MSVC runtime dependency on Windows
+
 ### 5.3.5
 - Updated to NET 8 and Aardvark.Base 5.3
 
