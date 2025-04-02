@@ -1,4 +1,5 @@
 ﻿using Aardvark.Base;
+using Aardvark.Data;
 using NUnit.Framework;
 
 namespace FreeImageNETUnitTest
@@ -11,6 +12,7 @@ namespace FreeImageNETUnitTest
         {
             IntrospectionProperties.CustomEntryAssembly = typeof(SetUpFixture).Assembly;
             Aardvark.Base.Aardvark.Init();
+            PixImageFreeImage.Init();
         }
 
         [OneTimeTearDown]
