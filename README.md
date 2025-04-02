@@ -1,8 +1,6 @@
 # Aardvark.Data
 
-![Windows](https://github.com/aardvark-platform/aardvark.data/workflows/Windows/badge.svg)
-![MacOS](https://github.com/aardvark-platform/aardvark.data/workflows/MacOS/badge.svg)
-![Linux](https://github.com/aardvark-platform/aardvark.data/workflows/Linux/badge.svg)
+![Build](https://github.com/aardvark-platform/aardvark.data/workflows/Build/badge.svg)
 ![Publish](https://github.com/aardvark-platform/aardvark.data/workflows/Publish/badge.svg)
 
 [The Aardvark Platform](https://aardvarkians.com/) |
