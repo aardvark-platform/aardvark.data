@@ -8,9 +8,40 @@ on:
       - '**/RELEASE_NOTES.md'
       - .github/workflows/publish.yml
 jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+            os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+            include:
+              - os: ubuntu-latest
+                solution-suffix: NonWindows.slnf
+              - os: windows-latest
+                solution-suffix: sln
+              - os: macos-13
+                solution-suffix: NonWindows.slnf
+              - os: macos-14
+                solution-suffix: NonWindows.slnf
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Restore Tools
+        run: dotnet tool restore
+      - name: Restore
+        run: dotnet paket restore
+      - name: Build
+        run: dotnet build -c Release src/Aardvark.Data.${{ matrix.solution-suffix }}
+      - name: Test
+        run: dotnet test src/Aardvark.Data.${{ matrix.solution-suffix }} -c Release --no-build --nologo --logger:"console;verbosity=normal"
   pack:
     name: Package
     runs-on: windows-latest
+    needs: test
     steps:  
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,8 +56,6 @@ jobs:
       - name: Build
         shell: cmd
         run: dotnet build -c Release src\Aardvark.Data.sln
-      - name: Test
-        run: dotnet test src\Aardvark.Data.sln -c Release --no-build --nologo --logger:"console;verbosity=normal"
       - name: Pack
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
