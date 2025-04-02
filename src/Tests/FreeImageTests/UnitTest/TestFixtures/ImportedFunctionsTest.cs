@@ -1179,7 +1179,7 @@ namespace FreeImageNETUnitTest.TestFixtures
             FreeImage.UnloadEx(ref dib);
         }
 
-        [Test]
+        [Test, Ignore("Not supported by vcpkg build.")]
         public void FreeImage_JPEGTransform()
         {
             string filename = iManager.GetBitmapPath(ImageType.JPEG, ImageColorType.Type_24);
@@ -1398,7 +1398,7 @@ namespace FreeImageNETUnitTest.TestFixtures
             FreeImage.UnloadEx(ref dib);
         }
 
-        [Test]
+        [Test, Ignore("Not supported by vcpkg build.")]
         public void FreeImage_JPEGCrop()
         {
             string filename = iManager.GetBitmapPath(ImageType.JPEG, ImageColorType.Type_01_Dither);

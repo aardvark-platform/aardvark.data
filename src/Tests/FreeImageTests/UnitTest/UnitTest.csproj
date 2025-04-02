@@ -6,11 +6,7 @@
     <AssemblyName>UnitTest</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="..\..\..\..\lib\Native\Aardvark.PixImage.FreeImage\windows\AMD64\FreeImage.dll" Link="FreeImage.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
+    <ProjectReference Include="..\..\..\Aardvark.PixImage.FreeImage\Aardvark.PixImage.FreeImage.csproj" />
     <ProjectReference Include="..\..\..\FreeImage.Standard\FreeImage.Standard.csproj" />
   </ItemGroup>
   <Import Project="..\..\..\..\.paket\Paket.Restore.targets" />

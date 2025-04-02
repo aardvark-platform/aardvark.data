@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 namespace FreeImageNETUnitTest
 {
@@ -163,10 +164,13 @@ namespace FreeImageNETUnitTest
             return result;
         }
 
+        private static string GetSourcePath([CallerFilePath] string path = null)
+            => Path.GetDirectoryName(path);
+
         private static string GetImageDataFolder()
         {
-            string solutionFolder = NativeLibraryLoader.GetSolutionFolder();
-            string imagesFolder = Path.Combine(solutionFolder, "src", "Tests", "FreeImageTests", "UnitTest", "UnitTestData", "Images");
+            string currentFolder = GetSourcePath();
+            string imagesFolder = Path.Combine(currentFolder, "UnitTestData", "Images");
 
             return Path.GetFullPath(imagesFolder);
         }

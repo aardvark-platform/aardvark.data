@@ -251,6 +251,7 @@ module PixLoaderTests =
 
     [<SetUp>]
     let setup() =
+        IntrospectionProperties.CustomEntryAssembly <- typeof<SaveLoadInput>.Assembly
         Aardvark.Init()
         Report.Verbosity <- 3
 

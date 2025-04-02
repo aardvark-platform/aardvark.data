@@ -1,6 +1,5 @@
-﻿using NUnit.Framework;
-using System.IO;
-using System.Reflection;
+﻿using Aardvark.Base;
+using NUnit.Framework;
 
 namespace FreeImageNETUnitTest
 {
@@ -10,10 +9,8 @@ namespace FreeImageNETUnitTest
         [OneTimeSetUp]
         public void Init()
         {
-            string dir = Path.GetDirectoryName(typeof(SetUpFixture).GetTypeInfo().Assembly.Location);
-            Directory.SetCurrentDirectory(dir);
-
-            NativeLibraryLoader.CopyFreeImageNativeDll();
+            IntrospectionProperties.CustomEntryAssembly = typeof(SetUpFixture).Assembly;
+            Aardvark.Base.Aardvark.Init();
         }
 
         [OneTimeTearDown]
