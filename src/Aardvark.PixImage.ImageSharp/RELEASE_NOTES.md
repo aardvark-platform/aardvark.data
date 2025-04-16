@@ -1,3 +1,6 @@
+### 3.0.0
+- Updated to ImageSharp 3
+
 ### 2.0.2
 - Updated to ImageSharp 2.1.10 (CVE-2025-27598)
 

@@ -4,9 +4,9 @@ open Aardvark.Base
 open Aardvark.Base.Monads
 open System
 open System.IO
-open System.Runtime.InteropServices
 open Microsoft.FSharp.NativeInterop
 open SixLabors.ImageSharp
+open SixLabors.ImageSharp.Metadata
 open SixLabors.ImageSharp.Processing
 open SixLabors.ImageSharp.Metadata.Profiles.Exif
 open SixLabors.ImageSharp.Formats
@@ -159,19 +159,11 @@ module private ImageSharpExtensions =
             v.ToRgba32(&c)
             C3b(c.R, c.G, c.B)
 
-        [<Extension>]
-        static member internal TryGetValue(this : ExifProfile, tag : ExifTag<'v>, [<Out>] v: byref<'v>) =
-            let r = this.GetValue tag
-            if isNull r then false
-            else
-                v <- r.Value
-                true
-
 /// Internal tools for copying beetween PixImage and ImageSharp Images.
 [<AutoOpen>]
 module private ImageSharpHelpers =
 
-    let (!!) (a : bool, v : 'a) = if a then Some v else None
+    let (!!) (a : bool, v : IExifValue<'T>) = if a then Some v.Value else None
 
     let piDirect<'TPixel, 'T when 'T : unmanaged and 'TPixel : (new : unit -> 'TPixel) and 'TPixel : struct and 'TPixel :> IPixel<'TPixel> and 'TPixel : unmanaged> (img : Image<'TPixel>, dst : PixImage<'T>) : unit =
         img.PinVolumeRows(dst.ChannelCount, fun y src ->
@@ -359,11 +351,11 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
             PixFormat.FloatRGBA,            (fun (img : PixImage) -> imgDirect<float32, RgbaVector>(unbox img) :> Image)
         ]
 
-    static let getRotateAndFlipMode (img : IImageInfo) =
-        if isNull img.Metadata.ExifProfile then
+    static let getRotateAndFlipMode (data : ImageMetadata) =
+        if isNull data.ExifProfile then
             RotateMode.None, FlipMode.None
         else
-            match img.Metadata.ExifProfile.TryGetValue ExifTag.Orientation with
+            match data.ExifProfile.TryGetValue ExifTag.Orientation with
             | (true, v) ->
                 match unbox<uint16> v with
                 | 1us -> RotateMode.None, FlipMode.None             // Horizontal (normal)
@@ -378,11 +370,11 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
             | _ ->
                 RotateMode.None, FlipMode.None
 
-    static let getImageTrafo (img : IImageInfo) =
-        if isNull img.Metadata.ExifProfile then
+    static let getImageTrafo (data : ImageMetadata) =
+        if isNull data.ExifProfile then
             ImageTrafo.Identity
         else
-            match img.Metadata.ExifProfile.TryGetValue ExifTag.Orientation with
+            match data.ExifProfile.TryGetValue ExifTag.Orientation with
             | (true, v) ->
                 match unbox<uint16> v with
                 | 1us -> ImageTrafo.Identity     // Horizontal (normal)
@@ -431,7 +423,7 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
         try
             use img = Image.Load stream
             let tp = img.GetType().GetGenericArguments().[0]
-            let trafo = getImageTrafo img
+            let trafo = getImageTrafo img.Metadata
             toPixImage tp img trafo |> Some
         with _ ->
             None
@@ -448,7 +440,7 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
     static member Create(stream : Stream) =
         use img = Image.Load stream
         let tp = img.GetType().GetGenericArguments().[0]
-        let trafo = getImageTrafo img
+        let trafo = getImageTrafo img.Metadata
         toPixImage tp img trafo
 
     /// Reads a Image from the given Stream or fails if not an image.
@@ -471,9 +463,10 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
     static member TryGetThumb(stream : Stream) =
         try
             let info = Image.Identify(stream)
-            let trafo = getImageTrafo info
-            let thumb = info.Metadata.ExifProfile.CreateThumbnail<Rgba32>()
-            toPixImage (thumb.GetType().GetGenericArguments().[0]) thumb trafo |> Some
+            let trafo = getImageTrafo info.Metadata
+            match info.Metadata.ExifProfile.TryCreateThumbnail() with
+            | true, thumb -> toPixImage (thumb.GetType().GetGenericArguments().[0]) thumb trafo |> Some
+            | _ -> None
         with _ ->
             None
 
@@ -489,7 +482,7 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
     static member GetPixImageInfo(stream : Stream) =
         try
             let info = Image.Identify stream
-            let trafo = getImageTrafo info
+            let trafo = getImageTrafo info.Metadata
             let size = trafo |> ImageTrafo.transformSize (V2i(info.Width, info.Height))
             PixImageInfo(PixFormat.ByteRGBA, size)
         with _ ->
@@ -506,25 +499,25 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
 
     /// Gets the (optional) CameraInfo for the given image.
     [<Extension>]
-    static member TryGetCameraInfo(info : IImageInfo) =
+    static member private TryGetCameraInfo(data : ImageMetadata, width : int, height : int) =
 
         option {
-            if not (isNull info.Metadata.ExifProfile) then
-                let! make = !!info.Metadata.ExifProfile.TryGetValue(ExifTag.Make)
-                let! model = !!info.Metadata.ExifProfile.TryGetValue(ExifTag.Model)
-                let! focal = !!info.Metadata.ExifProfile.TryGetValue(ExifTag.FocalLength)
-                let aperture1 = !!info.Metadata.ExifProfile.TryGetValue(ExifTag.ApertureValue)
-                let lensMake = !!info.Metadata.ExifProfile.TryGetValue(ExifTag.LensMake)
-                let lensModel = !!info.Metadata.ExifProfile.TryGetValue(ExifTag.LensModel)
+            if not (isNull data.ExifProfile) then
+                let! make = !!data.ExifProfile.TryGetValue(ExifTag.Make)
+                let! model = !!data.ExifProfile.TryGetValue(ExifTag.Model)
+                let! focal = !!data.ExifProfile.TryGetValue(ExifTag.FocalLength)
+                let aperture1 = !!data.ExifProfile.TryGetValue(ExifTag.ApertureValue)
+                let lensMake = !!data.ExifProfile.TryGetValue(ExifTag.LensMake)
+                let lensModel = !!data.ExifProfile.TryGetValue(ExifTag.LensModel)
 
 
                 let aperture =
                     match aperture1 with
                     | Some a -> Some a
-                    | None -> !!info.Metadata.ExifProfile.TryGetValue(ExifTag.MaxApertureValue)
+                    | None -> !!data.ExifProfile.TryGetValue(ExifTag.MaxApertureValue)
 
                 let focal35 =
-                    !!info.Metadata.ExifProfile.TryGetValue(ExifTag.FocalLengthIn35mmFilm)
+                    !!data.ExifProfile.TryGetValue(ExifTag.FocalLengthIn35mmFilm)
 
                 let crop =
                     match focal35 with
@@ -534,7 +527,7 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
 
                 try
                     return {
-                        size        = info |> getImageTrafo |> ImageTrafo.transformSize (V2i(info.Width, info.Height))
+                        size        = data |> getImageTrafo |> ImageTrafo.transformSize (V2i(width, height))
                         cropFactor  = crop
                         make        = make.Trim()
                         model       = model.Trim()
@@ -550,8 +543,18 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
 
         }
 
+    /// Gets the (optional) CameraInfo for the given image.
     [<Extension>]
-    static member GetMetadata(image : IImageInfo) =
+    static member TryGetCameraInfo(image : Image) =
+        image.Metadata.TryGetCameraInfo(image.Width, image.Height)
+
+    /// Gets the (optional) CameraInfo for the given image info.
+    [<Extension>]
+    static member TryGetCameraInfo(info : ImageInfo) =
+        info.Metadata.TryGetCameraInfo(info.Width, info.Height)
+
+    [<Extension>]
+    static member GetMetadata(image : Image) =
         let mutable res = Map.empty
         let exif = image.Metadata.ExifProfile
         if not (isNull exif) then
@@ -577,10 +580,10 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
 
     /// Gets the CameraInfo for the given image or fails if not existing.
     [<Extension>]
-    static member GetCameraInfo(info : IImageInfo) =
-        match info.TryGetCameraInfo() with
+    static member GetCameraInfo(image : Image) =
+        match image.TryGetCameraInfo() with
         | Some info -> info
-        | None -> failwithf "image does not contain CameraInfo: %A" info
+        | None -> failwithf "image does not contain CameraInfo: %A" image
 
     /// Gets the CameraInfo for the given file or fails if no camera info was found.
     static member GetCameraInfo(file : string) =
