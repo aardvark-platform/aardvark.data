@@ -16,8 +16,7 @@ namespace Aardvark.Data
 
         #region Static Tables and Methods
 
-        private static readonly Dictionary<PixFileFormat, FREE_IMAGE_FORMAT> s_fileFormats =
-            new Dictionary<PixFileFormat, FREE_IMAGE_FORMAT>
+        private static readonly Dictionary<PixFileFormat, FREE_IMAGE_FORMAT> s_fileFormats = new()
         {
             { PixFileFormat.Unknown, FREE_IMAGE_FORMAT.FIF_UNKNOWN   },
             { PixFileFormat.Bmp,     FREE_IMAGE_FORMAT.FIF_BMP       },
@@ -58,7 +57,86 @@ namespace Aardvark.Data
             { PixFileFormat.Raw,     FREE_IMAGE_FORMAT.FIF_RAW       },
         };
 
-        private static bool SupportsAlpha(PixFileFormat format)
+        private static readonly Dictionary<PixFormat, Func<PixImage, FIBITMAP>> s_bitmapCreators = new()
+        {
+            { PixFormat.ByteBW,     pi => PixImageToBitmapBW((PixImage<byte>)pi) },
+            { PixFormat.ByteGray,   pi => PixImageToBitmap((PixImage<byte>)pi, FREE_IMAGE_TYPE.FIT_BITMAP) },
+            { PixFormat.ByteRGB,    pi => PixImageToBitmap((PixImage<byte>)pi, FREE_IMAGE_TYPE.FIT_BITMAP) },
+            { PixFormat.ByteRGBA,   pi => PixImageToBitmap((PixImage<byte>)pi, FREE_IMAGE_TYPE.FIT_BITMAP) },
+            { PixFormat.ByteRGBP,   pi => PixImageToBitmap((PixImage<byte>)pi, FREE_IMAGE_TYPE.FIT_BITMAP) },
+            { PixFormat.ByteBGR,    pi => PixImageToBitmap((PixImage<byte>)pi, FREE_IMAGE_TYPE.FIT_BITMAP) },
+            { PixFormat.ByteBGRA,   pi => PixImageToBitmap((PixImage<byte>)pi, FREE_IMAGE_TYPE.FIT_BITMAP) },
+            { PixFormat.ByteBGRP,   pi => PixImageToBitmap((PixImage<byte>)pi, FREE_IMAGE_TYPE.FIT_BITMAP) },
+
+            { PixFormat.ShortGray,  pi => PixImageToBitmap((PixImage<short>)pi,  FREE_IMAGE_TYPE.FIT_INT16) },
+            { PixFormat.UShortGray, pi => PixImageToBitmap((PixImage<ushort>)pi, FREE_IMAGE_TYPE.FIT_UINT16) },
+            { PixFormat.UShortRGB,  pi => PixImageToBitmap((PixImage<ushort>)pi, FREE_IMAGE_TYPE.FIT_RGB16) },
+            { PixFormat.UShortBGR,  pi => PixImageToBitmap((PixImage<ushort>)pi, FREE_IMAGE_TYPE.FIT_RGB16) },
+            { PixFormat.UShortRGBA, pi => PixImageToBitmap((PixImage<ushort>)pi, FREE_IMAGE_TYPE.FIT_RGBA16) },
+            { PixFormat.UShortBGRA, pi => PixImageToBitmap((PixImage<ushort>)pi, FREE_IMAGE_TYPE.FIT_RGBA16) },
+            { PixFormat.UShortRGBP, pi => PixImageToBitmap((PixImage<ushort>)pi, FREE_IMAGE_TYPE.FIT_RGBA16) },
+            { PixFormat.UShortBGRP, pi => PixImageToBitmap((PixImage<ushort>)pi, FREE_IMAGE_TYPE.FIT_RGBA16) },
+
+            { PixFormat.IntGray,    pi => PixImageToBitmap((PixImage<int>)pi,  FREE_IMAGE_TYPE.FIT_INT32) },
+            { PixFormat.UIntGray,   pi => PixImageToBitmap((PixImage<uint>)pi, FREE_IMAGE_TYPE.FIT_UINT32) },
+
+            { PixFormat.FloatGray,  pi => PixImageToBitmap((PixImage<float>)pi, FREE_IMAGE_TYPE.FIT_FLOAT) },
+            { PixFormat.FloatRGB,   pi => PixImageToBitmap((PixImage<float>)pi, FREE_IMAGE_TYPE.FIT_RGBF) },
+            { PixFormat.FloatBGR,   pi => PixImageToBitmap((PixImage<float>)pi, FREE_IMAGE_TYPE.FIT_RGBF) },
+            { PixFormat.FloatRGBA,  pi => PixImageToBitmap((PixImage<float>)pi, FREE_IMAGE_TYPE.FIT_RGBAF) },
+            { PixFormat.FloatBGRA,  pi => PixImageToBitmap((PixImage<float>)pi, FREE_IMAGE_TYPE.FIT_RGBAF) },
+            { PixFormat.FloatRGBP,  pi => PixImageToBitmap((PixImage<float>)pi, FREE_IMAGE_TYPE.FIT_RGBAF) },
+            { PixFormat.FloatBGRP,  pi => PixImageToBitmap((PixImage<float>)pi, FREE_IMAGE_TYPE.FIT_RGBAF) },
+
+            { PixFormat.DoubleGray, pi => PixImageToBitmap((PixImage<double>)pi, FREE_IMAGE_TYPE.FIT_DOUBLE) },
+            { PixFormat.DoubleRG,   pi => PixImageToBitmap((PixImage<double>)pi, FREE_IMAGE_TYPE.FIT_COMPLEX) },
+        };
+
+        private static readonly Dictionary<FREE_IMAGE_TYPE, Func<FIBITMAP, PixImage>> s_pixImageCreators = new()
+        {
+            { FREE_IMAGE_TYPE.FIT_BITMAP,  BitmapToPixImage },
+
+            { FREE_IMAGE_TYPE.FIT_INT16,   bitmap => BitmapToPixImage<short>(bitmap, Col.Format.Gray) },
+            { FREE_IMAGE_TYPE.FIT_UINT16,  bitmap => BitmapToPixImage<ushort>(bitmap, Col.Format.Gray) },
+            { FREE_IMAGE_TYPE.FIT_RGB16,   bitmap => BitmapToPixImage<ushort>(bitmap, Col.Format.BGR) },
+            { FREE_IMAGE_TYPE.FIT_RGBA16,  bitmap => BitmapToPixImage<ushort>(bitmap, Col.Format.BGRA) },
+
+            { FREE_IMAGE_TYPE.FIT_INT32,   bitmap => BitmapToPixImage<int>(bitmap, Col.Format.Gray) },
+            { FREE_IMAGE_TYPE.FIT_UINT32,  bitmap => BitmapToPixImage<uint>(bitmap, Col.Format.Gray) },
+
+            { FREE_IMAGE_TYPE.FIT_FLOAT,   bitmap => BitmapToPixImage<float>(bitmap, Col.Format.Gray) },
+            { FREE_IMAGE_TYPE.FIT_RGBF,    bitmap => BitmapToPixImage<float>(bitmap, Col.Format.BGR) },
+            { FREE_IMAGE_TYPE.FIT_RGBAF,   bitmap => BitmapToPixImage<float>(bitmap, Col.Format.BGRA) },
+
+            { FREE_IMAGE_TYPE.FIT_DOUBLE,  bitmap => BitmapToPixImage<double>(bitmap, Col.Format.Gray) },
+            { FREE_IMAGE_TYPE.FIT_COMPLEX, bitmap => BitmapToPixImage<double>(bitmap, Col.Format.RG) },
+        };
+
+        private static Col.Format SwapRGB(this Col.Format format)
+        {
+            return format switch
+            {
+                Col.Format.RGB => Col.Format.BGR,
+                Col.Format.BGR => Col.Format.RGB,
+                Col.Format.RGBA => Col.Format.BGRA,
+                Col.Format.BGRA => Col.Format.RGBA,
+                Col.Format.RGBP => Col.Format.BGRP,
+                Col.Format.BGRP => Col.Format.RGBP,
+                _ => format
+            };
+        }
+
+        private static Col.Format WithoutAlpha(this Col.Format format)
+            => format switch
+            {
+                Col.Format.BGRA => Col.Format.BGR,
+                Col.Format.BGRP => Col.Format.BGR,
+                Col.Format.RGBA => Col.Format.RGB,
+                Col.Format.RGBP => Col.Format.RGB,
+                _ => format
+            };
+
+        private static bool SupportsAlpha(this PixFileFormat format)
             => format switch
             {
                 PixFileFormat.Jpeg => false,
@@ -76,669 +154,200 @@ namespace Aardvark.Data
 
         #region Bitmap to PixImage
 
-        private static PixImage BitmapToPixImage(FIBITMAP dib)
+        private static PixImage BitmapToPixImage<T>(FIBITMAP bitmap, Col.Format format) where T : unmanaged
         {
-            var sx = (int)FreeImage.GetWidth(dib);
-            var sy = (int)FreeImage.GetHeight(dib);
-            var delta = (int)FreeImage.GetPitch(dib);
-            var ftype = FreeImage.GetImageType(dib);
-            var bpp = FreeImage.GetBPP(dib);
+            var sx = (int)FreeImage.GetWidth(bitmap);
+            var sy = (int)FreeImage.GetHeight(bitmap);
+            var delta = (int)FreeImage.GetPitch(bitmap);
+            var bits = FreeImage.GetBits(bitmap) + sy * delta;
 
-            var bits = FreeImage.GetBits(dib) + sy * delta;
+            var pi = new PixImage<T>(format, sx, sy);
+            var data = pi.Volume.Data;
+            long i = 0;
 
-            switch (ftype)
+            var channelOrder = pi.Format.SwapRGB().ChannelOrder(); // FreeImage uses BGR layout while Aardvark assumes RGB as default
+
+            for (var y = 0; y < sy; y++)
             {
-                case FREE_IMAGE_TYPE.FIT_BITMAP:
-                    switch (bpp)
+                bits -= delta;
+                unsafe
+                {
+                    T* pixel = (T*)bits;
+                    for (var x = 0; x < sx; x++)
                     {
-                        case 1:
-                            {
-                                var palette = FreeImage.GetPaletteEx(dib);
-                                var pi = new PixImage<byte>(Col.Format.BW, sx, sy, 1);
-                                var data = pi.Volume.Data;
-                                int i = 0;
-                                if (palette != null &&
-                                    palette[0].rgbRed + palette[0].rgbGreen + palette[0].rgbBlue >= 384)
-                                {
-                                    for (var y = 0; y < sy; y++)
-                                    {
-                                        bits -= delta;
-                                        byte bit = 0x80; int bi = 0;
-                                        unsafe
-                                        {
-                                            byte* pixel = (byte*)bits;
-                                            for (var x = 0; x < sx; x++)
-                                            {
-                                                data[i++] = ((pixel[bi] & bit) == 0) ? (byte)255 : (byte)0;
-                                                bit >>= 1; if (bit == 0) { bit = 0x80; bi++; }
-                                            }
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    for (var y = 0; y < sy; y++)
-                                    {
-                                        bits -= delta;
-                                        byte bit = 0x80; int bi = 0;
-                                        unsafe
-                                        {
-                                            byte* pixel = (byte*)bits;
-                                            for (var x = 0; x < sx; x++)
-                                            {
-                                                data[i++] = ((pixel[bi] & bit) != 0) ? (byte)255 : (byte)0;
-                                                bit >>= 1; if (bit == 0) { bit = 0x80; bi++; }
-                                            }
-                                        }
-                                    }
-                                }
-                                return pi;
-                            }
-                        case 8:
-                            {
-                                var pi = new PixImage<byte>(sx, sy, 1);
-                                var data = pi.Volume.Data;
-                                long i = 0;
-                                for (var y = 0; y < sy; y++)
-                                {
-                                    bits -= delta;
-                                    unsafe
-                                    {
-                                        Byte* pixel = (Byte*)bits;
-                                        for (var x = 0; x < sx; x++)
-                                            data[i++] = pixel[x];
-                                    }
-                                }
-                                return pi;
-                            }
-                        case 24:
-                            {
-                                var pi = new PixImage<byte>(sx, sy, 3);
-                                var data = pi.Volume.Data;
-                                long i = 0;
-                                for (var y = 0; y < sy; y++)
-                                {
-                                    bits -= delta;
-                                    unsafe
-                                    {
-                                        Byte* pixel = (Byte*)bits;
-                                        for (var x = 0; x < sx; x++)
-                                        {
-                                            data[i++] = pixel[FreeImage.FI_RGBA_BLUE];
-                                            data[i++] = pixel[FreeImage.FI_RGBA_GREEN];
-                                            data[i++] = pixel[FreeImage.FI_RGBA_RED];
-                                            pixel += 3;
-                                        }
-                                    }
-                                }
-                                return pi;
-                            }
-                        case 32:
-                            {
-                                var pi = new PixImage<byte>(sx, sy, 4);
-                                var data = pi.Volume.Data;
-                                long i = 0;
-                                for (var y = 0; y < sy; y++)
-                                {
-                                    bits -= delta;
-                                    unsafe
-                                    {
-                                        Byte* pixel = (Byte*)bits;
-                                        for (var x = 0; x < sx; x++)
-                                        {
-                                            data[i++] = pixel[FreeImage.FI_RGBA_BLUE];
-                                            data[i++] = pixel[FreeImage.FI_RGBA_GREEN];
-                                            data[i++] = pixel[FreeImage.FI_RGBA_RED];
-                                            data[i++] = pixel[FreeImage.FI_RGBA_ALPHA];
-                                            pixel += 4;
-                                        }
-                                    }
-                                }
-                                return pi;
-                            }
-                    }
-                    break;
-                case FREE_IMAGE_TYPE.FIT_UINT16:
-                    {
-                        var pi = new PixImage<ushort>(sx, sy, 1);
-                        var data = pi.Volume.Data;
-                        long i = 0;
-                        for (var y = 0; y < sy; y++)
+                        for (var c = 0; c < pi.ChannelCount; c++)
                         {
-                            bits -= delta;
-                            unsafe
-                            {
-                                ushort* pixel = (ushort*)bits;
-                                for (var x = 0; x < sx; x++)
-                                    data[i++] = pixel[x];
-                            }
+                            data[i++] = pixel[channelOrder[c]];
                         }
-                        return pi;
+                        pixel += pi.ChannelCount;
                     }
-                case FREE_IMAGE_TYPE.FIT_INT16:
+                }
+            }
+            return pi;
+        }
+
+        private static PixImage BitmapToPixImage(FIBITMAP bitmap)
+        {
+            var bpp = FreeImage.GetBPP(bitmap);
+
+            if (bpp == 1)
+            {
+                var sx = (int)FreeImage.GetWidth(bitmap);
+                var sy = (int)FreeImage.GetHeight(bitmap);
+                var delta = (int)FreeImage.GetPitch(bitmap);
+                var bits = FreeImage.GetBits(bitmap) + sy * delta;
+                var palette = FreeImage.GetPaletteEx(bitmap);
+                var pi = new PixImage<byte>(Col.Format.BW, sx, sy);
+                var data = pi.Volume.Data;
+                int i = 0;
+                if (palette != null && palette[0].rgbRed + palette[0].rgbGreen + palette[0].rgbBlue >= 384)
+                {
+                    for (var y = 0; y < sy; y++)
                     {
-                        var pi = new PixImage<short>(sx, sy, 1);
-                        var data = pi.Volume.Data;
-                        long i = 0;
-                        for (var y = 0; y < sy; y++)
+                        bits -= delta;
+                        byte bit = 0x80; int bi = 0;
+                        unsafe
                         {
-                            bits -= delta;
-                            unsafe
+                            byte* pixel = (byte*)bits;
+                            for (var x = 0; x < sx; x++)
                             {
-                                short* pixel = (short*)bits;
-                                for (var x = 0; x < sx; x++)
-                                    data[i++] = pixel[x];
-                            }
-                        }
-                        return pi;
-                    }
-                case FREE_IMAGE_TYPE.FIT_UINT32:
-                    {
-                        var pi = new PixImage<uint>(sx, sy, 1);
-                        var data = pi.Volume.Data;
-                        long i = 0;
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            unsafe
-                            {
-                                uint* pixel = (uint*)bits;
-                                for (var x = 0; x < sx; x++)
-                                    data[i++] = pixel[x];
-                            }
-                        }
-                        return pi;
-                    }
-                case FREE_IMAGE_TYPE.FIT_INT32:
-                    {
-                        var pi = new PixImage<int>(sx, sy, 1);
-                        var data = pi.Volume.Data;
-                        long i = 0;
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            unsafe
-                            {
-                                int* pixel = (int*)bits;
-                                for (var x = 0; x < sx; x++)
-                                    data[i++] = pixel[x];
-                            }
-                        }
-                        return pi;
-                    }
-                case FREE_IMAGE_TYPE.FIT_FLOAT:
-                    {
-                        var pi = new PixImage<float>(sx, sy, 1);
-                        var data = pi.Volume.Data;
-                        long i = 0;
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            unsafe
-                            {
-                                float* pixel = (float*)bits;
-                                for (var x = 0; x < sx; x++)
-                                    data[i++] = pixel[x];
-                            }
-                        }
-                        return pi;
-                    }
-                case FREE_IMAGE_TYPE.FIT_DOUBLE:
-                    {
-                        var pi = new PixImage<double>(sx, sy, 1);
-                        var data = pi.Volume.Data;
-                        long i = 0;
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            unsafe
-                            {
-                                double* pixel = (double*)bits;
-                                for (var x = 0; x < sx; x++)
-                                    data[i++] = pixel[x];
+                                data[i++] = ((pixel[bi] & bit) == 0) ? (byte)255 : (byte)0;
+                                bit >>= 1; if (bit == 0) { bit = 0x80; bi++; }
                             }
                         }
                     }
-                    break;
-                case FREE_IMAGE_TYPE.FIT_COMPLEX:
+                }
+                else
+                {
+                    for (var y = 0; y < sy; y++)
                     {
-                        var pi = new PixImage<double>(sx, sy, 2);
-                        var data = pi.Volume.Data;
-                        long i = 0;
-                        for (var y = 0; y < sy; y++)
+                        bits -= delta;
+                        byte bit = 0x80; int bi = 0;
+                        unsafe
                         {
-                            bits -= delta;
-                            unsafe
+                            byte* pixel = (byte*)bits;
+                            for (var x = 0; x < sx; x++)
                             {
-                                FICOMPLEX* pixel = (FICOMPLEX*)bits;
-                                for (var x = 0; x < sx; x++)
-                                {
-                                    data[i++] = pixel[x].real;
-                                    data[i++] = pixel[x].imag;
-                                }
+                                data[i++] = ((pixel[bi] & bit) != 0) ? (byte)255 : (byte)0;
+                                bit >>= 1; if (bit == 0) { bit = 0x80; bi++; }
                             }
                         }
-                        return pi;
                     }
-                case FREE_IMAGE_TYPE.FIT_RGB16:
-                    {
-                        var pi = new PixImage<ushort>(sx, sy, 3);
-                        var data = pi.Volume.Data;
-                        long i = 0;
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            unsafe
-                            {
-                                FIRGB16* pixel = (FIRGB16*)bits;
-                                for (var x = 0; x < sx; x++)
-                                {
-                                    data[i++] = pixel[x].red;
-                                    data[i++] = pixel[x].green;
-                                    data[i++] = pixel[x].blue;
-                                }
-                            }
-                        }
-                        return pi;
-                    }
-                case FREE_IMAGE_TYPE.FIT_RGBF:
-                    {
-                        var pi = new PixImage<float>(sx, sy, 3);
-                        var data = pi.Volume.Data;
-                        long i = 0;
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            unsafe
-                            {
-                                FIRGBF* pixel = (FIRGBF*)bits;
-                                for (var x = 0; x < sx; x++)
-                                {
-                                    data[i++] = pixel[x].red;
-                                    data[i++] = pixel[x].green;
-                                    data[i++] = pixel[x].blue;
-                                }
-                            }
-                        }
-                        return pi;
-                    }
-                case FREE_IMAGE_TYPE.FIT_RGBA16:
-                    {
-                        var pi = new PixImage<ushort>(sx, sy, 4);
-                        var data = pi.Volume.Data;
-                        long i = 0;
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            unsafe
-                            {
-                                FIRGBA16* pixel = (FIRGBA16*)bits;
-                                for (var x = 0; x < sx; x++)
-                                {
-                                    data[i++] = pixel[x].red;
-                                    data[i++] = pixel[x].green;
-                                    data[i++] = pixel[x].blue;
-                                    data[i++] = pixel[x].alpha;
-                                }
-                            }
-                        }
-                        return pi;
-                    }
-                case FREE_IMAGE_TYPE.FIT_RGBAF:
-                    {
-                        var pi = new PixImage<float>(sx, sy, 4);
-                        var data = pi.Volume.Data;
-                        long i = 0;
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            unsafe
-                            {
-                                FIRGBAF* pixel = (FIRGBAF*)bits;
-                                for (var x = 0; x < sx; x++)
-                                {
-                                    data[i++] = pixel[x].red;
-                                    data[i++] = pixel[x].green;
-                                    data[i++] = pixel[x].blue;
-                                    data[i++] = pixel[x].alpha;
-                                }
-                            }
-                        }
-                        return pi;
-                    }
+                }
+                return pi;
             }
 
-            throw new NotSupportedException($"Unsupported image type {ftype}");
+            var format = bpp switch
+            {
+                8 => Col.Format.Gray,
+                24 => Col.Format.BGR,
+                32 => Col.Format.BGRA,
+                _ => throw new NotSupportedException($"Bit depth {bpp} is not supported.")
+            };
+
+            return BitmapToPixImage<byte>(bitmap, format);
         }
 
         #endregion
 
         #region PixImage to Bitmap
 
-        private static PixImage<T> WithoutAlpha<T>(PixImage<T> pi)
+        private static PixImage ToDenseLayout(this PixImage pi, bool removeAlpha)
         {
-            if (pi.ChannelCount == 4)
+            // PixImage -> Bitmap copy implementation requires a dense layout
+            var isDenseLayout = pi.VolumeInfo.DZ == 1L && pi.VolumeInfo.SZ == pi.VolumeInfo.DX;
+
+            // Trying to save an RGBA picture as JPEG fails because of the alpha channel
+            // => make sub volume and copy to dense layout again...
+            // Suboptimal but an easy workaround
+            var format = removeAlpha ? pi.Format.WithoutAlpha() : pi.Format;
+
+            if (isDenseLayout && pi.Format == format) return pi;
+            return pi.ToPixImage(format);
+        }
+
+        private static FIBITMAP PixImageToBitmap<T>(PixImage<T> pi, FREE_IMAGE_TYPE imageType) where T : unmanaged
+        {
+            var sx = pi.Size.X;
+            var sy = pi.Size.Y;
+            var bpp = pi.ChannelCount * typeof(T).GetCLRSize() * 8;
+            var data = pi.Volume.Data;
+            long i = pi.Volume.FirstIndex;
+            long j = pi.Volume.JY;
+
+            var bitmap = FreeImage.AllocateT(imageType, sx, sy, bpp);
+            var delta = (int)FreeImage.GetPitch(bitmap);
+            var bits = FreeImage.GetBits(bitmap) + sy * delta;
+
+            var channelOrder = pi.Format.SwapRGB().ChannelOrder(); // FreeImage uses BGR layout while Aardvark assumes RGB as default
+
+            for (var y = 0; y < sy; y++)
             {
-                var format = pi.Format switch
+                bits -= delta;
+                unsafe
                 {
-                    Col.Format.BGRA => Col.Format.BGR,
-                    Col.Format.BGRP => Col.Format.BGR,
-                    _ => Col.Format.RGB
-                };
-
-                // Trying to save an RGBA picture as JPEG fails because of the alpha channel
-                // => make sub volume and copy to dense layout again...
-                // Suboptimal but an easy workaround
-                var volume = pi.Volume.SubVolume(V3i.Zero, new V3i(pi.Size, 3)).CopyToImageWindow();
-                return new PixImage<T>(format, volume);
+                    T* pixel = (T*)bits;
+                    for (var x = 0; x < sx; x++)
+                    {
+                        for (var c = 0; c < pi.ChannelCount; c++)
+                        {
+                            pixel[channelOrder[c]] = data[i++];
+                        }
+                        pixel += pi.ChannelCount;
+                    }
+                }
+                i += j;
             }
-            else
-                return pi;
+
+            return bitmap;
         }
 
-        private static void CheckLayout(VolumeInfo vi)
+        private static FIBITMAP PixImageToBitmapBW(PixImage<byte> pi)
         {
-            if (vi.DZ != 1L)
-                throw new ArgumentException($"Volume must have DZ = 1 (is {vi.DZ}");
-
-            if (vi.SZ != vi.DX)
-                throw new ArgumentException($"Volume must have SZ = DX");
-        }
-
-        private static FIBITMAP PixImageToBitmap(PixImage<byte> pi)
-        {
-            CheckLayout(pi.Volume.Info);
-            var sx = pi.Size.X;
-            var sy = pi.Size.Y;
-            var bpp = pi.ChannelCount == 1 && pi.Format == Col.Format.BW ? 1 : pi.ChannelCount * 8;
-            var data = pi.Volume.Data;
-            long i = pi.Volume.FirstIndex;
-            long j = pi.Volume.JY;
-
-            switch (bpp)
-            {
-                case 1:
-                    {
-                        var dib = FreeImage.Allocate(sx, sy, bpp);
-                        var delta = (int)FreeImage.GetPitch(dib);
-                        var bits = FreeImage.GetBits(dib) + sy * delta;
-                        var palette = FreeImage.GetPaletteEx(dib);
-                        if (palette != null) // should alway be != null
-                        {
-                            palette[0] = new RGBQUAD { rgbRed = 0, rgbGreen = 0, rgbBlue = 0 };
-                            palette[1] = new RGBQUAD { rgbRed = 255, rgbGreen = 255, rgbBlue = 255 };
-                        }
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            byte bit = 0x80;
-                            int bi = 0;
-                            unsafe
-                            {
-                                byte* pixel = (byte*)bits;
-                                for (var x = 0; x < sx; x++)
-                                {
-                                    if ((data[i++] & 0x80) != 0) pixel[bi] |= bit;
-                                    bit >>= 1; if (bit == 0) { bit = 0x80; bi++; }
-                                }
-                            }
-                            i += j;
-                        }
-
-                        return dib;
-                    }
-                case 8:
-                    {
-                        var dib = FreeImage.Allocate(sx, sy, bpp);
-                        var delta = (int)FreeImage.GetPitch(dib);
-                        var bits = FreeImage.GetBits(dib) + sy * delta;
-
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            unsafe
-                            {
-                                byte* pixel = (byte*)bits;
-                                for (var x = 0; x < sx; x++)
-                                    pixel[x] = data[i++];
-                            }
-                            i += j;
-                        }
-
-                        return dib;
-                    }
-                case 24:
-                    {
-                        var dib = FreeImage.Allocate(sx, sy, bpp);
-                        var delta = (int)FreeImage.GetPitch(dib);
-                        var bits = FreeImage.GetBits(dib) + sy * delta;
-                        var channelOrder = new[] { FreeImage.FI_RGBA_BLUE, FreeImage.FI_RGBA_GREEN, FreeImage.FI_RGBA_RED };
-                        if (pi.Format == Col.Format.RGB) channelOrder = new[] { FreeImage.FI_RGBA_RED, FreeImage.FI_RGBA_GREEN, FreeImage.FI_RGBA_BLUE };
-
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            unsafe
-                            {
-                                byte* pixel = (byte*)bits;
-                                for (var x = 0; x < sx; x++)
-                                {
-                                    pixel[channelOrder[0]] = data[i++];
-                                    pixel[channelOrder[1]] = data[i++];
-                                    pixel[channelOrder[2]] = data[i++];
-                                    pixel += 3;
-                                }
-                            }
-                            i += j;
-                        }
-
-                        return dib;
-                    }
-                case 32:
-                    {
-                        var dib = FreeImage.Allocate(sx, sy, bpp);
-                        var delta = (int)FreeImage.GetPitch(dib);
-                        var bits = FreeImage.GetBits(dib) + sy * delta;
-                        var channelOrder = new[] { FreeImage.FI_RGBA_BLUE, FreeImage.FI_RGBA_GREEN, FreeImage.FI_RGBA_RED, FreeImage.FI_RGBA_ALPHA };
-                        if (pi.Format == Col.Format.RGBA) channelOrder = new[] { FreeImage.FI_RGBA_RED, FreeImage.FI_RGBA_GREEN, FreeImage.FI_RGBA_BLUE, FreeImage.FI_RGBA_ALPHA };
-
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            unsafe
-                            {
-                                byte* pixel = (byte*)bits;
-                                for (var x = 0; x < sx; x++)
-                                {
-                                    pixel[channelOrder[0]] = data[i++];
-                                    pixel[channelOrder[1]] = data[i++];
-                                    pixel[channelOrder[2]] = data[i++];
-                                    pixel[channelOrder[3]] = data[i++];
-                                    pixel += 4;
-                                }
-                            }
-                            i += j;
-                        }
-
-                        return dib;
-                    }
-                default:
-                    throw new ArgumentException($"Invalid channel count {pi.ChannelCount}");
-            }
-        }
-
-        private static FIBITMAP PixImageToBitmap(PixImage<ushort> pi)
-        {
-            CheckLayout(pi.Volume.Info);
             var sx = pi.Size.X;
             var sy = pi.Size.Y;
             var data = pi.Volume.Data;
             long i = pi.Volume.FirstIndex;
             long j = pi.Volume.JY;
 
-            switch (pi.ChannelCount)
+            var dib = FreeImage.Allocate(sx, sy, 1);
+            var delta = (int)FreeImage.GetPitch(dib);
+            var bits = FreeImage.GetBits(dib) + sy * delta;
+            var palette = FreeImage.GetPaletteEx(dib);
+            if (palette != null) // should alway be != null
             {
-                case 1:
-                    {
-                        var dib = FreeImage.AllocateT(FREE_IMAGE_TYPE.FIT_UINT16, sx, sy, 16);
-                        var delta = (int)FreeImage.GetPitch(dib);
-                        var bits = FreeImage.GetBits(dib) + sy * delta;
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            unsafe
-                            {
-                                ushort* pixel = (ushort*)bits;
-                                for (var x = 0; x < sx; x++)
-                                    pixel[x] = data[i++];
-                            }
-                            i += j;
-                        }
-                        return dib;
-                    }
-                case 3:
-                    {
-                        var dib = FreeImage.AllocateT(FREE_IMAGE_TYPE.FIT_RGB16, sx, sy, 48);
-                        var delta = (int)FreeImage.GetPitch(dib);
-                        var bits = FreeImage.GetBits(dib) + sy * delta;
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            unsafe
-                            {
-                                FIRGB16* pixel = (FIRGB16*)bits;
-                                for (var x = 0; x < sx; x++)
-                                {
-                                    pixel[x].red = data[i++];
-                                    pixel[x].green = data[i++];
-                                    pixel[x].blue = data[i++];
-                                }
-                            }
-                            i += j;
-                        }
-                        return dib;
-                    }
-                case 4:
-                    {
-                        var dib = FreeImage.AllocateT(FREE_IMAGE_TYPE.FIT_RGBA16, sx, sy, 64);
-                        var delta = (int)FreeImage.GetPitch(dib);
-                        var bits = FreeImage.GetBits(dib) + sy * delta;
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            unsafe
-                            {
-                                FIRGBA16* pixel = (FIRGBA16*)bits;
-                                for (var x = 0; x < sx; x++)
-                                {
-                                    pixel[x].red = data[i++];
-                                    pixel[x].green = data[i++];
-                                    pixel[x].blue = data[i++];
-                                    pixel[x].alpha = data[i++];
-                                }
-                            }
-                            i += j;
-                        }
-                        return dib;
-                    }
-                default:
-                    throw new ArgumentException($"Invalid channel count {pi.ChannelCount}");
+                palette[0] = new RGBQUAD { rgbRed = 0, rgbGreen = 0, rgbBlue = 0 };
+                palette[1] = new RGBQUAD { rgbRed = 255, rgbGreen = 255, rgbBlue = 255 };
             }
-        }
-
-        private static FIBITMAP PixImageToBitmap(PixImage<float> pi)
-        {
-            CheckLayout(pi.Volume.Info);
-            var sx = pi.Size.X;
-            var sy = pi.Size.Y;
-            var data = pi.Volume.Data;
-            long i = pi.Volume.FirstIndex;
-            long j = pi.Volume.JY;
-
-            switch (pi.ChannelCount)
+            for (var y = 0; y < sy; y++)
             {
-                case 1:
+                bits -= delta;
+                byte bit = 0x80;
+                int bi = 0;
+                unsafe
+                {
+                    byte* pixel = (byte*)bits;
+                    for (var x = 0; x < sx; x++)
                     {
-                        var dib = FreeImage.AllocateT(FREE_IMAGE_TYPE.FIT_FLOAT, sx, sy, 32);
-                        var delta = (int)FreeImage.GetPitch(dib);
-                        var bits = FreeImage.GetBits(dib) + sy * delta;
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            unsafe
-                            {
-                                float* pixel = (float*)bits;
-                                for (var x = 0; x < sx; x++)
-                                    pixel[x] = data[i++];
-                            }
-                            i += j;
-                        }
-                        return dib;
+                        if ((data[i++] & 0x80) != 0) pixel[bi] |= bit;
+                        bit >>= 1; if (bit == 0) { bit = 0x80; bi++; }
                     }
-                case 3:
-                    {
-                        var dib = FreeImage.AllocateT(FREE_IMAGE_TYPE.FIT_RGBF, sx, sy, 96);
-                        var delta = (int)FreeImage.GetPitch(dib);
-                        var bits = FreeImage.GetBits(dib) + sy * delta;
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            unsafe
-                            {
-                                FIRGBF* pixel = (FIRGBF*)bits;
-                                for (var x = 0; x < sx; x++)
-                                {
-                                    pixel[x].red = data[i++];
-                                    pixel[x].green = data[i++];
-                                    pixel[x].blue = data[i++];
-                                }
-                            }
-                            i += j;
-                        }
-                        return dib;
-                    }
-                case 4:
-                    {
-                        var dib = FreeImage.AllocateT(FREE_IMAGE_TYPE.FIT_RGBAF, sx, sy, 128);
-                        var delta = (int)FreeImage.GetPitch(dib);
-                        var bits = FreeImage.GetBits(dib) + sy * delta;
-                        for (var y = 0; y < sy; y++)
-                        {
-                            bits -= delta;
-                            unsafe
-                            {
-                                FIRGBAF* pixel = (FIRGBAF*)bits;
-                                for (var x = 0; x < sx; x++)
-                                {
-                                    pixel[x].red = data[i++];
-                                    pixel[x].green = data[i++];
-                                    pixel[x].blue = data[i++];
-                                    pixel[x].alpha = data[i++];
-                                }
-                            }
-                            i += j;
-                        }
-                        return dib;
-                    }
-                default:
-                    throw new ArgumentException($"Invalid channel count {pi.ChannelCount}");
+                }
+                i += j;
             }
-        }
 
-        private static FIBITMAP PixImageToBitmap(PixImage image, bool wantAlpha)
-        {
-            return image switch
-            {
-                PixImage<byte> pi => PixImageToBitmap(wantAlpha ? pi : WithoutAlpha(pi)),
-                PixImage<ushort> pi => PixImageToBitmap(wantAlpha ? pi : WithoutAlpha(pi)),
-                PixImage<float> pi => PixImageToBitmap(wantAlpha ? pi : WithoutAlpha(pi)),
-                _ => throw new NotSupportedException($"Cannot save PixImage of type {image.PixFormat.Type}"),
-            };
+            return dib;
         }
 
         #endregion
 
         #region Loader
+
+        private static ImageLoadException InternalError(string message)
+        {
+            var error = FreeImageEngine.LastErrorMessage;
+            return new ImageLoadException(string.IsNullOrEmpty(error) ? message : $"{message}: {error}");
+        }
 
         private class PixLoader : IPixLoader
         {
@@ -750,29 +359,33 @@ namespace Aardvark.Data
 
             #region Load
 
-            private static PixImage Load(Func<FIBITMAP> loadBitmap)
+            private static PixImage Load(string loadMethod, Func<FIBITMAP> loadBitmap)
             {
                 var bitmap = loadBitmap();
-                if (!bitmap.IsNull)
-                {
-                    try
-                    {
-                        return BitmapToPixImage(bitmap);
-                    }
-                    finally
-                    {
-                        FreeImage.Unload(bitmap);
-                    }
-                }
+                if (bitmap.IsNull) throw InternalError($"FreeImage.{loadMethod}() failed");
 
-                return null;
+                try
+                {
+                    var imageType = FreeImage.GetImageType(bitmap);
+
+                    if (!s_pixImageCreators.TryGetValue(imageType, out var creator))
+                    {
+                        throw new NotSupportedException($"Image type {imageType} is not supported.");
+                    }
+
+                    return creator(bitmap);
+                }
+                finally
+                {
+                    FreeImage.Unload(bitmap);
+                }
             }
 
             public PixImage LoadFromFile(string filename)
-                => Load(() => FreeImage.LoadEx(filename));
+                => Load("LoadEx", () => FreeImage.LoadEx(filename));
 
             public PixImage LoadFromStream(Stream stream)
-                => Load(() => FreeImage.LoadFromStream(stream));
+                => Load("LoadFromStream", () => FreeImage.LoadFromStream(stream));
 
             #endregion
 
@@ -783,7 +396,14 @@ namespace Aardvark.Data
                 if (!s_fileFormats.TryGetValue(saveParams.Format, out FREE_IMAGE_FORMAT format))
                     throw new NotSupportedException($"Unsupported PixImage file format {saveParams.Format}.");
 
-                var bitmap = PixImageToBitmap(pi, SupportsAlpha(saveParams.Format));
+                if (!s_bitmapCreators.TryGetValue(pi.PixFormat, out var creator))
+                {
+                    var supportedFormats = Environment.NewLine + string.Concat(s_bitmapCreators.Keys, Environment.NewLine);
+                    throw new NotSupportedException($"Cannot save PixImage with pixel format {pi.PixFormat}. Supported formats:{supportedFormats}");
+                }
+
+                var removeAlpha = !saveParams.Format.SupportsAlpha();
+                var bitmap = creator(pi.ToDenseLayout(removeAlpha));
 
                 try
                 {
@@ -806,7 +426,7 @@ namespace Aardvark.Data
                     }
 
                     if (!saveBitmap(bitmap, format, flags))
-                        throw new ImageLoadException($"FreeImage.{saveMethod}() failed.");
+                        throw InternalError($"FreeImage.{saveMethod}() failed");
                 }
                 finally
                 {
