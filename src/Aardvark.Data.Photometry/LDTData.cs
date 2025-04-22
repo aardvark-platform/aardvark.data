@@ -270,6 +270,7 @@ namespace Aardvark.Data.Photometry
 
         /// <summary>
         /// Luminous intensity distribution normalized to cd per 1000 lumen (cd/1000 lumens)
+        /// X = Gamma angles, Y = C planes
         /// </summary>
         public Matrix<double> Data { get; set; }
     }

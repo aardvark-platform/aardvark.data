@@ -248,5 +248,33 @@ namespace Aardvark.Data.Photometry
                     Report.Line("OK");
             }
         }
+
+        [Test]
+        public void GetIntensityTest()
+        {
+            var ldtFull = new LDTData()
+            {
+                LampSets = new LDTLampData() { TotalFlux = 1000, Number = 1 }.IntoArray(),
+                HorizontalAngles = new double[] { 0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330 },
+                VerticleAngles = new double[] { 0, 45, 90, 135, 180 },
+                VertAngleStep = 45,
+                LightOutputRatioLuminaire = 100,
+                Symmetry = LDTSymmetry.None,
+                Data = new Matrix<double>(5, 12).SetByCoord((x, y) => (x + 1) * (y + 1)),
+            };
+
+            var dataGeneric = new LightMeasurementData(ldtFull);
+            var sampler = new IntensityProfileSampler(dataGeneric);
+
+            var test1 = sampler.GetIntensity(0, 0);
+            var test2 = sampler.GetIntensity(0, Constant.Pi);
+            var test3 = sampler.GetIntensity(Constant.PiTimesTwo, 0);
+            var test4 = sampler.GetIntensity(330.0 * Constant.RadiansPerDegree, 0);
+
+            Assert.True(test1.ApproximateEquals(1));
+            Assert.True(test2.ApproximateEquals(5));
+            Assert.True(test3.ApproximateEquals(1));
+            Assert.True(test4.ApproximateEquals(12));
+        }
     }
 }
