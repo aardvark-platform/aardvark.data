@@ -11,6 +11,7 @@ namespace Aardvark.Data
         [OnAardvarkInit]
         public static void Init()
         {
+            FreeImageEngine.LastErrorMessage = null; // Invoke static constructor to register callback
             PixImage.AddLoader(Loader);
         }
 
@@ -346,6 +347,7 @@ namespace Aardvark.Data
         private static ImageLoadException InternalError(string message)
         {
             var error = FreeImageEngine.LastErrorMessage;
+            FreeImageEngine.LastErrorMessage = null;
             return new ImageLoadException(string.IsNullOrEmpty(error) ? message : $"{message}: {error}");
         }
 
