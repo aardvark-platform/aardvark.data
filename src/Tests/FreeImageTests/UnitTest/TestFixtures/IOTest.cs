@@ -7,7 +7,7 @@ using FreeImageAPI;
 using FreeImageAPI.IO;
 using NUnit.Framework;
 
-namespace UnitTest.TestFixtures
+namespace FreeImageNETUnitTest.TestFixtures
 {
     [TestFixture]
     public class IOTest
@@ -124,6 +124,52 @@ namespace UnitTest.TestFixtures
             }
 
             FreeImage.UnloadEx(ref dib);
+        }
+
+        [Test]
+        public unsafe void SaveAndLoadExr()
+        {
+            FIBITMAP image = FreeImage.AllocateT(FREE_IMAGE_TYPE.FIT_FLOAT, 1, 1, 32);
+
+            void Write(FIBITMAP dib, float value)
+            {
+                var ptr = FreeImage.GetBits(dib);
+                float* data = (float*)ptr;
+                data[0] = 42.0f;
+            }
+
+            float Read(FIBITMAP dib)
+            {
+                var ptr = FreeImage.GetBits(dib);
+                float* data = (float*)ptr;
+                return data[0];
+            }
+
+            try
+            {
+                Write(image, 42.0f);
+
+                using var ms = new MemoryStream();
+                var success = FreeImage.SaveToStream(image, ms, FREE_IMAGE_FORMAT.FIF_EXR, FREE_IMAGE_SAVE_FLAGS.EXR_FLOAT);
+                Assert.IsTrue(success);
+
+                ms.Seek(0, SeekOrigin.Begin);
+                var result = FreeImage.LoadFromStream(ms);
+
+                try
+                {
+                    var value = Read(result);
+                    Assert.AreEqual(42.0f, value);
+                }
+                finally
+                {
+                    FreeImage.UnloadEx(ref result);
+                }
+            }
+            finally
+            {
+                FreeImage.UnloadEx(ref image);
+            }
         }
     }
 }

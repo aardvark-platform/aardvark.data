@@ -48,7 +48,6 @@ namespace Aardvark.Data
             { PixFileFormat.Dds,     FREE_IMAGE_FORMAT.FIF_DDS       },
             { PixFileFormat.Gif,     FREE_IMAGE_FORMAT.FIF_GIF       },
             { PixFileFormat.Hdr,     FREE_IMAGE_FORMAT.FIF_HDR       },
-            { PixFileFormat.Faxg3,   FREE_IMAGE_FORMAT.FIF_FAXG3     },
             { PixFileFormat.Sgi,     FREE_IMAGE_FORMAT.FIF_SGI       },
             { PixFileFormat.Exr,     FREE_IMAGE_FORMAT.FIF_EXR       },
             { PixFileFormat.J2k,     FREE_IMAGE_FORMAT.FIF_J2K       },
