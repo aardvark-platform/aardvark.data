@@ -413,3 +413,84 @@ module PixLoaderTests =
 
             pi.SaveAsPng(stream)
         )
+
+
+    module FreeImageTests = 
+
+        [<SetUp>]
+        let setup() =
+            Aardvark.Init()
+            Report.Verbosity <- 3
+
+        let ``[PixLoaderFreeImage] EXR float roundtrip stream``<'t when 't: equality>(toT : int64 -> 't) =
+            let pi = PixImage<'t>(V2i(512, 512), 1L)
+
+            let mat = pi.GetMatrix<'t>()
+            mat.SetByCoord(fun (l : V2l) -> 
+                toT l.X
+            ) |> ignore
+
+            tempFile (fun fileName -> 
+                do
+                    use q = System.IO.File.OpenWrite(fileName)
+                    PixImageFreeImage.Loader.SaveToStream(q, pi, PixSaveParams(PixFileFormat.Exr)) |> ignore
+
+
+                let loadedPi = PixImage.Load(fileName, PixImageFreeImage.Loader) |> unbox<PixImage<'t>>
+                let loadedMat = loadedPi.GetMatrix<'t>()
+                loadedMat.ForeachCoord(fun (l : V2l) -> 
+                    let v = loadedMat.[l] 
+                    if toT l.X <> v then
+                        failwithf "Value mismatch at %A: expected %f, got %A" l (float32 l.X) v
+                )
+            )
+
+        let ``[PixLoaderFreeImage] EXR float roundtrip file``<'t when 't: equality>(toT : int64 -> 't) =
+            let pi = PixImage<'t>(V2i(512, 512), 1L)
+
+            let mat = pi.GetMatrix<'t>()
+            mat.SetByCoord(fun (l : V2l) -> 
+                toT l.X
+            ) |> ignore
+
+            tempFile (fun fileName -> 
+                do
+                    use q = System.IO.File.OpenWrite(fileName)
+                    PixImageFreeImage.Loader.SaveToStream(q, pi, PixSaveParams(PixFileFormat.Exr)) |> ignore
+
+
+                let loadedPi = PixImage.Load(fileName, PixImageFreeImage.Loader) |> unbox<PixImage<'t>>
+                let loadedMat = loadedPi.GetMatrix<'t>()
+                loadedMat.ForeachCoord(fun (l : V2l) -> 
+                    let v = loadedMat.[l] 
+                    if toT l.X <> v then
+                        failwithf "Value mismatch at %A: expected %f, got %A" l (float32 l.X) v
+                )
+            )
+
+        [<Test>]
+        let ``[PixLoaderFreeImage] EXR float roundtrip stream float16`` =
+            Aardvark.Init()
+            ``[PixLoaderFreeImage] EXR float roundtrip stream``<float16> (fun (v : int64) -> float16 v) |> ignore
+
+        [<Test>]
+        let ``[PixLoaderFreeImage] EXR float roundtrip file float16`` =
+            Aardvark.Init()
+            ``[PixLoaderFreeImage] EXR float roundtrip file``<float16> (fun (v : int64) -> float16 v) |> ignore
+
+        [<Test>]
+        let ``[PixLoaderFreeImage] EXR float roundtrip stream float32`` =
+            ``[PixLoaderFreeImage] EXR float roundtrip stream``<float32> (fun (v : int64) -> float32 v) |> ignore
+
+        [<Test>]
+        let ``[PixLoaderFreeImage] EXR float roundtrip file float32`` =
+            ``[PixLoaderFreeImage] EXR float roundtrip file``<float32> (fun (v : int64) -> float32 v) |> ignore
+
+
+        [<Test>]
+        let ``[PixLoaderFreeImage] EXR float roundtrip stream double`` =
+            ``[PixLoaderFreeImage] EXR float roundtrip stream``<double> (fun (v : int64) -> double v) |> ignore
+
+        [<Test>]
+        let ``[PixLoaderFreeImage] EXR float roundtrip file double`` =
+            ``[PixLoaderFreeImage] EXR float roundtrip file``<double> (fun (v : int64) -> double v) |> ignore
