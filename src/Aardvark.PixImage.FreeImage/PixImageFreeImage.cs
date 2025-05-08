@@ -406,6 +406,27 @@ namespace Aardvark.Data
                     ? FREE_IMAGE_SAVE_FLAGS.WEBP_LOSSLESS   // FreeImage does not support the quality parameter for lossless
                     : (FREE_IMAGE_SAVE_FLAGS)webp.Quality;
 
+            private static FREE_IMAGE_SAVE_FLAGS GetExrSaveFlags(PixExrSaveParams exr, int channelCount)
+            {
+                var compression =
+                    exr.Compression switch
+                    {
+                        PixExrCompression.None => FREE_IMAGE_SAVE_FLAGS.EXR_NONE,
+                        PixExrCompression.Zip => FREE_IMAGE_SAVE_FLAGS.EXR_ZIP,
+                        PixExrCompression.Piz => FREE_IMAGE_SAVE_FLAGS.EXR_PIZ,
+                        PixExrCompression.Pxr24 => FREE_IMAGE_SAVE_FLAGS.EXR_PXR24,
+                        PixExrCompression.B44 => FREE_IMAGE_SAVE_FLAGS.EXR_B44,
+                        _ => FREE_IMAGE_SAVE_FLAGS.DEFAULT,
+                    };
+
+                if (channelCount > 1 && exr.LuminanceChroma)
+                {
+                    Report.Warn($"Luminance chroma compression is not supported");
+                }
+
+                return compression;
+            }
+
             private static void Save(PixImage pi, PixSaveParams saveParams, string saveMethod, Func<FIBITMAP, FREE_IMAGE_FORMAT, FREE_IMAGE_SAVE_FLAGS, bool> saveBitmap)
             {
                 if (!s_fileFormats.TryGetValue(saveParams.Format, out FREE_IMAGE_FORMAT format))
@@ -428,6 +449,7 @@ namespace Aardvark.Data
                             PixPngSaveParams png => GetPngSaveFlags(png),
                             PixJpegSaveParams jpeg => GetJpegSaveFlags(jpeg),
                             PixWebpSaveParams webp => GetWebpSaveFlags(webp),
+                            PixExrSaveParams exr => GetExrSaveFlags(exr, pi.ChannelCount),
                             _ => FREE_IMAGE_SAVE_FLAGS.DEFAULT
                         };
 
