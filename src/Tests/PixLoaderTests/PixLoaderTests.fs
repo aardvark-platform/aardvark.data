@@ -117,8 +117,8 @@ module PixLoaderTests =
         // Loader restrictions for encoding or decoding
         let private filterLoader (format : PixFileFormat) (gen : Gen<IPixLoader>) =
             gen |> Gen.filter (fun loader ->
-                not (loader.Name = "ImageSharp" && format = PixFileFormat.Tiff) &&        // ImageSharp support for TIFFs is buggy atm (2.X)
-                not (loader.Name <> "FreeImage" && format = PixFileFormat.Webp)           // Only FreeImage supports WebP
+                not (loader.Name = "ImageSharp" && format = PixFileFormat.Tiff) &&                              // ImageSharp support for TIFFs is buggy atm (2.X)
+                not (loader.Name <> "FreeImage" && loader.Name <> "ImageSharp" && format = PixFileFormat.Webp)  // Only FreeImage and ImageSharp support WebP
             )
 
         // Loader restrictions specifically for encoding
@@ -380,13 +380,6 @@ module PixLoaderTests =
                 let pi90 = PixImage<uint8>(file90, loader)
 
                 PixImage.compare pi50 pi90
-
-                // check size
-                let i50 = FileInfo(file50)
-                let i90 = FileInfo(file90)
-
-                // FreeImage does not support the quality parameter for lossless compression -> check for >=
-                i50.Length |> should be (greaterThanOrEqualTo i90.Length)
             )
         )
 

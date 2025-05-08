@@ -423,13 +423,21 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
     static let tryGetEncoder (saveParams : PixSaveParams) =
         match saveParams with
         | :? PixJpegSaveParams as jpeg ->
-            Some (Jpeg.JpegEncoder(Quality = Nullable<int>(jpeg.Quality)) :> IImageEncoder)
+            Some (Jpeg.JpegEncoder(Quality = jpeg.Quality) :> IImageEncoder)
 
         | :? PixPngSaveParams as png ->
             Some (Png.PngEncoder(CompressionLevel = unbox png.CompressionLevel) :> IImageEncoder)
 
         | :? PixTiffSaveParams as tiff ->
             Some (Tiff.TiffEncoder(Compression = tryGetTiffCompression tiff.Compression) :> IImageEncoder)
+
+        | :? PixWebpSaveParams as webp ->
+            Some (
+                Webp.WebpEncoder(
+                    Quality = webp.Quality,
+                    FileFormat = if webp.Lossless then Webp.WebpFileFormatType.Lossless else Webp.WebpFileFormatType.Lossy
+                ) :> IImageEncoder
+            )
 
         | _ ->
             match saveParams.Format with
@@ -442,6 +450,7 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
             | PixFileFormat.Tiff   -> Some (Tiff.TiffEncoder() :> IImageEncoder)
             | PixFileFormat.Gif    -> Some (Gif.GifEncoder() :> IImageEncoder)
             | PixFileFormat.Png    -> Some (Png.PngEncoder() :> IImageEncoder)
+            | PixFileFormat.Webp   -> Some (Webp.WebpEncoder() :> IImageEncoder)
             | _ -> None
 
 
