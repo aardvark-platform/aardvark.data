@@ -6,6 +6,7 @@
 - Fixed invalid enum values (https://github.com/microsoft/vcpkg/issues/45410)
 - Added support for saving WebP images
 - Added support for EXR compression modes
+- Added support for TIFF compression modes
 
 ### 5.3.6
 - Added MacOS binaries

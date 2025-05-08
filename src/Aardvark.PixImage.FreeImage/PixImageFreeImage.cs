@@ -427,6 +427,19 @@ namespace Aardvark.Data
                 return compression;
             }
 
+            private static FREE_IMAGE_SAVE_FLAGS GetTiffSaveFlags(PixTiffSaveParams tiff)
+                => tiff.Compression switch
+                {
+                    PixTiffCompression.None => FREE_IMAGE_SAVE_FLAGS.TIFF_NONE,
+                    PixTiffCompression.Ccitt3 => FREE_IMAGE_SAVE_FLAGS.TIFF_CCITTFAX3,
+                    PixTiffCompression.Ccitt4 => FREE_IMAGE_SAVE_FLAGS.TIFF_CCITTFAX4,
+                    PixTiffCompression.Lzw => FREE_IMAGE_SAVE_FLAGS.TIFF_LZW,
+                    PixTiffCompression.Jpeg => FREE_IMAGE_SAVE_FLAGS.TIFF_JPEG,
+                    PixTiffCompression.Deflate => FREE_IMAGE_SAVE_FLAGS.TIFF_DEFLATE,
+                    PixTiffCompression.PackBits => FREE_IMAGE_SAVE_FLAGS.TIFF_PACKBITS,
+                    _ => FREE_IMAGE_SAVE_FLAGS.DEFAULT
+                };
+
             private static void Save(PixImage pi, PixSaveParams saveParams, string saveMethod, Func<FIBITMAP, FREE_IMAGE_FORMAT, FREE_IMAGE_SAVE_FLAGS, bool> saveBitmap)
             {
                 if (!s_fileFormats.TryGetValue(saveParams.Format, out FREE_IMAGE_FORMAT format))
@@ -450,6 +463,7 @@ namespace Aardvark.Data
                             PixJpegSaveParams jpeg => GetJpegSaveFlags(jpeg),
                             PixWebpSaveParams webp => GetWebpSaveFlags(webp),
                             PixExrSaveParams exr => GetExrSaveFlags(exr, pi.ChannelCount),
+                            PixTiffSaveParams tiff => GetTiffSaveFlags(tiff),
                             _ => FREE_IMAGE_SAVE_FLAGS.DEFAULT
                         };
 

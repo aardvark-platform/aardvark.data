@@ -211,6 +211,13 @@ module PixLoaderTests =
             ExrLoader       : IPixLoader
         }
 
+    type SaveLoadInputTiff =
+        {
+            Image           : PixImage<uint8>
+            Compression     : PixTiffCompression
+            TiffLoader      : IPixLoader
+        }
+
     type SaveLoadInput =
         {
             Image       : PixImage<byte>
@@ -291,6 +298,29 @@ module PixLoaderTests =
                     Compression = compression
                     LuminanceChroma = luminanceChroma
                     ExrLoader = loader
+                }
+            }
+            |> Arb.fromGen
+
+        static member SaveLoadInputTiff =
+            gen {
+                let! format = Gen.colorFormat
+                let! pix = Gen.checkerboardPix format
+                let! compression =
+                    Enum.GetValues<PixTiffCompression>()
+                    |> Array.filter (fun v ->
+                        v <> PixTiffCompression.Ccitt3 && v <> PixTiffCompression.Ccitt4 // Only makes sense for BW images
+                    )
+                    |> Gen.elements
+
+                let! loader =
+                    Gen.pixLoader false PixFileFormat.Tiff
+                    |> Gen.filter (fun l -> l.Name <> PixImageDevil.Loader.Name) // DevIL does not support compression
+
+                return {
+                    Image = pix
+                    Compression = compression
+                    TiffLoader = loader
                 }
             }
             |> Arb.fromGen
@@ -475,6 +505,28 @@ module PixLoaderTests =
             if isLossy then
                 let psnr = PixImage.peakSignalToNoiseRatio input.Image output
                 Expect.isGreaterThan psnr 10.0 "Bad peak-signal-to-noise ratio"
+            else
+                PixImage.compare input.Image output
+        )
+
+    [<Property(Arbitrary = [| typeof<Generator> |])>]
+    let ``[PixLoader] TIFF compression`` (input : SaveLoadInputTiff) =
+        let pi = input.Image
+        let loader = input.TiffLoader
+        printfn "loader = %s, size = %A, format = %A, compression = %A" loader.Name pi.Size pi.Format input.Compression
+
+        let isLossy =
+            match input.Compression with
+            | PixTiffCompression.Jpeg -> true
+            | _ -> false
+
+        tempFile (fun file ->
+            pi.Save(file, PixTiffSaveParams(input.Compression), false, loader)
+            let output = PixImage<uint8>(file, loader)
+
+            if isLossy then
+                let psnr = PixImage.peakSignalToNoiseRatio input.Image output
+                Expect.isGreaterThan psnr 20.0 "Bad peak-signal-to-noise ratio"
             else
                 PixImage.compare input.Image output
         )
