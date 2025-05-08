@@ -55,6 +55,7 @@ namespace Aardvark.Data
             { PixFileFormat.Pfm,     FREE_IMAGE_FORMAT.FIF_PFM       },
             { PixFileFormat.Pict,    FREE_IMAGE_FORMAT.FIF_PICT      },
             { PixFileFormat.Raw,     FREE_IMAGE_FORMAT.FIF_RAW       },
+            { PixFileFormat.Webp,    FREE_IMAGE_FORMAT.FIF_WEBP      },
         };
 
         private static readonly Dictionary<PixFormat, Func<PixImage, FIBITMAP>> s_bitmapCreators = new()
@@ -392,6 +393,19 @@ namespace Aardvark.Data
 
             #region Save
 
+            private static FREE_IMAGE_SAVE_FLAGS GetPngSaveFlags(PixPngSaveParams png)
+                => (png.CompressionLevel > 0)
+                    ? (FREE_IMAGE_SAVE_FLAGS)png.CompressionLevel
+                    : FREE_IMAGE_SAVE_FLAGS.PNG_Z_NO_COMPRESSION;
+
+            private static FREE_IMAGE_SAVE_FLAGS GetJpegSaveFlags(PixJpegSaveParams jpeg)
+                => (FREE_IMAGE_SAVE_FLAGS)jpeg.Quality;
+
+            private static FREE_IMAGE_SAVE_FLAGS GetWebpSaveFlags(PixWebpSaveParams webp)
+                => webp.Lossless
+                    ? FREE_IMAGE_SAVE_FLAGS.WEBP_LOSSLESS   // FreeImage does not support the quality parameter for lossless
+                    : (FREE_IMAGE_SAVE_FLAGS)webp.Quality;
+
             private static void Save(PixImage pi, PixSaveParams saveParams, string saveMethod, Func<FIBITMAP, FREE_IMAGE_FORMAT, FREE_IMAGE_SAVE_FLAGS, bool> saveBitmap)
             {
                 if (!s_fileFormats.TryGetValue(saveParams.Format, out FREE_IMAGE_FORMAT format))
@@ -408,22 +422,18 @@ namespace Aardvark.Data
 
                 try
                 {
-                    var flags = FREE_IMAGE_SAVE_FLAGS.DEFAULT;
+                    var flags =
+                        saveParams switch
+                        {
+                            PixPngSaveParams png => GetPngSaveFlags(png),
+                            PixJpegSaveParams jpeg => GetJpegSaveFlags(jpeg),
+                            PixWebpSaveParams webp => GetWebpSaveFlags(webp),
+                            _ => FREE_IMAGE_SAVE_FLAGS.DEFAULT
+                        };
 
-                    if (saveParams is PixPngSaveParams png)
+                    if (saveParams.Format == PixFileFormat.Exr && pi.PixFormat.Type == typeof(float))
                     {
-                        if (png.CompressionLevel > 0)
-                            flags = (FREE_IMAGE_SAVE_FLAGS)png.CompressionLevel;
-                        else
-                            flags = FREE_IMAGE_SAVE_FLAGS.PNG_Z_NO_COMPRESSION;
-                    }
-                    else if (saveParams is PixJpegSaveParams jpeg)
-                    {
-                        flags = (FREE_IMAGE_SAVE_FLAGS)jpeg.Quality;
-                    }
-                    else if (saveParams.Format == PixFileFormat.Exr && pi.PixFormat.Type == typeof(float))
-                    {
-                        flags = FREE_IMAGE_SAVE_FLAGS.EXR_FLOAT;
+                        flags |= FREE_IMAGE_SAVE_FLAGS.EXR_FLOAT;
                     }
 
                     if (!saveBitmap(bitmap, format, flags))

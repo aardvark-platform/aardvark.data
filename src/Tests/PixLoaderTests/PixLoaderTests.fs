@@ -117,7 +117,8 @@ module PixLoaderTests =
         // Loader restrictions for encoding or decoding
         let private filterLoader (format : PixFileFormat) (gen : Gen<IPixLoader>) =
             gen |> Gen.filter (fun loader ->
-                not (loader.Name = "ImageSharp" && format = PixFileFormat.Tiff)             // ImageSharp support for TIFFs is buggy atm (2.X)
+                not (loader.Name = "ImageSharp" && format = PixFileFormat.Tiff) &&        // ImageSharp support for TIFFs is buggy atm (2.X)
+                not (loader.Name <> "FreeImage" && format = PixFileFormat.Webp)           // Only FreeImage supports WebP
             )
 
         // Loader restrictions specifically for encoding
@@ -173,6 +174,12 @@ module PixLoaderTests =
             JpegLoader  : IPixLoader
         }
 
+    type SaveLoadInputWebp =
+        {
+            Image       : PixImage<byte>
+            WebpLoader  : IPixLoader
+        }
+
     type SaveLoadInputPng =
         {
             Image       : PixImage<byte>
@@ -206,6 +213,19 @@ module PixLoaderTests =
                 return {
                     Image = pix
                     JpegLoader = loader
+                }
+            }
+            |> Arb.fromGen
+
+        static member SaveLoadInputWebp =
+            gen {
+                let! format = Gen.colorFormat
+                let! pix = Gen.checkerboardPix format
+                let! loader = Gen.pixLoader false PixFileFormat.Webp
+
+                return {
+                    Image = pix
+                    WebpLoader = loader
                 }
             }
             |> Arb.fromGen
@@ -323,6 +343,52 @@ module PixLoaderTests =
             )
         )
 
+    [<Property(Arbitrary = [| typeof<Generator> |])>]
+    let ``[PixLoader] WebP compression`` (input : SaveLoadInputWebp) =
+        let pi = input.Image
+        let loader = input.WebpLoader
+        printfn "loader = %s, size = %A, format = %A" loader.Name pi.Size pi.Format
+
+        // Lossy
+        tempFile (fun file50 ->
+            tempFile (fun file90 ->
+                pi.Save(file50, PixWebpSaveParams(50), false, loader)
+                pi.Save(file90, PixWebpSaveParams(90), false, loader)
+
+                // check equal
+                let pi50 = PixImage<uint8>(file50, loader)
+                let pi90 = PixImage<uint8>(file90, loader)
+                let psnr = PixImage.peakSignalToNoiseRatio pi50 pi90
+                psnr |> should be (greaterThan 20.0)
+
+                // check size
+                let i50 = FileInfo(file50)
+                let i90 = FileInfo(file90)
+
+                i50.Length |> should be (lessThan i90.Length)
+            )
+        )
+
+        // Lossless
+        tempFile (fun file50 ->
+            tempFile (fun file90 ->
+                pi.Save(file50, PixWebpSaveParams(50, true), false, loader)
+                pi.Save(file90, PixWebpSaveParams(90, true), false, loader)
+
+                // check equal
+                let pi50 = PixImage<uint8>(file50, loader)
+                let pi90 = PixImage<uint8>(file90, loader)
+
+                PixImage.compare pi50 pi90
+
+                // check size
+                let i50 = FileInfo(file50)
+                let i90 = FileInfo(file90)
+
+                // FreeImage does not support the quality parameter for lossless compression -> check for >=
+                i50.Length |> should be (greaterThanOrEqualTo i90.Length)
+            )
+        )
 
     [<Property(Arbitrary = [| typeof<Generator> |])>]
     let ``[PixLoader] PNG compression level`` (input : SaveLoadInputPng) =
