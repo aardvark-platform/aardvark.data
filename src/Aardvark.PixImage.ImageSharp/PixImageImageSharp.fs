@@ -163,6 +163,11 @@ module private ImageSharpExtensions =
 [<AutoOpen>]
 module private ImageSharpHelpers =
 
+    // TODO: Added in Aardvark.Base 5.3.11
+    module PixFormat =
+        let ByteGrayAlpha = PixFormat(typeof<uint8>, Col.Format.GrayAlpha)
+        let UShortGrayAlpha = PixFormat(typeof<uint16>, Col.Format.GrayAlpha)
+
     let (!!) (a : bool, v : IExifValue<'T>) = if a then Some v.Value else None
 
     let piDirect<'TPixel, 'T when 'T : unmanaged and 'TPixel : (new : unit -> 'TPixel) and 'TPixel : struct and 'TPixel :> IPixel<'TPixel> and 'TPixel : unmanaged> (img : Image<'TPixel>, dst : PixImage<'T>) : unit =
@@ -315,41 +320,61 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
         else Nullable (min q 100)
 
     static let toPixImage =
-        LookupTable.lookup [
-            typeof<PixelFormats.A8>,        (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.Gray img.Width img.Height trafo (fun dst -> piDirect<A8, byte>(unbox img, dst)) :> PixImage)
-            typeof<PixelFormats.L8>,         (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.Gray img.Width img.Height trafo (fun dst -> piDirect<L8, byte>(unbox img, dst)) :> PixImage)
-            typeof<PixelFormats.Argb32>,        (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.RGBA img.Width img.Height trafo (fun dst -> piChannel<Argb32, byte>(unbox img, dst, [|1;2;3;0|])) :> PixImage)
-            typeof<PixelFormats.Rgb24>,         (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.RGB  img.Width img.Height trafo (fun dst -> piDirect<Rgb24, byte>(unbox img, dst)) :> PixImage)
-            typeof<PixelFormats.Rgba32>,        (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.RGBA img.Width img.Height trafo (fun dst -> piDirect<Rgba32, byte>(unbox img, dst)) :> PixImage)
-            typeof<PixelFormats.Bgr24>,         (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.BGR  img.Width img.Height trafo (fun dst -> piDirect<Bgr24, byte>(unbox img, dst)) :> PixImage)
-            typeof<PixelFormats.Bgra32>,        (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.BGRA img.Width img.Height trafo (fun dst -> piDirect<Bgra32, byte>(unbox img, dst)) :> PixImage)
-            typeof<PixelFormats.L16>,        (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.Gray img.Width img.Height trafo (fun dst -> piDirect<L16, uint16>(unbox img, dst)) :> PixImage)
-            typeof<PixelFormats.Rgb48>,         (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.RGB  img.Width img.Height trafo (fun dst -> piDirect<Rgb48, uint16>(unbox img, dst)) :> PixImage)
-            typeof<PixelFormats.Rgba64>,        (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.RGBA img.Width img.Height trafo (fun dst -> piDirect<Rgba64, uint16>(unbox img, dst)) :> PixImage)
-            typeof<PixelFormats.Bgr565>,        (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.BGR  img.Width img.Height trafo (fun dst -> piMapping<Bgr565, byte, C3b>(unbox img, dst, ImageSharpImageExtensions.ToC3b)) :> PixImage)
-            typeof<PixelFormats.Rgba1010102>,   (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.BGR  img.Width img.Height trafo (fun dst -> piMapping<Rgba1010102, byte, C3b>(unbox img, dst, ImageSharpImageExtensions.ToC3b)) :> PixImage)
-            typeof<PixelFormats.Bgra4444>,      (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.BGRA img.Width img.Height trafo (fun dst -> piMapping<Bgra4444, byte, C4b>(unbox img, dst, ImageSharpImageExtensions.ToC4b)) :> PixImage)
-            typeof<PixelFormats.Bgra5551>,      (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.BGRA img.Width img.Height trafo (fun dst -> piMapping<Bgra5551, byte, C4b>(unbox img, dst, ImageSharpImageExtensions.ToC4b)) :> PixImage)
-            typeof<PixelFormats.Byte4>,         (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.BGRA img.Width img.Height trafo (fun dst -> piMapping<Byte4, byte, C4b>(unbox img, dst, ImageSharpImageExtensions.ToC4b)) :> PixImage)
-            typeof<PixelFormats.Rg32>,          (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.RG img.Width img.Height trafo (fun dst -> piDirect<Rg32, uint16>(unbox img, dst)) :> PixImage)
-            typeof<PixelFormats.HalfSingle>,    (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.Gray img.Width img.Height trafo (fun dst -> piMapping<HalfSingle, float16, float16>(unbox img, dst, fun v -> Half.ToHalf v.PackedValue)) :> PixImage)
-            typeof<PixelFormats.RgbaVector>,    (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.RGBA img.Width img.Height trafo (fun dst -> piDirect<RgbaVector, float32>(unbox img, dst)) :> PixImage)
-        ]
+        let lookup =
+            LookupTable.tryLookupV [
+                typeof<A8>,          (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.Gray      img.Width img.Height trafo (fun dst -> piDirect<A8, byte>(unbox img, dst)) :> PixImage)
+                typeof<L8>,          (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.Gray      img.Width img.Height trafo (fun dst -> piDirect<L8, byte>(unbox img, dst)) :> PixImage)
+                typeof<La16>,        (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.GrayAlpha img.Width img.Height trafo (fun dst -> piDirect<La16, byte>(unbox img, dst)) :> PixImage)
+                typeof<Argb32>,      (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.RGBA      img.Width img.Height trafo (fun dst -> piChannel<Argb32, byte>(unbox img, dst, [|1;2;3;0|])) :> PixImage)
+                typeof<Rgb24>,       (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.RGB       img.Width img.Height trafo (fun dst -> piDirect<Rgb24, byte>(unbox img, dst)) :> PixImage)
+                typeof<Rgba32>,      (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.RGBA      img.Width img.Height trafo (fun dst -> piDirect<Rgba32, byte>(unbox img, dst)) :> PixImage)
+                typeof<Bgr24>,       (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.BGR       img.Width img.Height trafo (fun dst -> piDirect<Bgr24, byte>(unbox img, dst)) :> PixImage)
+                typeof<Bgra32>,      (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.BGRA      img.Width img.Height trafo (fun dst -> piDirect<Bgra32, byte>(unbox img, dst)) :> PixImage)
+
+                typeof<L16>,         (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.Gray      img.Width img.Height trafo (fun dst -> piDirect<L16, uint16>(unbox img, dst)) :> PixImage)
+                typeof<La32>,        (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.GrayAlpha img.Width img.Height trafo (fun dst -> piDirect<La32, uint16>(unbox img, dst)) :> PixImage)
+                typeof<Rg32>,        (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.RG        img.Width img.Height trafo (fun dst -> piDirect<Rg32, uint16>(unbox img, dst)) :> PixImage)
+                typeof<Rgb48>,       (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.RGB       img.Width img.Height trafo (fun dst -> piDirect<Rgb48, uint16>(unbox img, dst)) :> PixImage)
+                typeof<Rgba64>,      (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.RGBA      img.Width img.Height trafo (fun dst -> piDirect<Rgba64, uint16>(unbox img, dst)) :> PixImage)
+
+                typeof<Bgr565>,      (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.BGR  img.Width img.Height trafo (fun dst -> piMapping<Bgr565, byte, C3b>(unbox img, dst, ImageSharpImageExtensions.ToC3b)) :> PixImage)
+                typeof<Rgba1010102>, (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.BGR  img.Width img.Height trafo (fun dst -> piMapping<Rgba1010102, byte, C3b>(unbox img, dst, ImageSharpImageExtensions.ToC3b)) :> PixImage)
+                typeof<Bgra4444>,    (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.BGRA img.Width img.Height trafo (fun dst -> piMapping<Bgra4444, byte, C4b>(unbox img, dst, ImageSharpImageExtensions.ToC4b)) :> PixImage)
+                typeof<Bgra5551>,    (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.BGRA img.Width img.Height trafo (fun dst -> piMapping<Bgra5551, byte, C4b>(unbox img, dst, ImageSharpImageExtensions.ToC4b)) :> PixImage)
+                typeof<Byte4>,       (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.BGRA img.Width img.Height trafo (fun dst -> piMapping<Byte4, byte, C4b>(unbox img, dst, ImageSharpImageExtensions.ToC4b)) :> PixImage)
+                typeof<HalfSingle>,  (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.Gray img.Width img.Height trafo (fun dst -> piMapping<HalfSingle, float16, float16>(unbox img, dst, fun v -> Half.ToHalf v.PackedValue)) :> PixImage)
+
+                typeof<RgbaVector>,  (fun (img : Image) (trafo : ImageTrafo) -> usingTransformed Col.Format.RGBA img.Width img.Height trafo (fun dst -> piDirect<RgbaVector, float32>(unbox img, dst)) :> PixImage)
+            ]
+
+        fun pixelFormat ->
+            match lookup pixelFormat with
+            | ValueSome f -> f
+            | _ -> raise <| NotSupportedException($"Pixel format {pixelFormat} is not supported.")
 
     static let toImage =
-        LookupTable.lookup [
-            PixFormat.ByteGray,             (fun (img : PixImage) -> imgDirect<byte, L8>(unbox img) :> Image)
-            PixFormat.ByteBGR,              (fun (img : PixImage) -> imgDirect<byte, Bgr24>(unbox img) :> Image)
-            PixFormat.ByteBGRA,             (fun (img : PixImage) -> imgDirect<byte, Bgra32>(unbox img) :> Image)
-            PixFormat.ByteRGB,              (fun (img : PixImage) -> imgDirect<byte, Rgb24>(unbox img) :> Image)
-            PixFormat.ByteRGBA,             (fun (img : PixImage) -> imgDirect<byte, Rgba32>(unbox img) :> Image)
+        let lookup =
+            LookupTable.tryLookupV [
+                PixFormat.ByteGray,         (fun (img : PixImage) -> imgDirect<byte, L8>(unbox img) :> Image)
+                PixFormat.ByteGrayAlpha,    (fun (img : PixImage) -> imgDirect<byte, La16>(unbox img) :> Image)
+                PixFormat.ByteBGR,          (fun (img : PixImage) -> imgDirect<byte, Bgr24>(unbox img) :> Image)
+                PixFormat.ByteBGRA,         (fun (img : PixImage) -> imgDirect<byte, Bgra32>(unbox img) :> Image)
+                PixFormat.ByteRGB,          (fun (img : PixImage) -> imgDirect<byte, Rgb24>(unbox img) :> Image)
+                PixFormat.ByteRGBA,         (fun (img : PixImage) -> imgDirect<byte, Rgba32>(unbox img) :> Image)
 
-            PixFormat.UShortGray,           (fun (img : PixImage) -> imgDirect<uint16, L16>(unbox img) :> Image)
-            PixFormat.UShortRGB,            (fun (img : PixImage) -> imgDirect<uint16, Rgb48>(unbox img) :> Image)
-            PixFormat.UShortRGBA,           (fun (img : PixImage) -> imgDirect<uint16, Rgba64>(unbox img) :> Image)
+                PixFormat.UShortGray,       (fun (img : PixImage) -> imgDirect<uint16, L16>(unbox img) :> Image)
+                PixFormat.UShortGrayAlpha,  (fun (img : PixImage) -> imgDirect<uint16, La32>(unbox img) :> Image)
+                PixFormat.UShortRG,         (fun (img : PixImage) -> imgDirect<uint16, Rg32>(unbox img) :> Image)
+                PixFormat.UShortRGB,        (fun (img : PixImage) -> imgDirect<uint16, Rgb48>(unbox img) :> Image)
+                PixFormat.UShortRGBA,       (fun (img : PixImage) -> imgDirect<uint16, Rgba64>(unbox img) :> Image)
 
-            PixFormat.FloatRGBA,            (fun (img : PixImage) -> imgDirect<float32, RgbaVector>(unbox img) :> Image)
-        ]
+                PixFormat.FloatRGBA,        (fun (img : PixImage) -> imgDirect<float32, RgbaVector>(unbox img) :> Image)
+            ]
+
+        fun pixFormat ->
+            match lookup pixFormat with
+            | ValueSome f -> f
+            | _ -> raise <| NotSupportedException($"Pixel format {pixFormat} is not supported.")
 
     static let getRotateAndFlipMode (data : ImageMetadata) =
         if isNull data.ExifProfile then

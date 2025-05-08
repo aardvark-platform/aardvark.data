@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Aardvark.Base;
@@ -333,8 +334,16 @@ namespace Aardvark.Data
         public static BitmapSource ToBitmapSource(this PixImage pi, double dpi = 96.0)
         {
             var t = pi.PixFormat.Type;
-            var mi = typeof(PixImageWindowsMedia).GetMethod("ToBitmapSourceTyped", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).MakeGenericMethod(new[] { t });
-            return (BitmapSource)mi.Invoke(null, new object[] { pi, dpi });
+            var mi = typeof(PixImageWindowsMedia).GetMethod("ToBitmapSourceTyped", BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(t);
+
+            try
+            {
+                return (BitmapSource)mi.Invoke(null, [pi, dpi]);
+            }
+            catch (TargetInvocationException e)
+            {
+                throw e.InnerException ?? e;
+            }
         }
 
         public static BitmapSource ToBitmapSource<T>(this PixImage<T> pi, double dpi = 96.0)

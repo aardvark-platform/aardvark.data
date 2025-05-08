@@ -313,7 +313,7 @@ namespace FreeImageNETUnitTest.TestFixtures
             Assert.IsFalse(File.Exists(@"out_file.bmp"));
 
             stream = new MemoryStream();
-            Assert.IsFalse(FreeImage.SaveToStream(dib, stream, FREE_IMAGE_FORMAT.FIF_FAXG3));
+            Assert.IsFalse(FreeImage.SaveToStream(dib, stream, FREE_IMAGE_FORMAT.FIF_SGI));
             stream.Dispose();
             FreeImage.UnloadEx(ref dib);
         }
