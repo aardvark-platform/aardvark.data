@@ -289,9 +289,6 @@ namespace Aardvark.Data
 
             public void SaveToStream(Stream stream, PixImage pi, PixSaveParams saveParams)
             {
-                if (pi.Format == Col.Format.BW)
-                    throw new ArgumentException($"Unsupported color format {pi.Format}");
-
                 if (saveParams is PixPngSaveParams png && png.CompressionLevel != PixPngSaveParams.DefaultCompressionLevel)
                 {
                     Report.Warn("Windows Media does not support setting PNG compression levels.");

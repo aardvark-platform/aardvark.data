@@ -349,6 +349,17 @@ module PixLoaderTests =
             )
         )
 
+    [<Test>]
+    let ``[PixLoader] BW with Windows Media``() =
+        let src = PixImage.checkerboard Col.Format.BW 256 256
+        for i = 0 to src.Data.Length - 1 do
+            src.Data.[i] <- if src.Data.[i] > 127uy then 255uy else 0uy
+
+        tempFile (fun file ->
+            src.Save(file, PixFileFormat.Bmp, false, PixImageWindowsMedia.Loader)
+            let dst = PixImage.Load(file, PixImageWindowsMedia.Loader).AsPixImage<uint8>()
+            PixImage.compare src dst
+        )
 
     [<Test>]
     let ``[PixLoader] Add and remove loaders``() =
