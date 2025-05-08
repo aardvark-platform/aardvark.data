@@ -12,6 +12,7 @@ open SixLabors.ImageSharp.Metadata.Profiles.Exif
 open SixLabors.ImageSharp.Formats
 open SixLabors.ImageSharp.PixelFormats
 open SixLabors.ImageSharp.Processing.Processors.Transforms
+open SixLabors.ImageSharp.Formats.Tiff.Constants
 open System.Runtime.CompilerServices
 
 #nowarn "9"
@@ -162,11 +163,6 @@ module private ImageSharpExtensions =
 /// Internal tools for copying beetween PixImage and ImageSharp Images.
 [<AutoOpen>]
 module private ImageSharpHelpers =
-
-    // TODO: Added in Aardvark.Base 5.3.11
-    module PixFormat =
-        let ByteGrayAlpha = PixFormat(typeof<uint8>, Col.Format.GrayAlpha)
-        let UShortGrayAlpha = PixFormat(typeof<uint16>, Col.Format.GrayAlpha)
 
     let (!!) (a : bool, v : IExifValue<'T>) = if a then Some v.Value else None
 
@@ -414,6 +410,16 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
             | _ ->
                 ImageTrafo.Identity
 
+    static let tryGetTiffCompression = function
+        | PixTiffCompression.None     -> Nullable TiffCompression.None
+        | PixTiffCompression.Ccitt3   -> Nullable TiffCompression.CcittGroup3Fax
+        | PixTiffCompression.Ccitt4   -> Nullable TiffCompression.CcittGroup4Fax
+        | PixTiffCompression.Lzw      -> Nullable TiffCompression.Lzw
+        | PixTiffCompression.Jpeg     -> Nullable TiffCompression.Jpeg
+        | PixTiffCompression.Deflate  -> Nullable TiffCompression.Deflate
+        | PixTiffCompression.PackBits -> Nullable TiffCompression.PackBits
+        | _ -> Nullable()
+
     static let tryGetEncoder (saveParams : PixSaveParams) =
         match saveParams with
         | :? PixJpegSaveParams as jpeg ->
@@ -421,6 +427,9 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
 
         | :? PixPngSaveParams as png ->
             Some (Png.PngEncoder(CompressionLevel = unbox png.CompressionLevel) :> IImageEncoder)
+
+        | :? PixTiffSaveParams as tiff ->
+            Some (Tiff.TiffEncoder(Compression = tryGetTiffCompression tiff.Compression) :> IImageEncoder)
 
         | _ ->
             match saveParams.Format with

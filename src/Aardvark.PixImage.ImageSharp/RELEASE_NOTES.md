@@ -1,3 +1,6 @@
+### 3.0.1
+- Added support for TIFF compression schemes
+
 ### 3.0.0
 - Updated to ImageSharp 3
 
