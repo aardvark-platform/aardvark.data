@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Aardvark.Base;
@@ -142,7 +143,7 @@ namespace Aardvark.Data
         #region Static Tables and Methods
 
         private static readonly Dictionary<PixFileFormat, Func<BitmapEncoder>> s_FormatEncoder =
-            new Dictionary<PixFileFormat, Func<BitmapEncoder>>()
+            new()
         {
             { PixFileFormat.Png, () => new PngBitmapEncoder() },
             { PixFileFormat.Bmp, () => new BmpBitmapEncoder() },
@@ -161,7 +162,7 @@ namespace Aardvark.Data
         }
 
         private static readonly Dictionary<PixFormat, (PixelFormat, Col.Format)> s_pixelFormatOfFormat =
-            new Dictionary<PixFormat, (PixelFormat, Col.Format)>()
+            new()
             {
                 { new PixFormat(typeof(byte), Col.Format.BW), (PixelFormats.BlackWhite, Col.Format.BW) },
                 { new PixFormat(typeof(byte), Col.Format.Gray), (PixelFormats.Gray8, Col.Format.Gray) },
@@ -196,6 +197,20 @@ namespace Aardvark.Data
 
             throw new ArgumentException($"Unsupported pixel format ({format}, {type})");
         }
+
+        private static readonly Dictionary<PixTiffCompression, TiffCompressOption> s_tiffCompression =
+            new()
+            {
+                { PixTiffCompression.Default, TiffCompressOption.Default },
+                { PixTiffCompression.None,    TiffCompressOption.None },
+                { PixTiffCompression.Ccitt3,  TiffCompressOption.Ccitt3 },
+                { PixTiffCompression.Ccitt4,  TiffCompressOption.Ccitt4 },
+                { PixTiffCompression.Lzw,     TiffCompressOption.Lzw },
+                { PixTiffCompression.Deflate, TiffCompressOption.Zip },
+            };
+
+        private static TiffCompressOption GetTiffCompression(PixTiffCompression compression)
+            => s_tiffCompression.GetOrDefault(compression, TiffCompressOption.Default);
 
         private static PixImage CreateFromBitmapSource(BitmapSource bitmapSource)
         {
@@ -274,9 +289,6 @@ namespace Aardvark.Data
 
             public void SaveToStream(Stream stream, PixImage pi, PixSaveParams saveParams)
             {
-                if (pi.Format == Col.Format.BW)
-                    throw new ArgumentException($"Unsupported color format {pi.Format}");
-
                 if (saveParams is PixPngSaveParams png && png.CompressionLevel != PixPngSaveParams.DefaultCompressionLevel)
                 {
                     Report.Warn("Windows Media does not support setting PNG compression levels.");
@@ -286,6 +298,7 @@ namespace Aardvark.Data
                     saveParams switch
                     {
                         PixJpegSaveParams jpeg => new JpegBitmapEncoder { QualityLevel = jpeg.Quality },
+                        PixTiffSaveParams tiff => new TiffBitmapEncoder { Compression = GetTiffCompression(tiff.Compression) },
                         _ => GetEncoder(saveParams.Format)
                     };
 
@@ -333,8 +346,16 @@ namespace Aardvark.Data
         public static BitmapSource ToBitmapSource(this PixImage pi, double dpi = 96.0)
         {
             var t = pi.PixFormat.Type;
-            var mi = typeof(PixImageWindowsMedia).GetMethod("ToBitmapSourceTyped", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).MakeGenericMethod(new[] { t });
-            return (BitmapSource)mi.Invoke(null, new object[] { pi, dpi });
+            var mi = typeof(PixImageWindowsMedia).GetMethod("ToBitmapSourceTyped", BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(t);
+
+            try
+            {
+                return (BitmapSource)mi.Invoke(null, [pi, dpi]);
+            }
+            catch (TargetInvocationException e)
+            {
+                throw e.InnerException ?? e;
+            }
         }
 
         public static BitmapSource ToBitmapSource<T>(this PixImage<T> pi, double dpi = 96.0)

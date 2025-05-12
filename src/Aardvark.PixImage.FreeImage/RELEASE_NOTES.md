@@ -1,3 +1,13 @@
+### 5.3.7
+- Added support for more pixel formats
+- Fixed issues with conversion between BGR and RGB
+- Allow non-dense image layouts when saving
+- Improved error messages (displays internal log now)
+- Fixed invalid enum values (https://github.com/microsoft/vcpkg/issues/45410)
+- Added support for saving WebP images
+- Added support for EXR compression modes
+- Added support for TIFF compression modes
+
 ### 5.3.6
 - Added MacOS binaries
 - Removed MSVC runtime dependency on Windows

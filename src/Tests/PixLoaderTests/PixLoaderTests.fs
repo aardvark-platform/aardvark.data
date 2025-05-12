@@ -37,26 +37,34 @@ module PixLoaderTests =
             Directory.CreateDirectory(dir) |> ignore
             img.Save(Path.combine [dir; fileName])
 
-        let checkerboard (format : Col.Format) (width : int) (height : int) =
-            let mutable colors = HashMap.empty<V2l, C4b>
+        let checkerboardGeneric<'T> (format : Col.Format) (width : int) (height : int) (background : 'T[]) (getRandom : unit -> 'T) =
+            let mutable colors = HashMap.empty<V2l, 'T[]>
 
-            let pi = PixImage<byte>(format, V2i(width, height))
+            let pi = PixImage<'T>(format, V2i(width, height))
 
             for channel = 0 to pi.ChannelCount - 1 do
                 pi.GetChannel(int64 channel).SetByCoord(fun (c : V2l) ->
                     let c = c / 11L
                     if (c.X + c.Y) % 2L = 0L then
-                        255uy
+                        background.[channel]
                     else
                         match colors |> HashMap.tryFind c with
                         | Some c -> c.[channel]
                         | _ ->
-                            let color = rnd.UniformC4d().ToC4b()
+                            let color = Array.init pi.ChannelCount (fun _ -> getRandom())
                             colors <- colors |> HashMap.add c color
                             color.[channel]
                 ) |> ignore
 
             pi
+
+        let checkerboard (format : Col.Format) (width : int) (height : int) =
+            let background = C4b.White.ToArray()
+            checkerboardGeneric<uint8> format width height background Rnd.uint8
+
+        let checkerboard32f (format : Col.Format) (width : int) (height : int) =
+            let background = C4f.White.ToArray()
+            checkerboardGeneric<float32> format width height background Rnd.float32
 
         let compare (input : PixImage<'T>) (output : PixImage<'T>) =
             let channels = min input.ChannelCount output.ChannelCount
@@ -89,6 +97,7 @@ module PixLoaderTests =
                 Col.Format.BGRA
                 Col.Format.RGB
                 Col.Format.BGR
+                Col.Format.Gray
             ]
             |> Gen.elements
 
@@ -110,6 +119,13 @@ module PixLoaderTests =
                 return PixImage.checkerboard format w h
             }
 
+        let checkerboardPix32f (format : Col.Format) =
+            gen {
+                let! w = Gen.choose (64, 513)
+                let! h = Gen.choose (64, 513)
+                return PixImage.checkerboard32f format w h
+            }
+
         let private allPixLoaders =
             let loaders = PixImage.GetLoaders() |> Seq.filter (fun l -> l.Name <> "Aardvark PGM")
             Gen.elements loaders
@@ -117,7 +133,9 @@ module PixLoaderTests =
         // Loader restrictions for encoding or decoding
         let private filterLoader (format : PixFileFormat) (gen : Gen<IPixLoader>) =
             gen |> Gen.filter (fun loader ->
-                not (loader.Name = "ImageSharp" && format = PixFileFormat.Tiff)             // ImageSharp support for TIFFs is buggy atm (2.X)
+                not (loader.Name = "ImageSharp" && format = PixFileFormat.Tiff) &&                                 // ImageSharp support for TIFFs is buggy atm (2.X)
+                not (loader.Name <> "FreeImage" && loader.Name <> "ImageSharp" && format = PixFileFormat.Webp) &&  // Only FreeImage and ImageSharp support WebP
+                not (loader.Name <> "FreeImage" && format = PixFileFormat.Exr)                                     // Only FreeImage supports EXR (we don't talk about DevIL)
             )
 
         // Loader restrictions specifically for encoding
@@ -173,10 +191,31 @@ module PixLoaderTests =
             JpegLoader  : IPixLoader
         }
 
+    type SaveLoadInputWebp =
+        {
+            Image       : PixImage<byte>
+            WebpLoader  : IPixLoader
+        }
+
     type SaveLoadInputPng =
         {
             Image       : PixImage<byte>
             PngLoader   : IPixLoader
+        }
+
+    type SaveLoadInputExr =
+        {
+            Image           : PixImage<float32>
+            Compression     : PixExrCompression
+            LuminanceChroma : bool
+            ExrLoader       : IPixLoader
+        }
+
+    type SaveLoadInputTiff =
+        {
+            Image           : PixImage<uint8>
+            Compression     : PixTiffCompression
+            TiffLoader      : IPixLoader
         }
 
     type SaveLoadInput =
@@ -197,6 +236,13 @@ module PixLoaderTests =
             }
             |> Arb.fromGen
 
+        static member PixImage32f =
+            gen {
+                let! format = Gen.colorFormat
+                return! Gen.checkerboardPix32f format
+            }
+            |> Arb.fromGen
+
         static member SaveLoadInputJpeg =
             gen {
                 let! format = Gen.colorFormat
@@ -206,6 +252,19 @@ module PixLoaderTests =
                 return {
                     Image = pix
                     JpegLoader = loader
+                }
+            }
+            |> Arb.fromGen
+
+        static member SaveLoadInputWebp =
+            gen {
+                let! format = Gen.colorFormat
+                let! pix = Gen.checkerboardPix format
+                let! loader = Gen.pixLoader false PixFileFormat.Webp
+
+                return {
+                    Image = pix
+                    WebpLoader = loader
                 }
             }
             |> Arb.fromGen
@@ -222,6 +281,46 @@ module PixLoaderTests =
                 return {
                     Image = pix
                     PngLoader = loader
+                }
+            }
+            |> Arb.fromGen
+
+        static member SaveLoadInputExr =
+            gen {
+                let! format = Gen.colorFormat
+                let! pix = Gen.checkerboardPix32f format
+                let! compression = Gen.elements (Enum.GetValues<PixExrCompression>())
+                let! luminanceChroma = Gen.elements [false] // Seems to be broken in FreeImage (produces bad files)
+                let! loader = Gen.pixLoader false PixFileFormat.Exr
+
+                return {
+                    Image = pix
+                    Compression = compression
+                    LuminanceChroma = luminanceChroma
+                    ExrLoader = loader
+                }
+            }
+            |> Arb.fromGen
+
+        static member SaveLoadInputTiff =
+            gen {
+                let! format = Gen.colorFormat
+                let! pix = Gen.checkerboardPix format
+                let! compression =
+                    Enum.GetValues<PixTiffCompression>()
+                    |> Array.filter (fun v ->
+                        v <> PixTiffCompression.Ccitt3 && v <> PixTiffCompression.Ccitt4 // Only makes sense for BW images
+                    )
+                    |> Gen.elements
+
+                let! loader =
+                    Gen.pixLoader false PixFileFormat.Tiff
+                    |> Gen.filter (fun l -> l.Name <> PixImageDevil.Loader.Name) // DevIL does not support compression
+
+                return {
+                    Image = pix
+                    Compression = compression
+                    TiffLoader = loader
                 }
             }
             |> Arb.fromGen
@@ -323,6 +422,45 @@ module PixLoaderTests =
             )
         )
 
+    [<Property(Arbitrary = [| typeof<Generator> |])>]
+    let ``[PixLoader] WebP compression`` (input : SaveLoadInputWebp) =
+        let pi = input.Image
+        let loader = input.WebpLoader
+        printfn "loader = %s, size = %A, format = %A" loader.Name pi.Size pi.Format
+
+        // Lossy
+        tempFile (fun file50 ->
+            tempFile (fun file90 ->
+                pi.Save(file50, PixWebpSaveParams(50), false, loader)
+                pi.Save(file90, PixWebpSaveParams(90), false, loader)
+
+                // check equal
+                let pi50 = PixImage<uint8>(file50, loader)
+                let pi90 = PixImage<uint8>(file90, loader)
+                let psnr = PixImage.peakSignalToNoiseRatio pi50 pi90
+                psnr |> should be (greaterThan 20.0)
+
+                // check size
+                let i50 = FileInfo(file50)
+                let i90 = FileInfo(file90)
+
+                i50.Length |> should be (lessThan i90.Length)
+            )
+        )
+
+        // Lossless
+        tempFile (fun file50 ->
+            tempFile (fun file90 ->
+                pi.Save(file50, PixWebpSaveParams(50, true), false, loader)
+                pi.Save(file90, PixWebpSaveParams(90, true), false, loader)
+
+                // check equal
+                let pi50 = PixImage<uint8>(file50, loader)
+                let pi90 = PixImage<uint8>(file90, loader)
+
+                PixImage.compare pi50 pi90
+            )
+        )
 
     [<Property(Arbitrary = [| typeof<Generator> |])>]
     let ``[PixLoader] PNG compression level`` (input : SaveLoadInputPng) =
@@ -349,6 +487,61 @@ module PixLoaderTests =
             )
         )
 
+    [<Property(Arbitrary = [| typeof<Generator> |])>]
+    let ``[PixLoader] EXR compression`` (input : SaveLoadInputExr) =
+        let pi = input.Image
+        let loader = input.ExrLoader
+        printfn "loader = %s, size = %A, format = %A, compression = %A, lc = %A" loader.Name pi.Size pi.Format input.Compression input.LuminanceChroma
+
+        let isLossy =
+            match input.Compression with
+            | PixExrCompression.Pxr24 | PixExrCompression.B44 -> true
+            | _ -> pi.Format.ChannelCount() > 1 && input.LuminanceChroma
+
+        tempFile (fun file ->
+            pi.Save(file, PixExrSaveParams(input.Compression, input.LuminanceChroma), false, loader)
+            let output = PixImage<float32>(file, loader)
+
+            if isLossy then
+                let psnr = PixImage.peakSignalToNoiseRatio input.Image output
+                Expect.isGreaterThan psnr 10.0 "Bad peak-signal-to-noise ratio"
+            else
+                PixImage.compare input.Image output
+        )
+
+    [<Property(Arbitrary = [| typeof<Generator> |])>]
+    let ``[PixLoader] TIFF compression`` (input : SaveLoadInputTiff) =
+        let pi = input.Image
+        let loader = input.TiffLoader
+        printfn "loader = %s, size = %A, format = %A, compression = %A" loader.Name pi.Size pi.Format input.Compression
+
+        let isLossy =
+            match input.Compression with
+            | PixTiffCompression.Jpeg -> true
+            | _ -> false
+
+        tempFile (fun file ->
+            pi.Save(file, PixTiffSaveParams(input.Compression), false, loader)
+            let output = PixImage<uint8>(file, loader)
+
+            if isLossy then
+                let psnr = PixImage.peakSignalToNoiseRatio input.Image output
+                Expect.isGreaterThan psnr 20.0 "Bad peak-signal-to-noise ratio"
+            else
+                PixImage.compare input.Image output
+        )
+
+    [<Test>]
+    let ``[PixLoader] BW with Windows Media``() =
+        let src = PixImage.checkerboard Col.Format.BW 256 256
+        for i = 0 to src.Data.Length - 1 do
+            src.Data.[i] <- if src.Data.[i] > 127uy then 255uy else 0uy
+
+        tempFile (fun file ->
+            src.Save(file, PixFileFormat.Bmp, false, PixImageWindowsMedia.Loader)
+            let dst = PixImage.Load(file, PixImageWindowsMedia.Loader).AsPixImage<uint8>()
+            PixImage.compare src dst
+        )
 
     [<Test>]
     let ``[PixLoader] Add and remove loaders``() =
@@ -413,84 +606,3 @@ module PixLoaderTests =
 
             pi.SaveAsPng(stream)
         )
-
-
-    module FreeImageTests = 
-
-        [<SetUp>]
-        let setup() =
-            Aardvark.Init()
-            Report.Verbosity <- 3
-
-        let ``[PixLoaderFreeImage] EXR float roundtrip stream``<'t when 't: equality>(toT : int64 -> 't) =
-            let pi = PixImage<'t>(V2i(512, 512), 1L)
-
-            let mat = pi.GetMatrix<'t>()
-            mat.SetByCoord(fun (l : V2l) -> 
-                toT l.X
-            ) |> ignore
-
-            tempFile (fun fileName -> 
-                do
-                    use q = System.IO.File.OpenWrite(fileName)
-                    PixImageFreeImage.Loader.SaveToStream(q, pi, PixSaveParams(PixFileFormat.Exr)) |> ignore
-
-
-                let loadedPi = PixImage.Load(fileName, PixImageFreeImage.Loader) |> unbox<PixImage<'t>>
-                let loadedMat = loadedPi.GetMatrix<'t>()
-                loadedMat.ForeachCoord(fun (l : V2l) -> 
-                    let v = loadedMat.[l] 
-                    if toT l.X <> v then
-                        failwithf "Value mismatch at %A: expected %f, got %A" l (float32 l.X) v
-                )
-            )
-
-        let ``[PixLoaderFreeImage] EXR float roundtrip file``<'t when 't: equality>(toT : int64 -> 't) =
-            let pi = PixImage<'t>(V2i(512, 512), 1L)
-
-            let mat = pi.GetMatrix<'t>()
-            mat.SetByCoord(fun (l : V2l) -> 
-                toT l.X
-            ) |> ignore
-
-            tempFile (fun fileName -> 
-                do
-                    use q = System.IO.File.OpenWrite(fileName)
-                    PixImageFreeImage.Loader.SaveToStream(q, pi, PixSaveParams(PixFileFormat.Exr)) |> ignore
-
-
-                let loadedPi = PixImage.Load(fileName, PixImageFreeImage.Loader) |> unbox<PixImage<'t>>
-                let loadedMat = loadedPi.GetMatrix<'t>()
-                loadedMat.ForeachCoord(fun (l : V2l) -> 
-                    let v = loadedMat.[l] 
-                    if toT l.X <> v then
-                        failwithf "Value mismatch at %A: expected %f, got %A" l (float32 l.X) v
-                )
-            )
-
-        [<Test>]
-        let ``[PixLoaderFreeImage] EXR float roundtrip stream float16`` =
-            Aardvark.Init()
-            ``[PixLoaderFreeImage] EXR float roundtrip stream``<float16> (fun (v : int64) -> float16 v) |> ignore
-
-        [<Test>]
-        let ``[PixLoaderFreeImage] EXR float roundtrip file float16`` =
-            Aardvark.Init()
-            ``[PixLoaderFreeImage] EXR float roundtrip file``<float16> (fun (v : int64) -> float16 v) |> ignore
-
-        [<Test>]
-        let ``[PixLoaderFreeImage] EXR float roundtrip stream float32`` =
-            ``[PixLoaderFreeImage] EXR float roundtrip stream``<float32> (fun (v : int64) -> float32 v) |> ignore
-
-        [<Test>]
-        let ``[PixLoaderFreeImage] EXR float roundtrip file float32`` =
-            ``[PixLoaderFreeImage] EXR float roundtrip file``<float32> (fun (v : int64) -> float32 v) |> ignore
-
-
-        [<Test>]
-        let ``[PixLoaderFreeImage] EXR float roundtrip stream double`` =
-            ``[PixLoaderFreeImage] EXR float roundtrip stream``<double> (fun (v : int64) -> double v) |> ignore
-
-        [<Test>]
-        let ``[PixLoaderFreeImage] EXR float roundtrip file double`` =
-            ``[PixLoaderFreeImage] EXR float roundtrip file``<double> (fun (v : int64) -> double v) |> ignore

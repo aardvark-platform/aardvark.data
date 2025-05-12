@@ -157,44 +157,40 @@ namespace FreeImageAPI
         /// </summary>
         FIF_HDR = 26,
         /// <summary>
-        /// Raw Fax format CCITT G3 (*.G3)
-        /// </summary>
-        FIF_FAXG3 = 27,
-        /// <summary>
         /// Silicon Graphics SGI image format (*.SGI)
         /// </summary>
-        FIF_SGI = 28,
+        FIF_SGI = 27,
         /// <summary>
         /// OpenEXR format (*.EXR)
         /// </summary>
-        FIF_EXR = 29,
+        FIF_EXR = 28,
         /// <summary>
         /// JPEG-2000 format (*.J2K, *.J2C)
         /// </summary>
-        FIF_J2K = 30,
+        FIF_J2K = 29,
         /// <summary>
         /// JPEG-2000 format (*.JP2)
         /// </summary>
-        FIF_JP2 = 31,
+        FIF_JP2 = 30,
         /// <summary>
         /// Portable FloatMap (*.PFM)
         /// </summary>
-        FIF_PFM = 32,
+        FIF_PFM = 31,
         /// <summary>
         /// Macintosh PICT (*.PICT)
         /// </summary>
-        FIF_PICT = 33,
+        FIF_PICT = 32,
         /// <summary>
         /// RAW camera image (*.*)
         /// </summary>
-        FIF_RAW = 34,
+        FIF_RAW = 33,
         /// <summary>
         /// WEBP format (*.webp)
         /// </summary>
-        FIF_WEBP = 35,
+        FIF_WEBP = 34,
         /// <summary>
         /// JPEG XR (*.jxr)
         /// </summary>
-        FIF_JXR = 36
+        FIF_JXR = 35
     }
 }

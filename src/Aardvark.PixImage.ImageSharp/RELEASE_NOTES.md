@@ -1,3 +1,7 @@
+### 3.0.1
+- Added support for TIFF compression schemes
+- Added support for saving WebP images
+
 ### 3.0.0
 - Updated to ImageSharp 3
 
