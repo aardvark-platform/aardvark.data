@@ -155,7 +155,7 @@ namespace Aardvark.Data
 
         #region Bitmap to PixImage
 
-        private static PixImage BitmapToPixImage<T>(FIBITMAP bitmap, Col.Format format) where T : unmanaged
+        private static PixImage<T> BitmapToPixImage<T>(FIBITMAP bitmap, Col.Format format) where T : unmanaged
         {
             var sx = (int)FreeImage.GetWidth(bitmap);
             var sy = (int)FreeImage.GetHeight(bitmap);
@@ -444,6 +444,16 @@ namespace Aardvark.Data
             {
                 if (!s_fileFormats.TryGetValue(saveParams.Format, out FREE_IMAGE_FORMAT format))
                     throw new NotSupportedException($"Unsupported PixImage file format {saveParams.Format}.");
+
+                // WebP plugin crashes if format is not supported.
+                if (format == FREE_IMAGE_FORMAT.FIF_WEBP)
+                {
+                    if (pi.PixFormat.Type != typeof(byte))
+                        throw new NotSupportedException($"WebP only supports 24-bit and 32-bit depths (Format = {pi.PixFormat}).");
+
+                    if (pi.Format == Col.Format.Gray)
+                        pi = pi.ToPixImage(Col.Format.BGR);
+                }
 
                 if (!s_bitmapCreators.TryGetValue(pi.PixFormat, out var creator))
                 {

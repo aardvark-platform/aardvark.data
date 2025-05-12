@@ -126,44 +126,78 @@ namespace FreeImageNETUnitTest.TestFixtures
             FreeImage.UnloadEx(ref dib);
         }
 
+        private static unsafe void Write<T>(FIBITMAP dib, T value) where T : unmanaged
+        {
+            var ptr = FreeImage.GetBits(dib);
+            var data = (T*)ptr;
+            data[0] = value;
+        }
+
+        private static unsafe T Read<T>(FIBITMAP dib) where T : unmanaged
+        {
+            var ptr = FreeImage.GetBits(dib);
+            var data = (T*)ptr;
+            return data[0];
+        }
+
         [Test]
-        public unsafe void SaveAndLoadExr()
+        public void SaveAndLoadExr()
         {
             FIBITMAP image = FreeImage.AllocateT(FREE_IMAGE_TYPE.FIT_FLOAT, 1, 1, 32);
-
-            void Write(FIBITMAP dib, float value)
-            {
-                var ptr = FreeImage.GetBits(dib);
-                float* data = (float*)ptr;
-                data[0] = 42.0f;
-            }
-
-            float Read(FIBITMAP dib)
-            {
-                var ptr = FreeImage.GetBits(dib);
-                float* data = (float*)ptr;
-                return data[0];
-            }
+            const float value = 42.0f;
 
             try
             {
-                Write(image, 42.0f);
+                Write(image, value);
 
                 using var ms = new MemoryStream();
                 var success = FreeImage.SaveToStream(image, ms, FREE_IMAGE_FORMAT.FIF_EXR, FREE_IMAGE_SAVE_FLAGS.EXR_FLOAT);
                 Assert.IsTrue(success);
 
                 ms.Seek(0, SeekOrigin.Begin);
-                var result = FreeImage.LoadFromStream(ms);
+                var loaded = FreeImage.LoadFromStream(ms);
 
                 try
                 {
-                    var value = Read(result);
-                    Assert.AreEqual(42.0f, value);
+                    var result = Read<float>(loaded);
+                    Assert.AreEqual(value, result);
                 }
                 finally
                 {
-                    FreeImage.UnloadEx(ref result);
+                    FreeImage.UnloadEx(ref loaded);
+                }
+            }
+            finally
+            {
+                FreeImage.UnloadEx(ref image);
+            }
+        }
+
+        [Test]
+        public void SaveAndLoadWebp()
+        {
+            FIBITMAP image = FreeImage.AllocateT(FREE_IMAGE_TYPE.FIT_BITMAP, 1, 1, 24);
+            const byte value = 42;
+
+            try
+            {
+                Write(image, value);
+
+                using var ms = new MemoryStream();
+                var success = FreeImage.SaveToStream(image, ms, FREE_IMAGE_FORMAT.FIF_WEBP, FREE_IMAGE_SAVE_FLAGS.WEBP_LOSSLESS);
+                Assert.IsTrue(success);
+
+                ms.Seek(0, SeekOrigin.Begin);
+                var loaded = FreeImage.LoadFromStream(ms);
+
+                try
+                {
+                    var result = Read<byte>(loaded);
+                    Assert.AreEqual(value, result);
+                }
+                finally
+                {
+                    FreeImage.UnloadEx(ref loaded);
                 }
             }
             finally
