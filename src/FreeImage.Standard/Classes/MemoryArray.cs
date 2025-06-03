@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace FreeImageAPI
@@ -76,16 +77,13 @@ namespace FreeImageAPI
 
         static MemoryArray()
         {
-            T[] dummy = new T[2];
             long marshalledSize = Marshal.SizeOf(typeof(T));
-            long structureSize =
-                Marshal.UnsafeAddrOfPinnedArrayElement(dummy, 1).ToInt64() -
-                Marshal.UnsafeAddrOfPinnedArrayElement(dummy, 0).ToInt64();
+            long structureSize = Unsafe.SizeOf<T>();
             if (marshalledSize != structureSize)
             {
                 throw new NotSupportedException(
-                    "The desired type can not be handled, " +
-                    "because its managed and unmanaged size in bytes are different.");
+                    $"The type {typeof(T)} can not be handled, " +
+                    $"because its managed and unmanaged size in bytes are different (Managed: {structureSize}, Unmanaged: {marshalledSize}).");
             }
 
             size = (int)marshalledSize;

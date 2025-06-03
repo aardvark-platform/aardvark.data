@@ -1,3 +1,6 @@
+### 5.3.8
+- Fixed validation of unmanaged and managed size in MemoryArray
+
 ### 5.3.7
 - Added support for more pixel formats
 - Fixed issues with conversion between BGR and RGB
