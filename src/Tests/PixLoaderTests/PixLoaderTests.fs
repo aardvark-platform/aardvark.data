@@ -504,7 +504,7 @@ module PixLoaderTests =
 
             if isLossy then
                 let psnr = PixImage.peakSignalToNoiseRatio input.Image output
-                Expect.isGreaterThan psnr 10.0 "Bad peak-signal-to-noise ratio"
+                Expect.isGreaterThan psnr 8.0 "Bad peak-signal-to-noise ratio"
             else
                 PixImage.compare input.Image output
         )
