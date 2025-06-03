@@ -1,3 +1,6 @@
+### 1.1.0-prerelease0012
+- Update xBIM-libs and clean up redundant functionality
+
 ### 1.1.0-prerelease0011
 - Fixed project length unit scale
 

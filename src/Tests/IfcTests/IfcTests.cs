@@ -149,7 +149,6 @@ namespace Aardvark.Data.Tests.Ifc
                 //create simple object and use lambda initializer to set the name
                 var wall = (Xbim.Ifc4.SharedBldgElements.IfcWall) model.Factory().Wall(w => w.Name = "The very first wall"); // <- remove cast (necessary for PurgePropertySet, SetPropertySingleValue...)
                 site.AddElement(wall);
-
                 var prop = new Dictionary<string, object>
                         {
                             { "p1", "A" },
@@ -288,11 +287,6 @@ namespace Aardvark.Data.Tests.Ifc
                         a.Axis = factory.Direction(rd => rd.SetXYZ(0, 0, 1.0));         // default z-axis
                     });
                 });
-            });
-
-            factory.RelContainedInSpatialStructure(relSe => {
-                relSe.RelatingStructure = site;
-                relSe.RelatedElements.Add(proxy);
             });
 
             site.AddElement(proxy);

@@ -3,6 +3,7 @@ using System.Linq;
 using Aardvark.Base;
 using Aardvark.Geometry;
 
+using Xbim.Ifc;
 using Xbim.Common;
 using Xbim.Ifc4.Interfaces;
 

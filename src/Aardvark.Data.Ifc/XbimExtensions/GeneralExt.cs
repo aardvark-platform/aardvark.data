@@ -93,7 +93,6 @@ namespace Aardvark.Data.Ifc
             };
 
             project.Initialize(xBimDefaultUnits);
-
             switch (units)
             {
                 case ProjectUnitsExtended.SIUnitsM : project.UnitsInContext.SetOrChangeSiUnit(IfcUnitEnum.LENGTHUNIT, IfcSIUnitName.METRE, null); break;

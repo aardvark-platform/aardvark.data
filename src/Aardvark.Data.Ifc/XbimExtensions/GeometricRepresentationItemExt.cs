@@ -4,45 +4,13 @@ using System.Linq;
 using Aardvark.Base;
 
 using Xbim.Common;
+using Xbim.Ifc;
 using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.GeometryResource;
 using Xbim.Ifc4.MeasureResource;
 
 namespace Aardvark.Data.Ifc
-{
-    public static class IIfcCartesianPointExtensions
-    {
-        public static void SetXY(this IIfcCartesianPoint obj, double x, double y)
-        {
-            obj.Coordinates.Clear();
-            obj.Coordinates.Add(x);
-            obj.Coordinates.Add(y);
-        }
-
-        public static void SetXYZ(this IIfcCartesianPoint obj, double x, double y, double z)
-        {
-            obj.Coordinates.Clear();
-            obj.Coordinates.Add(x);
-            obj.Coordinates.Add(y);
-            obj.Coordinates.Add(z);
-        }
-
-        public static void SetXY(this IIfcDirection obj, double x, double y)
-        {
-            obj.DirectionRatios.Clear();
-            obj.DirectionRatios.Add(x);
-            obj.DirectionRatios.Add(y);
-        }
-
-        public static void SetXYZ(this IIfcDirection obj, double x, double y, double z)
-        {
-            obj.DirectionRatios.Clear();
-            obj.DirectionRatios.Add(x);
-            obj.DirectionRatios.Add(y);
-            obj.DirectionRatios.Add(z);
-        }
-    }
-        
+{ 
     public static class GeometricRepresentationItemExt
     {
         public static IIfcGeometricRepresentationContext GetGeometricRepresentationContextPlan(this IModel model)

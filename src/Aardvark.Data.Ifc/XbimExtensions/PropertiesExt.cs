@@ -5,6 +5,7 @@ using System.Linq;
 using Aardvark.Base;
 
 using Xbim.Common;
+using Xbim.Ifc;
 using Xbim.Ifc.Extensions;
 using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.DateTimeResource;
@@ -346,17 +347,17 @@ namespace Aardvark.Data.Ifc
             return false;
         }
 
-        public static IIfcPhysicalSimpleQuantity CreatePhysicalSimpleQuantity(this IModel model, XbimQuantityTypeEnum quantityType, double value, string name = null)
+        public static IIfcPhysicalSimpleQuantity CreatePhysicalSimpleQuantity(this IModel model, Xbim.Ifc.XbimQuantityTypeEnum quantityType, double value, string name = null)
         {
             var factory = new EntityCreator(model);
             return quantityType switch
             {
-                XbimQuantityTypeEnum.Area => factory.QuantityArea(sq => { if (name != null) sq.Name = name; sq.AreaValue = (IfcAreaMeasure)value; }),
-                XbimQuantityTypeEnum.Length => factory.QuantityLength(sq => { if (name != null) sq.Name = name; sq.LengthValue = (IfcLengthMeasure)value; }),
-                XbimQuantityTypeEnum.Volume => factory.QuantityVolume(sq => { if (name != null) sq.Name = name; sq.VolumeValue = (IfcVolumeMeasure)value; }),
-                XbimQuantityTypeEnum.Count => factory.QuantityCount(sq => { if (name != null) sq.Name = name; sq.CountValue = (IfcCountMeasure)value; }),
-                XbimQuantityTypeEnum.Weight => factory.QuantityWeight(sq => { if (name != null) sq.Name = name; sq.WeightValue = (IfcMassMeasure)value; }),
-                XbimQuantityTypeEnum.Time => factory.QuantityTime(sq => { if (name != null) sq.Name = name; sq.TimeValue = (IfcTimeMeasure)value; }),
+                Xbim.Ifc.XbimQuantityTypeEnum.Area => factory.QuantityArea(sq => { if (name != null) sq.Name = name; sq.AreaValue = (IfcAreaMeasure)value; }),
+                Xbim.Ifc.XbimQuantityTypeEnum.Length => factory.QuantityLength(sq => { if (name != null) sq.Name = name; sq.LengthValue = (IfcLengthMeasure)value; }),
+                Xbim.Ifc.XbimQuantityTypeEnum.Volume => factory.QuantityVolume(sq => { if (name != null) sq.Name = name; sq.VolumeValue = (IfcVolumeMeasure)value; }),
+                Xbim.Ifc.XbimQuantityTypeEnum.Count => factory.QuantityCount(sq => { if (name != null) sq.Name = name; sq.CountValue = (IfcCountMeasure)value; }),
+                Xbim.Ifc.XbimQuantityTypeEnum.Weight => factory.QuantityWeight(sq => { if (name != null) sq.Name = name; sq.WeightValue = (IfcMassMeasure)value; }),
+                Xbim.Ifc.XbimQuantityTypeEnum.Time => factory.QuantityTime(sq => { if (name != null) sq.Name = name; sq.TimeValue = (IfcTimeMeasure)value; }),
                 _ => default,
             }; 
         }

@@ -5,8 +5,8 @@ using Aardvark.Data.Photometry;
 
 using Xbim.Common;
 using Xbim.Common.Step21;
+using Xbim.Ifc;
 using Xbim.Ifc4.Interfaces;
-using Xbim.Ifc4.Kernel;
 using Xbim.Ifc4.MeasureResource;
 
 namespace Aardvark.Data.Ifc
@@ -73,7 +73,7 @@ namespace Aardvark.Data.Ifc
         // IIfcLightFixture replaces general IIfcFlowTerminal in IFC4+
         public static void Qto_LightFixtureBaseQuantities(this IIfcFlowTerminal light, double weight)
         {
-            var q = light.Model.CreatePhysicalSimpleQuantity(XbimQuantityTypeEnum.Weight, weight, "GrossWeight");
+            var q = light.Model.CreatePhysicalSimpleQuantity(Xbim.Ifc.XbimQuantityTypeEnum.Weight, weight, "GrossWeight");
             light.AddQuantity("Qto_LightFixtureBaseQuantities", q);
         }
 
