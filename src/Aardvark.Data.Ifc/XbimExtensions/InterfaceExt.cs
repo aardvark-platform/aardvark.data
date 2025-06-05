@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using Xbim.Ifc4.Interfaces;
 
 namespace Aardvark.Data.Ifc
@@ -21,6 +20,18 @@ namespace Aardvark.Data.Ifc
             {
                 spatialStructure.RelatedElements.Add(product);
             }
+        }
+
+        public static void AddRelAggregates(this IIfcObjectDefinition obj, IIfcObjectDefinition relatingObject)
+        {
+            // check for existing RelAggregates for this parent
+            var decomposition = relatingObject.IsDecomposedBy.FirstOrDefault();
+
+            // create relationship
+            decomposition ??= obj.Model.Factory().RelAggregates(relSub => relSub.RelatingObject = relatingObject);
+
+            // update relationship
+            decomposition.RelatedObjects.Add(obj);
         }
     }
 }

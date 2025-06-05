@@ -1,3 +1,6 @@
+### 1.1.0-prerelease0013
+- Restore missing extension
+
 ### 1.1.0-prerelease0012
 - Update xBIM-libs and clean up redundant functionality
 
