@@ -378,16 +378,16 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
         else
             match data.ExifProfile.TryGetValue ExifTag.Orientation with
             | (true, v) ->
-                match unbox<uint16> v with
-                | 1us -> RotateMode.None, FlipMode.None             // Horizontal (normal)
-                | 2us -> RotateMode.None, FlipMode.Horizontal       // Mirror horizontal
-                | 3us -> RotateMode.Rotate180, FlipMode.None        // Rotate 180
-                | 4us -> RotateMode.None, FlipMode.Vertical         // Mirror vertical
-                | 5us -> RotateMode.Rotate270, FlipMode.Horizontal  // Mirror horizontal and rotate 270 CW
-                | 6us -> RotateMode.Rotate90, FlipMode.None         // Rotate 90 CW
-                | 7us -> RotateMode.Rotate90, FlipMode.Horizontal   // Mirror horizontal and rotate 90 CW
-                | 8us -> RotateMode.Rotate270, FlipMode.None        // Rotate 270 CW
-                | _   -> RotateMode.None, FlipMode.None
+                match v.Value with
+                | ExifOrientationMode.TopLeft     -> RotateMode.None, FlipMode.None             // Horizontal (normal)
+                | ExifOrientationMode.TopRight    -> RotateMode.None, FlipMode.Horizontal       // Mirror horizontal
+                | ExifOrientationMode.BottomRight -> RotateMode.Rotate180, FlipMode.None        // Rotate 180
+                | ExifOrientationMode.BottomLeft  -> RotateMode.None, FlipMode.Vertical         // Mirror vertical
+                | ExifOrientationMode.LeftTop     -> RotateMode.Rotate270, FlipMode.Horizontal  // Mirror horizontal and rotate 270 CW
+                | ExifOrientationMode.RightTop    -> RotateMode.Rotate90, FlipMode.None         // Rotate 90 CW
+                | ExifOrientationMode.RightBottom -> RotateMode.Rotate90, FlipMode.Horizontal   // Mirror horizontal and rotate 90 CW
+                | ExifOrientationMode.LeftBottom  -> RotateMode.Rotate270, FlipMode.None        // Rotate 270 CW
+                | _                               -> RotateMode.None, FlipMode.None
             | _ ->
                 RotateMode.None, FlipMode.None
 
@@ -397,16 +397,16 @@ and [<AbstractClass; Sealed; Extension>] PixImageSharp private() =
         else
             match data.ExifProfile.TryGetValue ExifTag.Orientation with
             | (true, v) ->
-                match unbox<uint16> v with
-                | 1us -> ImageTrafo.Identity     // Horizontal (normal)
-                | 2us -> ImageTrafo.MirrorX      // Mirror horizontal
-                | 3us -> ImageTrafo.Rot180       // Rotate 180
-                | 4us -> ImageTrafo.MirrorY      // Mirror vertical
-                | 5us -> ImageTrafo.Transpose    // Mirror horizontal and rotate 270 CW
-                | 6us -> ImageTrafo.Rot270       // Rotate 90 CW
-                | 7us -> ImageTrafo.Transverse   // Mirror horizontal and rotate 90 CW
-                | 8us -> ImageTrafo.Rot90        // Rotate 270 CW
-                | _   -> ImageTrafo.Identity
+                match v.Value with
+                | ExifOrientationMode.TopLeft     -> ImageTrafo.Identity     // Horizontal (normal)
+                | ExifOrientationMode.TopRight    -> ImageTrafo.MirrorX      // Mirror horizontal
+                | ExifOrientationMode.BottomRight -> ImageTrafo.Rot180       // Rotate 180
+                | ExifOrientationMode.BottomLeft  -> ImageTrafo.MirrorY      // Mirror vertical
+                | ExifOrientationMode.LeftTop     -> ImageTrafo.Transpose    // Mirror horizontal and rotate 270 CW
+                | ExifOrientationMode.RightTop    -> ImageTrafo.Rot270       // Rotate 90 CW
+                | ExifOrientationMode.RightBottom -> ImageTrafo.Transverse   // Mirror horizontal and rotate 90 CW
+                | ExifOrientationMode.LeftBottom  -> ImageTrafo.Rot90        // Rotate 270 CW
+                | _                               -> ImageTrafo.Identity
             | _ ->
                 ImageTrafo.Identity
 

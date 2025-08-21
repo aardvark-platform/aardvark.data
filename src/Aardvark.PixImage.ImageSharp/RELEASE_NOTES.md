@@ -1,4 +1,5 @@
 - Updated to ImageSharp 3.1.11 (CVE-2025-54575)
+- Fixed issue with reading orientation from metadata
 
 ### 3.0.1
 - Added support for TIFF compression schemes
