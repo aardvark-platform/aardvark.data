@@ -1,3 +1,4 @@
+### 3.0.2
 - Updated to ImageSharp 3.1.11 (CVE-2025-54575)
 - Fixed issue with reading orientation from metadata
 
