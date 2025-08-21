@@ -1,3 +1,5 @@
+- Updated to ImageSharp 3.1.11 (CVE-2025-54575)
+
 ### 3.0.1
 - Added support for TIFF compression schemes
 - Added support for saving WebP images
