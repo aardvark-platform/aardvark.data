@@ -1,3 +1,6 @@
+### 5.2.11
+- Fixed ColladaMaterial diffuse/specular in case there is a texture
+
 ### 5.2.10
 - Added PerfectReflection to ColladaMaterial
 - Fixed ColladaMaterial diffuse/specular fallback values

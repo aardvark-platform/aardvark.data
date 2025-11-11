@@ -371,25 +371,29 @@ namespace Aardvark.Data.Collada
 
                 if (diffuse != null)
                 {
-                    if (diffuse.Item is common_color_or_texture_typeColor diffuseColor) 
+                    if (diffuse.Item is common_color_or_texture_typeColor diffuseColor)
+                    { 
                         mat.Diffuse = ToColor(diffuseColor);
-
-                    if (diffuse.Item is common_color_or_texture_typeTexture diffuseTexture)
+                    }
+                    else if (diffuse.Item is common_color_or_texture_typeTexture diffuseTexture)
                     {
                         var img = samplers.ContainsKey(diffuseTexture.texture) ? textureNames.Get(samplers[diffuseTexture.texture]) : diffuseTexture.texture;
                         mat.DiffuseColorTexturePath = images.Get(img, img);
+                        mat.Diffuse = C4f.White;
                     }
                 }
 
                 if (specular != null)
                 {
                     if (specular.Item is common_color_or_texture_typeColor specularColor)
+                    {
                         mat.Specular = ToColor(specularColor);
-
-                    if (specular.Item is common_color_or_texture_typeTexture specularTexture)
+                    }
+                    else if (specular.Item is common_color_or_texture_typeTexture specularTexture)
                     {
                         var img = samplers.ContainsKey(specularTexture.texture) ? textureNames.Get(samplers[specularTexture.texture]) : specularTexture.texture;
                         mat.SpecularColorTexturePath = images.Get(img, img);
+                        mat.Specular = C4f.White;
                     }
                 }
 
@@ -410,7 +414,7 @@ namespace Aardvark.Data.Collada
                     if (reflective != null && reflective.Item is common_color_or_texture_typeColor reflectiveColor)
                         mat.PerfectReflection = ToColor(reflectiveColor);
                     else
-                        mat.PerfectReflection = C4f.White;
+                        mat.PerfectReflection = C4f.White; // TODO: texture
 
                     if (reflectivity.Item is common_float_or_param_typeFloat reflectivityFloat)
                         mat.PerfectReflection *= new C4f(reflectivityFloat.Value, reflectivityFloat.Value, reflectivityFloat.Value, 1);
