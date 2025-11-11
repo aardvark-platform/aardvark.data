@@ -8,31 +8,18 @@ namespace Aardvark.Data.Collada
 
     public class ColladaMaterial
     {
-        public C4f Emission;
-        public C4f Ambient;
-        public C4f Diffuse;
-        public C4f Specular;
-        public double Alpha;
-        public double Shininess;
-        public string Name;
+        public C4f Emission = C4f.Black;
+        public C4f Ambient = C4f.Black;
+        public C4f Diffuse = C4f.Black;
+        public C4f Specular = C4f.Black;
+        public C4f PerfectReflection = C4f.Black;
+        public double Alpha = 1;
+        public double Shininess = 32;
+        public string Name = null;
 
-        public string DiffuseColorTexturePath;
-        public string SpecularColorTexturePath;
-        public string NormalMapPath;
-
-        public ColladaMaterial()
-        {
-            Emission = new C4f(0, 0, 0, 1);
-            Ambient = new C4f(0, 0, 0, 1);
-            Diffuse = new C4f(1, 1, 1, 1);
-            Specular = new C4f(1, 1, 1, 1);
-            Alpha = 1.0;
-            Shininess = 32;
-
-            DiffuseColorTexturePath = null;
-            SpecularColorTexturePath = null;
-            NormalMapPath = null;
-        }
+        public string DiffuseColorTexturePath = null;
+        public string SpecularColorTexturePath = null;
+        public string NormalMapPath = null;
     }
 
     public class ColladaLight

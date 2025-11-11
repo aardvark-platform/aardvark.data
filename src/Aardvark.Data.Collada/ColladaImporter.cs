@@ -347,6 +347,16 @@ namespace Aardvark.Data.Collada
                 var shininess = phong != null ? phong.shininess :
                                 blinn != null ? blinn.shininess : null;
 
+                var reflectivity = constant != null ? constant.reflectivity :
+                                   lambert != null ? lambert.reflectivity :
+                                   phong != null ? phong.reflectivity :
+                                   blinn != null ? blinn.reflectivity : null;
+
+                var reflective = constant != null ? constant.reflective :
+                                 lambert != null ? lambert.reflective :
+                                 phong != null ? phong.reflective :
+                                 blinn != null ? blinn.reflective : null;
+                
                 if (emission != null)
                 {
                     if (emission.Item is common_color_or_texture_typeColor emissionColor) 
@@ -393,6 +403,19 @@ namespace Aardvark.Data.Collada
                 {
                     if (transparency.Item is common_float_or_param_typeFloat transparencyFloat) 
                         mat.Alpha = transparencyFloat.Value;
+                }
+
+                if (reflectivity != null)
+                {
+                    if (reflective != null && reflective.Item is common_color_or_texture_typeColor reflectiveColor)
+                        mat.PerfectReflection = ToColor(reflectiveColor);
+                    else
+                        mat.PerfectReflection = C4f.White;
+
+                    if (reflectivity.Item is common_float_or_param_typeFloat reflectivityFloat)
+                        mat.PerfectReflection *= new C4f(reflectivityFloat.Value, reflectivityFloat.Value, reflectivityFloat.Value, 1);
+                    else
+                        mat.PerfectReflection = C4f.Black;
                 }
 
                 result.Add("#" + m.id, mat);
