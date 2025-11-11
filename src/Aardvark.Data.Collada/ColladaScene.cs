@@ -6,6 +6,9 @@ namespace Aardvark.Data.Collada
 {
     #region library stuff
 
+    /// <summary>
+    /// Superset of a Collada material: Constant, Lambert, Phong, Blinn
+    /// </summary>
     public class ColladaMaterial
     {
         public C4f Emission = C4f.Black;
@@ -13,13 +16,18 @@ namespace Aardvark.Data.Collada
         public C4f Diffuse = C4f.Black;
         public C4f Specular = C4f.Black;
         public C4f PerfectReflection = C4f.Black;
+        public C3f TransparentColor = C3f.Black;
         public double Alpha = 1;
         public double Shininess = 32;
         public string Name = null;
 
-        public string DiffuseColorTexturePath = null;
-        public string SpecularColorTexturePath = null;
-        public string NormalMapPath = null;
+        public string EmissiveColorTexturePath;
+        public string AmbientColorTexturePath;
+        public string ReflectionColorTexturePath;
+        public string TransparencyColorTexturePath;
+        public string DiffuseColorTexturePath;
+        public string SpecularColorTexturePath;
+        public string NormalMapPath;
     }
 
     public class ColladaLight

@@ -1,3 +1,6 @@
+### 5.2.12
+- Added missing material parameters
+
 ### 5.2.11
 - Fixed ColladaMaterial diffuse/specular in case there is a texture
 

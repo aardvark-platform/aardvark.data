@@ -332,6 +332,11 @@ namespace Aardvark.Data.Collada
                                phong != null ? phong.diffuse :
                                blinn != null ? blinn.diffuse : null;
                 
+                var transparent = constant != null ? constant.transparent :
+                                  lambert != null ? lambert.transparent :
+                                  phong != null ? phong.transparent :
+                                  blinn != null ? blinn.transparent : null;
+
                 var transparency = constant != null ? constant.transparency :
                                lambert != null ? lambert.transparency :
                                phong != null ? phong.transparency :
@@ -359,14 +364,30 @@ namespace Aardvark.Data.Collada
                 
                 if (emission != null)
                 {
-                    if (emission.Item is common_color_or_texture_typeColor emissionColor) 
+                    if (emission.Item is common_color_or_texture_typeColor emissionColor)
+                    {
                         mat.Emission = ToColor(emissionColor);
+                    }
+                    else if (emission.Item is common_color_or_texture_typeTexture emissiveTexture)
+                    {
+                        var img = samplers.ContainsKey(emissiveTexture.texture) ? textureNames.Get(samplers[emissiveTexture.texture]) : emissiveTexture.texture;
+                        mat.EmissiveColorTexturePath = images.Get(img, img);
+                        mat.Emission = C4f.White;
+                    }
                 }
 
                 if (ambient != null)
                 {
-                    if (ambient.Item is common_color_or_texture_typeColor ambientColor) 
+                    if (ambient.Item is common_color_or_texture_typeColor ambientColor)
+                    { 
                         mat.Ambient = ToColor(ambientColor);
+                    }
+                    else if (ambient.Item is common_color_or_texture_typeTexture ambientTexture)
+                    {
+                        var img = samplers.ContainsKey(ambientTexture.texture) ? textureNames.Get(samplers[ambientTexture.texture]) : ambientTexture.texture;
+                        mat.AmbientColorTexturePath = images.Get(img, img);
+                        mat.Ambient = C4f.White;
+                    }
                 }
 
                 if (diffuse != null)
@@ -407,19 +428,42 @@ namespace Aardvark.Data.Collada
                 {
                     if (transparency.Item is common_float_or_param_typeFloat transparencyFloat) 
                         mat.Alpha = transparencyFloat.Value;
+
+                    // TODO: "transparent" (perfect transmission)
+                    // TODO: A_ONE: Takes the transparency information from the color’s alpha channel, where the value 1.0 is opaque.
+                    // TODO: RGB_ZERO: Takes the transparency information from the color’s red, green, and blue channels, where the value 0.0 is opaque, with each channel modulated independently.
+                }
+
+                if (transparent != null)
+                {
+                    if (transparent.Item is common_color_or_texture_typeColor transparentColor)
+                    {
+                        mat.TransparentColor = ToColor(transparentColor).RGB;
+                    }
+                    else if (reflective.Item is common_color_or_texture_typeTexture transparentTexture)
+                    {
+                        var img = samplers.ContainsKey(transparentTexture.texture) ? textureNames.Get(samplers[transparentTexture.texture]) : transparentTexture.texture;
+                        mat.TransparencyColorTexturePath = images.Get(img, img);
+                    }
                 }
 
                 if (reflectivity != null)
                 {
-                    if (reflective != null && reflective.Item is common_color_or_texture_typeColor reflectiveColor)
-                        mat.PerfectReflection = ToColor(reflectiveColor);
-                    else
-                        mat.PerfectReflection = C4f.White; // TODO: texture
-
                     if (reflectivity.Item is common_float_or_param_typeFloat reflectivityFloat)
-                        mat.PerfectReflection *= new C4f(reflectivityFloat.Value, reflectivityFloat.Value, reflectivityFloat.Value, 1);
-                    else
-                        mat.PerfectReflection = C4f.Black;
+                        mat.PerfectReflection = new C4f(reflectivityFloat.Value, reflectivityFloat.Value, reflectivityFloat.Value, 1);
+                }
+
+                if (reflective != null)
+                {
+                    if (reflective.Item is common_color_or_texture_typeColor reflectiveColor)
+                    {
+                        mat.PerfectReflection *= ToColor(reflectiveColor);
+                    }
+                    else if (reflective.Item is common_color_or_texture_typeTexture reflectiveTexture)
+                    {
+                        var img = samplers.ContainsKey(reflectiveTexture.texture) ? textureNames.Get(samplers[reflectiveTexture.texture]) : reflectiveTexture.texture;
+                        mat.ReflectionColorTexturePath = images.Get(img, img);
+                    }
                 }
 
                 result.Add("#" + m.id, mat);
