@@ -45,7 +45,7 @@ jobs:
           path: vcpkg/FreeImage/vcpkg_installed/linux-x64-release/lib/libFreeImage.so
   macos-x64:
     name: MacOS (x64)
-    runs-on: macos-13
+    runs-on: macos-15-intel
     steps:
       - name: Checkout
         uses: actions/checkout@v4

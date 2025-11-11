@@ -15,15 +15,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
         matrix:
-            os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+            os: [ubuntu-latest, windows-latest, macos-latest]
             include:
               - os: ubuntu-latest
                 script: sh ./build.sh
               - os: windows-latest
                 script: .\build.cmd
-              - os: macos-13
-                script: bash ./build.sh
-              - os: macos-14
+              - os: macos-latest
                 script: bash ./build.sh
     steps:
     - name: Checkout
