@@ -1,3 +1,6 @@
+### 5.2.13
+- Allow diffuse color in constant materials for better compatibility to certain exporters (not allowed according to specification)
+
 ### 5.2.12
 - Added missing material parameters
 

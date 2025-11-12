@@ -7,7 +7,10 @@ namespace Aardvark.Data.Collada
     #region library stuff
 
     /// <summary>
-    /// Superset of a Collada material: Constant, Lambert, Phong, Blinn
+    /// Superset of a Collada material: Constant, Lambert, Phong, Blinn.
+    /// NOTE: According to the COLLADA specification, each material component can either have a color or a texture (not both).
+    ///       For simpler processing, the color will be set to white in case there is a texture. Otherwise, it will have the
+    ///       defined color value or be black when the element is absent.
     /// </summary>
     public class ColladaMaterial
     {

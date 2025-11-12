@@ -4999,6 +4999,8 @@ namespace Aardvark.Data.Collada
         [XmlType(AnonymousType = true, Namespace = "http://www.collada.org/2005/11/COLLADASchema")]
         public class effectFx_profile_abstractProfile_COMMONTechniqueConstant
         {
+            private common_color_or_texture_type diffuseField;
+
             private common_color_or_texture_type emissionField;
             private common_float_or_param_type index_of_refractionField;
 
@@ -5008,6 +5010,16 @@ namespace Aardvark.Data.Collada
 
             private common_float_or_param_type transparencyField;
             private common_transparent_type transparentField;
+
+            /// <remarks>
+            /// The diffuse element is not officially expected in a constant material according to the COLLADA specification.
+            /// Some exporters however use this -> added here to improve compatibility
+            /// </remarks>
+            public common_color_or_texture_type diffuse
+            {
+                get { return diffuseField; }
+                set { diffuseField = value; }
+            }
 
             /// <remarks />
             public common_color_or_texture_type emission

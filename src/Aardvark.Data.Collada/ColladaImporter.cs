@@ -328,7 +328,8 @@ namespace Aardvark.Data.Collada
                                phong != null ? phong.emission :
                                blinn != null ? blinn.emission : null;
 
-                var diffuse = lambert != null ? lambert.diffuse :
+                var diffuse = constant != null ? constant.diffuse :
+                               lambert != null ? lambert.diffuse :
                                phong != null ? phong.diffuse :
                                blinn != null ? blinn.diffuse : null;
                 
