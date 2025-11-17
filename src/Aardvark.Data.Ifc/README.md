@@ -1,7 +1,7 @@
 # Aardvark.Data.Ifc
 
-[![NuGet](https://badgen.net/nuget/v/Aardvark.Data.Ifc)](https://www.nuget.org/packages/Aardvark.Data.Ifc/)
-[![NuGet](https://badgen.net/nuget/dt/Aardvark.Data.Ifc)](https://www.nuget.org/packages/Aardvark.Data.Ifc/)
+[![Version](https://img.shields.io/nuget/vpre/Aardvark.Data.Ifc)](https://www.nuget.org/packages/Aardvark.Data.Ifc/)
+[![Downloads](https://img.shields.io/nuget/dt/Aardvark.Data.Ifc)](https://www.nuget.org/packages/Aardvark.Data.Ifc/)
 
 IFC wrapper based on the [xBIM toolkit](https://docs.xbim.net/index.html) for the Aardvark platform.
 

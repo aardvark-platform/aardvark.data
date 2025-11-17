@@ -1,4 +1,4 @@
 # Aardvark.Data.Dgm
 
-[![NuGet](https://badgen.net/nuget/v/Aardvark.Data.Dgm)](https://www.nuget.org/packages/Aardvark.Data.Dgm/)
-[![NuGet](https://badgen.net/nuget/dt/Aardvark.Data.Dgm)](https://www.nuget.org/packages/Aardvark.Data.Dgm/)
+[![Version](https://img.shields.io/nuget/vpre/Aardvark.Data.Dgm)](https://www.nuget.org/packages/Aardvark.Data.Dgm/)
+[![Downloads](https://img.shields.io/nuget/dt/Aardvark.Data.Dgm)](https://www.nuget.org/packages/Aardvark.Data.Dgm/)
