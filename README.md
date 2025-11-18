@@ -1,7 +1,6 @@
 # Aardvark.Data
-
-![Build](https://github.com/aardvark-platform/aardvark.data/workflows/Build/badge.svg)
-![Publish](https://github.com/aardvark-platform/aardvark.data/workflows/Publish/badge.svg)
+[![Build](https://github.com/aardvark-platform/aardvark.data/actions/workflows/build.yml/badge.svg)](https://github.com/aardvark-platform/aardvark.data/actions/workflows/build.yml)
+[![Publish](https://github.com/aardvark-platform/aardvark.data/actions/workflows/publish.yml/badge.svg)](https://github.com/aardvark-platform/aardvark.data/actions/workflows/publish.yml)
 
 [The Aardvark Platform](https://aardvarkians.com/) |
 [Gallery](https://github.com/aardvark-platform/aardvark.docs/wiki/Gallery) | 
