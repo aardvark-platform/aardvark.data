@@ -3,32 +3,49 @@ name: Build
 on:
   push:
     paths-ignore:
-    - 'README.md'
-    - 'docs/'
+      - 'README.md'
+      - 'docs/**'
+      - 'ai/**'
+      - 'AGENTS.md'
+      - '.claude/**'
   pull_request:
     paths-ignore:
-    - 'README.md'
-    - 'docs/'
+      - 'README.md'
+      - 'docs/**'
+      - 'ai/**'
+      - 'AGENTS.md'
+      - '.claude/**'
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
-        matrix:
-            os: [ubuntu-latest, windows-latest, macos-latest]
-            include:
-              - os: ubuntu-latest
-                script: sh ./build.sh
-              - os: windows-latest
-                script: .\build.cmd
-              - os: macos-latest
-                script: bash ./build.sh
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            script: sh ./build.sh
+          - os: windows-latest
+            script: .\build.cmd
+          - os: macos-latest
+            script: bash ./build.sh
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    - name: Install Dotnet
-      uses: actions/setup-dotnet@v4
-      with:
-        global-json-file: global.json
-    - name: Build
-      run: ${{ matrix.script }}
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/paket.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Build
+        run: ${{ matrix.script }}

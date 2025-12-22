@@ -36,3 +36,4 @@ Aardvark.log
 .idea
 **/*.DotSettings.user
 **/vcpkg_installed
+/.boss
