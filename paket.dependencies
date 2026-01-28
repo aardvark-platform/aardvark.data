@@ -26,17 +26,17 @@ nuget glTF2Loader                                           ~> 1.1.4-alpha
 nuget SharpZipLib                                           ~> 1.4.1
 
 // XBim does not have proper version constraints so we declare and reference everything explicitly
-nuget Xbim.Ifc                                              ~> 6.0.493
-nuget Xbim.Ifc2x3                                           ~> 6.0.493
-nuget Xbim.Ifc4                                             ~> 6.0.493
-nuget Xbim.IO.Esent                                         ~> 6.0.493
-nuget Xbim.IO.MemoryModel                                   ~> 6.0.493
-nuget Xbim.Essentials                                       ~> 6.0.493
-nuget Xbim.Common                                           ~> 6.0.493
-nuget Xbim.Tessellator                                      ~> 6.0.493
-nuget Xbim.Geometry                                         ~> 6.1.801-netcore
-nuget Xbim.Geometry.Engine.Interop                          ~> 6.1.801-netcore
-nuget Xbim.ModelGeometry.Scene                              ~> 6.1.801-netcore
+nuget Xbim.Ifc                                              ~> 6.0.565
+nuget Xbim.Ifc2x3                                           ~> 6.0.565
+nuget Xbim.Ifc4                                             ~> 6.0.565
+nuget Xbim.IO.Esent                                         ~> 6.0.565
+nuget Xbim.IO.MemoryModel                                   ~> 6.0.565
+nuget Xbim.Essentials                                       ~> 6.0.565
+nuget Xbim.Common                                           ~> 6.0.565
+nuget Xbim.Tessellator                                      ~> 6.3.873-netcore
+nuget Xbim.Geometry                                         ~> 6.3.873-netcore
+nuget Xbim.Geometry.Engine.Interop                          ~> 6.3.873-netcore
+nuget Xbim.ModelGeometry.Scene                              ~> 6.3.873-netcore
 
 group Test
     framework: auto-detect
