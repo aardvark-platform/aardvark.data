@@ -52,21 +52,13 @@ namespace Aardvark.Data.Ifc
                 context.CreateContext(null, true, false);
             }
 
-            double projectScale = model.Instances.OfType<IIfcProject>().First().UnitsInContext switch
-            {
-                Xbim.Ifc2x3.MeasureResource.IfcUnitAssignment u2x3 => u2x3.LengthUnitPower,
-                Xbim.Ifc4.MeasureResource.IfcUnitAssignment u4 => u4.LengthUnitPower,
-                Xbim.Ifc4x3.MeasureResource.IfcUnitAssignment u4x3 => u4x3.LengthUnitPower,
-                _ => 1.0 // Report.Line("Cannot retrieve Length Unit of IFC-Project. Use Default Unit (meters)")
-            };
-
             var cacheInverse = model.BeginInverseCaching();
             var cacheEntity = model.BeginEntityCaching();
 
             (content, materials) = ParseIFC(model);
             var hierarchy = HierarchyExt.CreateHierarchy(model);
 
-            return new IFCData(model, cacheInverse, cacheEntity, content, materials, projectScale, hierarchy);
+            return new IFCData(model, cacheInverse, cacheEntity, content, materials, hierarchy);
         }
 
         private static (Dict<IfcGloballyUniqueId, IFCContent>, Dictionary<string, IFCMaterial>) ParseIFC(IModel model)

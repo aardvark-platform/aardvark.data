@@ -53,6 +53,7 @@ namespace Aardvark.Data.Tests.Ifc
             LoadEmbeddedData(@"data\surface-model.ifc", (filePath) => {
                 var parsed = IFCParser.PreprocessIFC(filePath);
                 Assert.AreEqual(1, parsed.Materials.Count);
+                Assert.AreEqual(0.001, parsed.UnitScale);
             });
         }
 
@@ -62,6 +63,7 @@ namespace Aardvark.Data.Tests.Ifc
             LoadEmbeddedData(@"data\wall.ifc", (filePath) => {
                 var parsed = IFCParser.PreprocessIFC(filePath);
                 Assert.AreEqual(4, parsed.Materials.Count);
+                Assert.AreEqual(0.001, parsed.UnitScale);
             });
         }
 
@@ -84,6 +86,7 @@ namespace Aardvark.Data.Tests.Ifc
             LoadEmbeddedData(@"data\simple_scene.ifc", (filePath) => {
                 var parsed = IFCParser.PreprocessIFC(filePath, geometryEngine: Xbim.Geometry.Abstractions.XGeometryEngineVersion.V5, singleThreading: false);
                 Assert.AreEqual(5, parsed.Materials.Count);
+                Assert.AreEqual(1, parsed.UnitScale);
             });
 
             LoadEmbeddedData(@"data\simple_scene.ifc", (filePath) => {
@@ -109,6 +112,7 @@ namespace Aardvark.Data.Tests.Ifc
                 var parsed = IFCParser.PreprocessIFC(filePath, geometryEngine: Xbim.Geometry.Abstractions.XGeometryEngineVersion.V6, singleThreading: false);
                 var carbonMaterial = parsed.Materials["Carbon"];
                 Assert.IsTrue(carbonMaterial.ThermalConductivity.ApproximateEquals(100.0) && carbonMaterial.MassDensity.ApproximateEquals(1234.0));
+                Assert.AreEqual(.001, parsed.UnitScale);
             });
         }
 
