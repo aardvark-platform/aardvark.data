@@ -37,6 +37,7 @@ nuget Xbim.Tessellator                                      ~> 6.3.873-netcore
 nuget Xbim.Geometry                                         ~> 6.3.873-netcore
 nuget Xbim.Geometry.Engine.Interop                          ~> 6.3.873-netcore
 nuget Xbim.ModelGeometry.Scene                              ~> 6.3.873-netcore
+nuget Microsoft.Database.ManagedEsent                       = 2.0.3
 
 group Test
     framework: auto-detect

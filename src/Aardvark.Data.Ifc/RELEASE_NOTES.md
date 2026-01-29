@@ -1,5 +1,5 @@
 ### 1.1.0
-- Update xBIM-libs and enable access of IfcStore
+- Update xBIM-libs and enable access of IfcStore (pinned MeasuredEsent to 2.0.3)
 
 ### 1.1.0-prerelease0013
 - Restore missing extension
