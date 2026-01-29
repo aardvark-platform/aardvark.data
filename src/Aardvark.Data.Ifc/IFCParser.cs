@@ -167,7 +167,7 @@ namespace Aardvark.Data.Ifc
             return (output, materialsByName);
         }
 
-        public static HashSet<short> DefaultExclusions(IModel model)
+        private static HashSet<short> DefaultExclusions(IModel model)
         {
             var excludedTypes = new HashSet<short>();
             var exclude = new List<Type>()

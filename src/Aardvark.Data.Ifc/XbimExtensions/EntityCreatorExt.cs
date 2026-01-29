@@ -1,5 +1,4 @@
-﻿using Aardvark.Base;
-using System;
+﻿using System;
 
 using Xbim.Common;
 using Xbim.Common.Step21;

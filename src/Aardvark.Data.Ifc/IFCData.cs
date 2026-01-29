@@ -16,24 +16,21 @@ namespace Aardvark.Data.Ifc
 
         private readonly IEntityCache m_entityCache;
 
+        public IfcStore IfcStore { get { return m_model; } }
         public Dict<IfcGloballyUniqueId, IFCContent> Content { get; private set; }
-        public Dictionary<string, IFCMaterial> Materials { get; private set; }
-        public double UnitScale { get { return ModelFactors.LengthToMetresConversionFactor; } }
-        public IModelFactors ModelFactors { get; private set; }
         public IFCNode Hierarchy { get; private set; }
-        public IIfcProject Project { get; }
-        public string ProjectName { get; private set; }
+        public Dictionary<string, IFCMaterial> Materials { get; private set; }
+        public double UnitScale { get { return IfcStore.ModelFactors.LengthToMetresConversionFactor; } }
+        public IIfcProject Project { get { return GeneralExt.GetProject(IfcStore); } }
+        public string ProjectName { get { return Project.LongName; } }
 
-        public IFCData(IfcStore model, IInverseCache inversCache, IEntityCache entityCache, Dict<IfcGloballyUniqueId, IFCContent> content, Dictionary<string, IFCMaterial> materials, IFCNode hierarchy)
+        internal IFCData(IfcStore model, IInverseCache inversCache, IEntityCache entityCache, Dict<IfcGloballyUniqueId, IFCContent> content, Dictionary<string, IFCMaterial> materials, IFCNode hierarchy)
         {
             m_inversCache = inversCache;
             m_entityCache = entityCache;
             m_model = model;
             Content = content;
-            ModelFactors = m_model.ModelFactors;
             Hierarchy = hierarchy;
-            Project = GeneralExt.GetProject(m_model);
-            ProjectName = Project.LongName;
             Materials = materials;
         }
 

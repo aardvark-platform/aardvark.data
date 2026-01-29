@@ -1,3 +1,6 @@
+### 1.1.0
+- Update xBIM-libs and enable access of IfcStore
+
 ### 1.1.0-prerelease0013
 - Restore missing extension
 
