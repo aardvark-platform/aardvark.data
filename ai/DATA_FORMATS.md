@@ -656,7 +656,7 @@ foreach (var fs in obj.FaceSets)
 - `fs.MaterialIndices[i]` maps face `i` to `obj.Materials[mi]`.
 - `mi == -1` means no material was active for that face or the referenced material could not be resolved from the loaded `.mtl` files.
 - `usemtl` does not create a new `FaceSet`. `FaceSet` boundaries follow `g` group changes, so one `FaceSet` can contain faces with multiple materials.
-- `GetFaceSetMeshes()` exposes material data in `PolyMesh.FaceAttributes[PolyMesh.Property.Material]` and stores the material table in `PolyMesh.FaceAttributes[-PolyMesh.Property.Material]`. For the exact raw parser state, inspect `FaceSet.MaterialIndices` directly.
+- `GetFaceSetMeshes()` exposes material data in `PolyMesh.FaceAttributes[PolyMesh.Property.Material]` when the face set contains at least one resolved material, and stores the material table in `PolyMesh.FaceAttributes[-PolyMesh.Property.Material]`. The per-face indices can still contain `-1` for unresolved or missing materials. For the exact raw parser state, inspect `FaceSet.MaterialIndices` directly.
 
 ### Supported Features
 | Feature | Supported | Notes |

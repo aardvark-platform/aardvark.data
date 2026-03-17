@@ -407,17 +407,17 @@ namespace Aardvark.Data.Wavefront
                             (baseVertexIndex + idx).ToString()).Join(" ");
                     else if (normals == null)
                         faceString = "f " + face.VertexIndices.Select(idx =>
-                            (baseVertexIndex + idx).ToString() + "//" +
+                            (baseVertexIndex + idx).ToString() + "/" +
                             (baseTexCoordIndex + idx).ToString()).Join(" ");
                     else if (texCoords == null)
                         faceString = "f " + face.VertexIndices.Select(idx =>
-                            (baseVertexIndex + idx).ToString() + "/" +
+                            (baseVertexIndex + idx).ToString() + "//" +
                             (baseNormalIndex + idx).ToString()).Join(" ");
                     else
                         faceString = "f " + face.VertexIndices.Select(idx =>
                             (baseVertexIndex + idx).ToString() + "/" +
-                            (baseNormalIndex + idx).ToString() + "/" +
-                            (baseTexCoordIndex + idx).ToString()).Join(" ");
+                            (baseTexCoordIndex + idx).ToString() + "/" +
+                            (baseNormalIndex + idx).ToString()).Join(" ");
 
                     m_geometryStream.WriteLine(faceString);
                 }

@@ -33,8 +33,8 @@ var meshes = obj.GetFaceSetMeshes();
 
 ## PolyMesh Projection
 
-`GetFaceSetMeshes()` exposes material information on the resulting `PolyMesh`:
+`GetFaceSetMeshes()` exposes material information on the resulting `PolyMesh` when the face set contains at least one resolved material:
 
-- `FaceAttributes[PolyMesh.Property.Material]` contains the per-face material indices.
+- `FaceAttributes[PolyMesh.Property.Material]` contains the per-face material indices, including `-1` for unresolved or missing materials.
 - `FaceAttributes[-PolyMesh.Property.Material]` contains the material table.
 - For the exact raw parser state, inspect `FaceSet.MaterialIndices` directly.

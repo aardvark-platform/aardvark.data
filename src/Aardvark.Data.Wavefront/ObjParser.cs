@@ -39,14 +39,14 @@ namespace Aardvark.Data.Wavefront
             // lines are allowed to be joined when ended with line continuation character (\)
             var line = String.Empty;
             var str = String.Empty;
+            var continues = false;
             do
             {
                 str = m_reader.ReadLine().TrimEnd();
-                line = line + str;
-                //var test = str.Length > 0 && str[str.Length - 1] == '\\';
-                //if (test) Report.Line("JOIN");
+                continues = str.Length > 0 && str[str.Length - 1] == '\\';
+                line = line + (continues ? str.Substring(0, str.Length - 1) : str);
             }
-            while (str.Length > 0 && str[str.Length - 1] == '\\');
+            while (continues);
 
             Line = new Text(line);
             return true;
@@ -201,7 +201,7 @@ namespace Aardvark.Data.Wavefront
                 {
                     var index = i.ParseIntValue();
                     if (index == 0) throw new InvalidOperationException("Invalid point vertex index");
-                    ps.VertexIndices.Add(index > 0 ? index - 1 : vertexCount - index);
+                    ps.VertexIndices.Add(index > 0 ? index - 1 : vertexCount + index);
                 }
 
                 var mi = this.m_currentMaterial;
@@ -390,7 +390,7 @@ namespace Aardvark.Data.Wavefront
                         var ci0 = a.Count == 7 ? 4 : 3;
                         c = new C3f(a[ci0].ParseFloatValue(),
                                     a[ci0 + 1].ParseFloatValue(),
-                                    a[ci0 + 1].ParseFloatValue());
+                                    a[ci0 + 2].ParseFloatValue());
                     }
                     // initialized vertex color array for all already read vertices in case not all vertices have colors
                     if (ca == null)
@@ -434,9 +434,12 @@ namespace Aardvark.Data.Wavefront
         /// </summary>
         public static WavefrontObject Load(string fileName, Encoding encoding, bool useDoublePrecision = true)
         {
-            var parseState = new ParseState(File.OpenRead(fileName), encoding, Path.GetDirectoryName(fileName), useDoublePrecision);
-            WavefrontParser.Parse(parseState, s_elementProcessors);
-            return parseState.Object;
+            using (var stream = File.OpenRead(fileName))
+            {
+                var parseState = new ParseState(stream, encoding, Path.GetDirectoryName(fileName), useDoublePrecision);
+                WavefrontParser.Parse(parseState, s_elementProcessors);
+                return parseState.Object;
+            }
         }
 
         static Dictionary<Text, Action<ParseState, IList<Text>>> s_elementProcessors =

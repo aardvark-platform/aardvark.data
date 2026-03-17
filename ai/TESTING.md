@@ -62,13 +62,15 @@ dotnet run --project src/Tests/FreeImageTests/Benchmarking/Benchmarking.csproj -
 
 **Structure**:
 - `PhotometryTests.cs` - Tests for LDT photometry data parsing and calculations
-- Depends on: `Aardvark.Data.Photometry`
+- `WavefrontTests.cs` - Regression tests for OBJ/MTL parsing and Wavefront OBJ export
+- Depends on: `Aardvark.Data.Photometry`, `Aardvark.Data.Wavefront`
 
 **Patterns**:
 - Standard NUnit `[TestFixture]` classes
 - `[Test]` attribute for test methods
 - `[Ignore("reason")]` for tests requiring external data files
 - Helper methods for test setup (e.g., `EvaluatePlanes`, `EvaluateZones`)
+- Wavefront tests use temp files/directories to validate parsing, exporting, encoding, and file-handle cleanup
 
 **Example**:
 ```csharp

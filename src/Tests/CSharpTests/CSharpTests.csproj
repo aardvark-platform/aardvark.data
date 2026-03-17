@@ -13,6 +13,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Aardvark.Data.Photometry\Aardvark.Data.Photometry.csproj" />
+    <ProjectReference Include="..\..\Aardvark.Data.Wavefront\Aardvark.Data.Wavefront.csproj" />
   </ItemGroup>
   <Import Project="..\..\..\.paket\Paket.Restore.targets" />
 </Project>

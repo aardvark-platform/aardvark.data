@@ -123,9 +123,10 @@ namespace Aardvark.Data.Wavefront
         /// Normals and TextureCoordinates can either remain float or be also converted to double.
         /// The default behavior is similar to PolyMeshFromVrml97: V3d Positions, V3f Normals, V2f TexCoords.
         /// All meshes point to the same data arrays with different First/VertexIndex arrays.
-        /// When material data is emitted, per-face material indices are written to
-        /// <c>PolyMesh.Property.Material</c> and the material table is stored at
-        /// <c>-PolyMesh.Property.Material</c>. For the exact raw parser state, inspect
+        /// When at least one face in the set has a resolved material, the per-face material
+        /// indices are written to <c>PolyMesh.Property.Material</c> and the material table is
+        /// stored at <c>-PolyMesh.Property.Material</c>. Unresolved or missing materials remain
+        /// encoded as -1 in the per-face index array. For the exact raw parser state, inspect
         /// <see cref="WavefrontObject.FaceSets"/> and <see cref="WavefrontObject.ElementSet.MaterialIndices"/> directly.
         /// </summary>
         public static IEnumerable<PolyMesh> GetFaceSetMeshes(this WavefrontObject obj, bool doubleAttributes = false)
@@ -163,7 +164,7 @@ namespace Aardvark.Data.Wavefront
                 mesh.FirstIndexArray = fia;
                 mesh.VertexIndexArray = via;
 
-                if (!materials.IsEmptyOrNull() && !mIndices.IsEmptyOrNull() && mIndices[0] >= 0) // NOTE: >= 0 check assumes that all faces have no normal indices, otherwise the mesh would need to be split 
+                if (!materials.IsEmptyOrNull() && !mIndices.IsEmptyOrNull() && mIndices.Any(mi => mi >= 0))
                 {
                     if (mIndices.Count != fs.ElementCount) throw new InvalidOperationException();
                     mesh.FaceAttributes.Add(PolyMesh.Property.Material, mIndices.ToArray());

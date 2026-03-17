@@ -59,8 +59,10 @@ namespace Aardvark.Data.Wavefront
             if (!File.Exists(fileName))
                 throw new FileNotFoundException("Material library file \"{0}\" not found", fileName);
 
-            var stream = File.OpenRead(fileName);
-            return Load(stream, Encoding.Default, Path.GetDirectoryName(fileName));
+            using (var stream = File.OpenRead(fileName))
+            {
+                return Load(stream, encoding, Path.GetDirectoryName(fileName));
+            }
         }
 
         /// <summary>
