@@ -30,6 +30,11 @@ namespace Aardvark.Data.Wavefront
             public int GroupIndex;
             public List<int> VertexIndices = new List<int>();
             public List<int> FirstIndices = new List<int>(0.IntoIEnumerable());
+            /// <summary>
+            /// Per-element material indices into <see cref="WavefrontObject.Materials"/>.
+            /// A value of -1 means that no material was active or that the referenced
+            /// material could not be resolved while parsing.
+            /// </summary>
             public List<int> MaterialIndices = new List<int>();
 
             public int ElementCount
@@ -51,6 +56,11 @@ namespace Aardvark.Data.Wavefront
             public List<int> TexCoordIndices = new List<int>();
         }
 
+        /// <summary>
+        /// Faces belonging to the same OBJ group.
+        /// Material changes via <c>usemtl</c> do not split face sets; mixed materials are
+        /// tracked per face through <see cref="ElementSet.MaterialIndices"/>.
+        /// </summary>
         public class FaceSet : ElementSet
         {
             /// <summary>
@@ -113,6 +123,10 @@ namespace Aardvark.Data.Wavefront
         /// Normals and TextureCoordinates can either remain float or be also converted to double.
         /// The default behavior is similar to PolyMeshFromVrml97: V3d Positions, V3f Normals, V2f TexCoords.
         /// All meshes point to the same data arrays with different First/VertexIndex arrays.
+        /// When material data is emitted, per-face material indices are written to
+        /// <c>PolyMesh.Property.Material</c> and the material table is stored at
+        /// <c>-PolyMesh.Property.Material</c>. For the exact raw parser state, inspect
+        /// <see cref="WavefrontObject.FaceSets"/> and <see cref="WavefrontObject.ElementSet.MaterialIndices"/> directly.
         /// </summary>
         public static IEnumerable<PolyMesh> GetFaceSetMeshes(this WavefrontObject obj, bool doubleAttributes = false)
         {

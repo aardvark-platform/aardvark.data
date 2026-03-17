@@ -586,7 +586,7 @@ WavefrontObject ObjParser.Load(string fileName, bool useDoublePrecision)
 
 **Convert to PolyMesh:**
 ```csharp
-List<PolyMesh> WavefrontObject.ToPolyMeshes()
+IEnumerable<PolyMesh> obj.GetFaceSetMeshes(bool doubleAttributes = false)
 ```
 
 ### Key Types
@@ -629,8 +629,8 @@ var obj = ObjParser.Load(@"C:\models\model.obj");
 int vertexCount = obj.Vertices.Count;
 int materialCount = obj.Materials.Count;
 
-// Convert to PolyMesh per group/material
-var meshes = obj.ToPolyMeshes();
+// Convert each FaceSet to a PolyMesh
+var meshes = obj.GetFaceSetMeshes();
 foreach (var mesh in meshes)
 {
     var positions = mesh.PositionArray;   // V3d[]
@@ -638,7 +638,25 @@ foreach (var mesh in meshes)
     var name = mesh.GetProperty<string>(PolyMesh.Property.Name);
     Report.Line($"Mesh '{name}': {positions.Length} verts, {indices.Length / 3} faces");
 }
+
+// Resolve usemtl per face
+foreach (var fs in obj.FaceSets)
+{
+    for (int face = 0; face < fs.ElementCount; face++)
+    {
+        int mi = fs.MaterialIndices[face];
+        var materialName = mi >= 0 ? obj.Materials[mi].Name : "<none>";
+        Report.Line($"face {face}: {materialName}");
+    }
+}
 ```
+
+### Material Semantics
+- `usemtl` is tracked per face in `FaceSet.MaterialIndices`.
+- `fs.MaterialIndices[i]` maps face `i` to `obj.Materials[mi]`.
+- `mi == -1` means no material was active for that face or the referenced material could not be resolved from the loaded `.mtl` files.
+- `usemtl` does not create a new `FaceSet`. `FaceSet` boundaries follow `g` group changes, so one `FaceSet` can contain faces with multiple materials.
+- `GetFaceSetMeshes()` exposes material data in `PolyMesh.FaceAttributes[PolyMesh.Property.Material]` and stores the material table in `PolyMesh.FaceAttributes[-PolyMesh.Property.Material]`. For the exact raw parser state, inspect `FaceSet.MaterialIndices` directly.
 
 ### Supported Features
 | Feature | Supported | Notes |
@@ -650,7 +668,7 @@ foreach (var mesh in meshes)
 | Lines (l) | ✓ | Line strips |
 | Points (p) | ✓ | Point sets |
 | Groups (g) | ✓ | Named groups |
-| Materials (usemtl) | ✓ | Material assignment |
+| Materials (usemtl) | ✓ | Per-face material indices in `FaceSet.MaterialIndices`; `-1` means missing/unresolved |
 | MTL files (mtllib) | ✓ | Auto-loaded from same dir |
 | Smoothing groups (s) | ✓ | Stored but not used for normals |
 | Relative indices | ✓ | Negative indices |
@@ -1031,7 +1049,7 @@ PolyMesh LoadMesh(string path)
 
         case ".obj":
             var obj = ObjParser.Load(path);
-            var meshes = obj.ToPolyMeshes();
+            var meshes = obj.GetFaceSetMeshes();
             return meshes.FirstOrDefault();
 
         case ".wrl":

@@ -32,7 +32,13 @@ let scene = GLTF.load "model.gltf"
 
 // Wavefront OBJ
 var obj = ObjParser.Load("model.obj");
-var meshes = obj.ToPolyMeshes();
+var meshes = obj.GetFaceSetMeshes();
+
+foreach (var fs in obj.FaceSets)
+{
+    int mi = fs.MaterialIndices[0];
+    var materialName = mi >= 0 ? obj.Materials[mi].Name : "<none>";
+}
 
 // IFC (building models) - always use singleThreading!
 var ifc = IFCParser.PreprocessIFC("building.ifc", singleThreading: true);
@@ -84,7 +90,7 @@ var loaders = new Dictionary<string, Func<string, List<PolyMesh>>> {
     { ".gltf", path => GLTF.load(path).Meshes.Values.ToList() },
     { ".glb",  path => GLTF.load(path).Meshes.Values.ToList() },
     { ".dae",  path => ColladaImporter.Load(path).SelectMany(GetMeshes).ToList() },
-    { ".obj",  path => ObjParser.Load(path).ToPolyMeshes() },
+    { ".obj",  path => ObjParser.Load(path).GetFaceSetMeshes().ToList() },
     { ".wrl",  path => SceneLoader.Load(path).GetMeshes().ToList() },
 };
 var ext = Path.GetExtension(file).ToLower();
