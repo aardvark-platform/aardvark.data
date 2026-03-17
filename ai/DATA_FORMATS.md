@@ -79,6 +79,8 @@ foreach (var root in sceneNodes)
 ```
 
 ### Supported Features
+`o` declarations are preserved per element in `ElementSet.ObjectIndices`; `-1` means no object was active for that element.
+
 | Feature | Supported | Notes |
 |---------|-----------|-------|
 | Triangles | ✓ | Primary geometry type |
@@ -644,19 +646,26 @@ foreach (var fs in obj.FaceSets)
 {
     for (int face = 0; face < fs.ElementCount; face++)
     {
+        int oi = fs.ObjectIndices[face];
         int mi = fs.MaterialIndices[face];
+        var objectName = oi >= 0 ? obj.Objects[oi] : "<none>";
         var materialName = mi >= 0 ? obj.Materials[mi].Name : "<none>";
-        Report.Line($"face {face}: {materialName}");
+        Report.Line($"face {face}: {objectName} / {materialName}");
     }
 }
 ```
 
-### Material Semantics
+### Object and Material Semantics
+- `o` is tracked per element in `ElementSet.ObjectIndices`.
+- `fs.ObjectIndices[i]` maps face `i` to `obj.Objects[oi]`.
+- `oi == -1` means no object was active for that element.
 - `usemtl` is tracked per face in `FaceSet.MaterialIndices`.
 - `fs.MaterialIndices[i]` maps face `i` to `obj.Materials[mi]`.
 - `mi == -1` means no material was active for that face or the referenced material could not be resolved from the loaded `.mtl` files.
-- `usemtl` does not create a new `FaceSet`. `FaceSet` boundaries follow `g` group changes, so one `FaceSet` can contain faces with multiple materials.
-- `GetFaceSetMeshes()` exposes material data in `PolyMesh.FaceAttributes[PolyMesh.Property.Material]` when the face set contains at least one resolved material, and stores the material table in `PolyMesh.FaceAttributes[-PolyMesh.Property.Material]`. The per-face indices can still contain `-1` for unresolved or missing materials. For the exact raw parser state, inspect `FaceSet.MaterialIndices` directly.
+- `g` still defines `FaceSet` boundaries. Neither `o` nor `usemtl` creates a new `FaceSet`, so one `FaceSet` can contain faces from multiple objects and materials.
+- `GetFaceSetMeshes()` keeps `PolyMesh.Property.Name` mapped to the group name.
+- `GetFaceSetMeshes()` exposes object data in `PolyMesh.FaceAttributes[WavefrontObject.Property.Objects]` when the face set contains at least one resolved object, stores the object table in `PolyMesh.FaceAttributes[-WavefrontObject.Property.Objects]`, and adds `InstanceAttributes[WavefrontObject.Property.Objects]` when the whole face set belongs to one resolved object. The per-face indices can still contain `-1`.
+- `GetFaceSetMeshes()` exposes material data in `PolyMesh.FaceAttributes[PolyMesh.Property.Material]` when the face set contains at least one resolved material, and stores the material table in `PolyMesh.FaceAttributes[-PolyMesh.Property.Material]`. The per-face indices can still contain `-1` for unresolved or missing materials. For the exact raw parser state, inspect `FaceSet.ObjectIndices` and `FaceSet.MaterialIndices` directly.
 
 ### Supported Features
 | Feature | Supported | Notes |

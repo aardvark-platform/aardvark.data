@@ -72,6 +72,7 @@ namespace Aardvark.Data.Wavefront
             public WavefrontObject Object = new WavefrontObject();
 
             int m_currentMaterial = -1;
+            int m_currentObject = -1;
             int m_currentGroup = -1;
             int m_currentSmoothGroup = -1;
 
@@ -79,6 +80,7 @@ namespace Aardvark.Data.Wavefront
             Dictionary<Text, WavefrontMaterial> m_mtlLib = new Dictionary<Text, WavefrontMaterial>();
             Dictionary<WavefrontMaterial, int> m_mtlIndices = new Dictionary<WavefrontMaterial, int>();
 
+            Dictionary<Text, int> m_objects = new Dictionary<Text, int>();
             Dictionary<Text, int> m_groups = new Dictionary<Text, int>();
             
             public ParseState(Stream stream, Encoding encoding, string baseDir = null)
@@ -94,6 +96,20 @@ namespace Aardvark.Data.Wavefront
 
 
             static bool multipleGroupsWarningShown = false;
+
+            public void SetObject(IEnumerable<Text> args)
+            {
+                var name = args.First();
+                if (name.IsEmpty) throw new InvalidOperationException();
+
+                if (!m_objects.TryGetValue(name, out m_currentObject))
+                {
+                    var ol = Object.Objects;
+                    m_currentObject = ol.Count;
+                    m_objects[name] = ol.Count;
+                    ol.Add(name.ToString());
+                }
+            }
 
             public void SetGroup(IEnumerable<Text> args)
             {
@@ -204,7 +220,9 @@ namespace Aardvark.Data.Wavefront
                     ps.VertexIndices.Add(index > 0 ? index - 1 : vertexCount + index);
                 }
 
+                var oi = this.m_currentObject;
                 var mi = this.m_currentMaterial;
+                ps.ObjectIndices.Add(oi);
                 ps.MaterialIndices.Add(mi);
                 ps.FirstIndices.Add(ps.VertexIndices.Count);
             }
@@ -268,7 +286,9 @@ namespace Aardvark.Data.Wavefront
                     ls.TexCoordIndices.Add(ti > 0 ? ti - 1 : ti < 0 ? coordCount + ti : -1);
                 }
 
+                var oi = this.m_currentObject;
                 var mi = this.m_currentMaterial;
+                ls.ObjectIndices.Add(oi);
                 ls.MaterialIndices.Add(mi);
                 ls.FirstIndices.Add(ls.VertexIndices.Count);
             }
@@ -350,7 +370,9 @@ namespace Aardvark.Data.Wavefront
                     fs.NormalIndices.Add(ni);
                 }
 
+                var oi = this.m_currentObject;
                 var mi = this.m_currentMaterial;
+                fs.ObjectIndices.Add(oi);
                 fs.MaterialIndices.Add(mi);
                 fs.FirstIndices.Add(fs.VertexIndices.Count);
             }
@@ -475,10 +497,10 @@ namespace Aardvark.Data.Wavefront
                 // con
 
                 // Grouping
+                { new Text(WavefrontObject.Property.Objects.ToString()), (s, a) => s.SetObject(a) }, // object: name
                 { new Text(WavefrontObject.Property.Groups.ToString()), (s, a) => s.SetGroup(a) }, // group: name (name2, ...) NOTE: multi group not supported
                 { new Text("s"), (s, a) => s.SetSmoothingGroup(a) }, // smoothing group: "off"/-1 or index
                 // mg
-                // o
 
                 // Render attributes
                 { new Text("mtllib"), (s, a) => s.LoadMaterialLibs(a, s.Encoding) }, // material library

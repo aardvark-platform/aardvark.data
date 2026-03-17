@@ -18,6 +18,7 @@ namespace Aardvark.Data.Wavefront
             public static readonly Symbol ControlPoints = "vp";
 
             public static readonly Symbol Materials = "usemtl";
+            public static readonly Symbol Objects = "o";
             public static readonly Symbol Groups = "g";
 
             public static readonly Symbol PointSets = "p";
@@ -30,6 +31,11 @@ namespace Aardvark.Data.Wavefront
             public int GroupIndex;
             public List<int> VertexIndices = new List<int>();
             public List<int> FirstIndices = new List<int>(0.IntoIEnumerable());
+            /// <summary>
+            /// Per-element object indices into <see cref="WavefrontObject.Objects"/>.
+            /// A value of -1 means that no object was active while parsing that element.
+            /// </summary>
+            public List<int> ObjectIndices = new List<int>();
             /// <summary>
             /// Per-element material indices into <see cref="WavefrontObject.Materials"/>.
             /// A value of -1 means that no material was active or that the referenced
@@ -58,8 +64,9 @@ namespace Aardvark.Data.Wavefront
 
         /// <summary>
         /// Faces belonging to the same OBJ group.
-        /// Material changes via <c>usemtl</c> do not split face sets; mixed materials are
-        /// tracked per face through <see cref="ElementSet.MaterialIndices"/>.
+        /// Material changes via <c>usemtl</c> and object changes via <c>o</c> do not split
+        /// face sets; mixed materials and object membership are tracked per face through
+        /// <see cref="ElementSet.MaterialIndices"/> and <see cref="ElementSet.ObjectIndices"/>.
         /// </summary>
         public class FaceSet : ElementSet
         {
@@ -79,6 +86,8 @@ namespace Aardvark.Data.Wavefront
         public List<FaceSet> FaceSets { get; } = new List<FaceSet>();
 
         public List<string> Groups { get; } = new List<string>();
+
+        public List<string> Objects { get; } = new List<string>();
 
         public List<WavefrontMaterial> Materials { get; } = new List<WavefrontMaterial>();
 
@@ -123,11 +132,17 @@ namespace Aardvark.Data.Wavefront
         /// Normals and TextureCoordinates can either remain float or be also converted to double.
         /// The default behavior is similar to PolyMeshFromVrml97: V3d Positions, V3f Normals, V2f TexCoords.
         /// All meshes point to the same data arrays with different First/VertexIndex arrays.
+        /// When at least one face in the set has a resolved object, the per-face object
+        /// indices are written to <c>FaceAttributes[WavefrontObject.Property.Objects]</c>
+        /// and the object name table is stored at <c>FaceAttributes[-WavefrontObject.Property.Objects]</c>.
+        /// If all faces share the same resolved object, that name is also written to
+        /// <c>InstanceAttributes[WavefrontObject.Property.Objects]</c>.
         /// When at least one face in the set has a resolved material, the per-face material
         /// indices are written to <c>PolyMesh.Property.Material</c> and the material table is
         /// stored at <c>-PolyMesh.Property.Material</c>. Unresolved or missing materials remain
         /// encoded as -1 in the per-face index array. For the exact raw parser state, inspect
-        /// <see cref="WavefrontObject.FaceSets"/> and <see cref="WavefrontObject.ElementSet.MaterialIndices"/> directly.
+        /// <see cref="WavefrontObject.FaceSets"/>, <see cref="WavefrontObject.ElementSet.ObjectIndices"/>
+        /// and <see cref="WavefrontObject.ElementSet.MaterialIndices"/> directly.
         /// </summary>
         public static IEnumerable<PolyMesh> GetFaceSetMeshes(this WavefrontObject obj, bool doubleAttributes = false)
         {
@@ -141,6 +156,7 @@ namespace Aardvark.Data.Wavefront
             var texCoords = obj.TextureCoordinates.Count > 0 ? doubleAttributes ?
                                 obj.TextureCoordinates.MapToArray(v => v.XY.ToV2d()) : (Array)obj.TextureCoordinates.MapToArray(v => v.XY) : null;
 
+            var objects = obj.Objects.Count > 0 ? obj.Objects.ToArray() : null;
             var materials = obj.Materials.Count > 0 ? obj.Materials.ToArray() : null;
             var groups = obj.Groups;
 
@@ -157,12 +173,24 @@ namespace Aardvark.Data.Wavefront
                 var fia = fs.FirstIndices.ToArray();
                 var via = fs.VertexIndices.ToArray();
 
+                var oIndices = fs.ObjectIndices;
                 var mIndices = fs.MaterialIndices;
                 var nIndices = fs.NormalIndices;
                 var tcIndices = fs.TexCoordIndices;
 
                 mesh.FirstIndexArray = fia;
                 mesh.VertexIndexArray = via;
+
+                if (!objects.IsEmptyOrNull() && !oIndices.IsEmptyOrNull() && oIndices.Any(oi => oi >= 0))
+                {
+                    if (oIndices.Count != fs.ElementCount) throw new InvalidOperationException();
+                    mesh.FaceAttributes.Add(WavefrontObject.Property.Objects, oIndices.ToArray());
+                    mesh.FaceAttributes.Add(-WavefrontObject.Property.Objects, objects);
+
+                    var firstObjectIndex = oIndices[0];
+                    if (firstObjectIndex >= 0 && oIndices.All(oi => oi == firstObjectIndex))
+                        mesh.InstanceAttributes.Add(WavefrontObject.Property.Objects, objects[firstObjectIndex]);
+                }
 
                 if (!materials.IsEmptyOrNull() && !mIndices.IsEmptyOrNull() && mIndices.Any(mi => mi >= 0))
                 {

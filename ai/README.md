@@ -11,8 +11,8 @@ For one-liner APIs, see [QUICK_REF.md](QUICK_REF.md) (~100 lines).
 | Workflow | Document | Section | Key APIs |
 |----------|----------|---------|----------|
 | Load single 3D file | DATA_FORMATS.md | varies | `GLTF.load`, `ColladaImporter.Load`, `ObjParser.Load` |
-| Load point cloud hierarchy | DATA_FORMATS.md | 415-569 | `PatchHierarchy.load`, `Aara.fromFile` |
-| Process IFC building | DATA_FORMATS.md | 234-413 | `IFCParser.PreprocessIFC`, `PolyMesh` |
+| Load point cloud hierarchy | DATA_FORMATS.md | 417-571 | `PatchHierarchy.load`, `Aara.fromFile` |
+| Process IFC building | DATA_FORMATS.md | 236-415 | `IFCParser.PreprocessIFC`, `PolyMesh` |
 | Multi-format loader | QUICK_REF.md | 79-92 | Plugin pattern |
 | Texture loading | PIXIMAGE_LOADERS.md | 22-62 | `PixImageMipMap.Load`, backend selection |
 | Choose image loader | PIXIMAGE_LOADERS.md | 22-62 | Decision tree |
@@ -22,7 +22,7 @@ For one-liner APIs, see [QUICK_REF.md](QUICK_REF.md) (~100 lines).
 | Task | Document | Lines | Keywords |
 |------|----------|-------|----------|
 | Image loading | [PIXIMAGE_LOADERS.md](PIXIMAGE_LOADERS.md) | 1-483 | PNG, JPEG, TIFF, BMP, DDS, TGA, WebP, EXR, HDR |
-| 3D formats | [DATA_FORMATS.md](DATA_FORMATS.md) | 1-1359 | COLLADA, glTF, OBJ, VRML, IFC, mesh, scene |
+| 3D formats | [DATA_FORMATS.md](DATA_FORMATS.md) | 1-1368 | COLLADA, glTF, OBJ, VRML, IFC, mesh, scene |
 | Testing | [TESTING.md](TESTING.md) | 1-417 | NUnit, Expecto, FsCheck, benchmark |
 
 ## By Loader (with line ranges)
@@ -46,16 +46,16 @@ For one-liner APIs, see [QUICK_REF.md](QUICK_REF.md) (~100 lines).
 | Loader | Lines | Keywords |
 |--------|-------|----------|
 | Overview + comparison | 1-20 | which format, comparison |
-| COLLADA | 22-94 | .dae, scene graph, materials, lights |
-| glTF 2.0 | 96-231 | .gltf, .glb, PBR, modern |
-| IFC | 234-413 | .ifc, building, BIM, Xbim |
-| OPC | 415-569 | point cloud, .aara, hierarchy |
-| Wavefront OBJ | 571-677 | .obj, .mtl, simple mesh |
-| VRML97 | 679-823 | .wrl, legacy, animation |
-| DGM | 825-909 | heightfield, terrain, elevation |
-| Photometry | 911-1031 | .ies, .ldt, light measurement |
-| Usage patterns | 1033-1170 | traverse, flatten, convert |
-| Gotchas | 1172-1346 | Xbim version, F# interop, coordinates |
+| COLLADA | 22-96 | .dae, scene graph, materials, lights |
+| glTF 2.0 | 98-234 | .gltf, .glb, PBR, modern |
+| IFC | 236-415 | .ifc, building, BIM, Xbim |
+| OPC | 417-571 | point cloud, .aara, hierarchy |
+| Wavefront OBJ | 573-686 | .obj, .mtl, simple mesh |
+| VRML97 | 688-832 | .wrl, legacy, animation |
+| DGM | 834-918 | heightfield, terrain, elevation |
+| Photometry | 920-1040 | .ies, .ldt, light measurement |
+| Usage patterns | 1042-1179 | traverse, flatten, convert |
+| Gotchas | 1181-1355 | Xbim version, F# interop, coordinates |
 
 ### Testing ([TESTING.md](TESTING.md))
 

@@ -36,7 +36,9 @@ var meshes = obj.GetFaceSetMeshes();
 
 foreach (var fs in obj.FaceSets)
 {
+    int oi = fs.ObjectIndices[0];
     int mi = fs.MaterialIndices[0];
+    var objectName = oi >= 0 ? obj.Objects[oi] : "<none>";
     var materialName = mi >= 0 ? obj.Materials[mi].Name : "<none>";
 }
 

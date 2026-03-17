@@ -232,6 +232,187 @@ namespace Aardvark.Data.Wavefront.Tests
         }
 
         [Test]
+        public void ObjParser_Load_ObjectNames_AreCapturedInObjectTable()
+        {
+            WithTempDirectory(dir =>
+            {
+                var path = WriteFile(dir, "objects.obj",
+                    "o body\n" +
+                    "v 0 0 0\n" +
+                    "v 1 0 0\n" +
+                    "v 0 1 0\n" +
+                    "f 1 2 3\n");
+
+                var obj = ObjParser.Load(path);
+                var faceSet = obj.FaceSets.Single();
+
+                CollectionAssert.AreEqual(new[] { "body" }, obj.Objects);
+                CollectionAssert.AreEqual(new[] { 0 }, faceSet.ObjectIndices);
+            });
+        }
+
+        [Test]
+        public void ObjParser_Load_NoActiveObject_UsesMinusOneObjectIndex()
+        {
+            WithTempDirectory(dir =>
+            {
+                var path = WriteFile(dir, "objects.obj",
+                    "v 0 0 0\n" +
+                    "v 1 0 0\n" +
+                    "v 0 1 0\n" +
+                    "f 1 2 3\n");
+
+                var obj = ObjParser.Load(path);
+
+                Assert.IsEmpty(obj.Objects);
+                CollectionAssert.AreEqual(new[] { -1 }, obj.FaceSets.Single().ObjectIndices);
+            });
+        }
+
+        [Test]
+        public void ObjParser_Load_ObjectChangesWithinSingleGroup_KeepOneFaceSetAndRecordPerFaceObjectIndices()
+        {
+            WithTempDirectory(dir =>
+            {
+                var path = WriteFile(dir, "objects.obj",
+                    "g shared\n" +
+                    "o first\n" +
+                    "v 0 0 0\n" +
+                    "v 1 0 0\n" +
+                    "v 1 1 0\n" +
+                    "v 0 1 0\n" +
+                    "o second\n" +
+                    "f 1 2 3\n" +
+                    "o first\n" +
+                    "f 1 3 4\n");
+
+                var obj = ObjParser.Load(path);
+                var faceSet = obj.FaceSets.Single();
+
+                Assert.AreEqual(1, obj.FaceSets.Count);
+                Assert.AreEqual(0, faceSet.GroupIndex);
+                CollectionAssert.AreEqual(new[] { "shared" }, obj.Groups);
+                CollectionAssert.AreEqual(new[] { "first", "second" }, obj.Objects);
+                CollectionAssert.AreEqual(new[] { 1, 0 }, faceSet.ObjectIndices);
+            });
+        }
+
+        [Test]
+        public void ObjParser_Load_ObjectIndices_AreRecordedForPointAndLineSets()
+        {
+            WithTempDirectory(dir =>
+            {
+                var path = WriteFile(dir, "objects.obj",
+                    "v 0 0 0\n" +
+                    "v 1 0 0\n" +
+                    "o points\n" +
+                    "p 1\n" +
+                    "o lines\n" +
+                    "l 1 2\n");
+
+                var obj = ObjParser.Load(path);
+
+                CollectionAssert.AreEqual(new[] { "points", "lines" }, obj.Objects);
+                CollectionAssert.AreEqual(new[] { 0 }, obj.PointsSets.Single().ObjectIndices);
+                CollectionAssert.AreEqual(new[] { 1 }, obj.LineSets.Single().ObjectIndices);
+            });
+        }
+
+        [Test]
+        public void GetFaceSetMeshes_MixedObjects_EmitsPerFaceObjectIndicesAndObjectTable()
+        {
+            WithTempDirectory(dir =>
+            {
+                var path = WriteFile(dir, "objects.obj",
+                    "g group0\n" +
+                    "o first\n" +
+                    "v 0 0 0\n" +
+                    "v 1 0 0\n" +
+                    "v 1 1 0\n" +
+                    "v 0 1 0\n" +
+                    "f 1 2 3\n" +
+                    "o second\n" +
+                    "f 1 3 4\n");
+
+                var obj = ObjParser.Load(path);
+                var mesh = obj.GetFaceSetMeshes().Single();
+
+                Assert.IsTrue(mesh.FaceAttributes.Contains(WavefrontObject.Property.Objects));
+                CollectionAssert.AreEqual(new[] { 0, 1 }, (int[])mesh.FaceAttributes[WavefrontObject.Property.Objects]);
+                CollectionAssert.AreEqual(new[] { "first", "second" }, (string[])mesh.FaceAttributes[-WavefrontObject.Property.Objects]);
+                Assert.IsFalse(mesh.InstanceAttributes.Contains(WavefrontObject.Property.Objects));
+            });
+        }
+
+        [Test]
+        public void GetFaceSetMeshes_UniformObject_AlsoEmitsInstanceObjectName()
+        {
+            WithTempDirectory(dir =>
+            {
+                var path = WriteFile(dir, "objects.obj",
+                    "g group0\n" +
+                    "o body\n" +
+                    "v 0 0 0\n" +
+                    "v 1 0 0\n" +
+                    "v 1 1 0\n" +
+                    "v 0 1 0\n" +
+                    "f 1 2 3\n" +
+                    "f 1 3 4\n");
+
+                var obj = ObjParser.Load(path);
+                var mesh = obj.GetFaceSetMeshes().Single();
+
+                Assert.IsTrue(mesh.FaceAttributes.Contains(WavefrontObject.Property.Objects));
+                CollectionAssert.AreEqual(new[] { 0, 0 }, (int[])mesh.FaceAttributes[WavefrontObject.Property.Objects]);
+                Assert.AreEqual("body", mesh.InstanceAttributes[WavefrontObject.Property.Objects]);
+            });
+        }
+
+        [Test]
+        public void GetFaceSetMeshes_AllMissingObjects_DoesNotEmitObjectAttributes()
+        {
+            WithTempDirectory(dir =>
+            {
+                var path = WriteFile(dir, "objects.obj",
+                    "g group0\n" +
+                    "v 0 0 0\n" +
+                    "v 1 0 0\n" +
+                    "v 1 1 0\n" +
+                    "v 0 1 0\n" +
+                    "f 1 2 3\n" +
+                    "f 1 3 4\n");
+
+                var obj = ObjParser.Load(path);
+                var mesh = obj.GetFaceSetMeshes().Single();
+
+                Assert.IsFalse(mesh.FaceAttributes.Contains(WavefrontObject.Property.Objects));
+                Assert.IsFalse(mesh.FaceAttributes.Contains(-WavefrontObject.Property.Objects));
+                Assert.IsFalse(mesh.InstanceAttributes.Contains(WavefrontObject.Property.Objects));
+            });
+        }
+
+        [Test]
+        public void GetFaceSetMeshes_PreservesGroupNameInPolyMeshPropertyName()
+        {
+            WithTempDirectory(dir =>
+            {
+                var path = WriteFile(dir, "objects.obj",
+                    "g group0\n" +
+                    "o body\n" +
+                    "v 0 0 0\n" +
+                    "v 1 0 0\n" +
+                    "v 0 1 0\n" +
+                    "f 1 2 3\n");
+
+                var obj = ObjParser.Load(path);
+                var mesh = obj.GetFaceSetMeshes().Single();
+
+                Assert.AreEqual("group0", mesh.InstanceAttributes[PolyMesh.Property.Name]);
+                Assert.AreEqual("body", mesh.InstanceAttributes[WavefrontObject.Property.Objects]);
+            });
+        }
+
+        [Test]
         public void Exporter_SaveToFile_WithTexcoordsOnly_WritesVSlashVt()
         {
             WithTempDirectory(dir =>
