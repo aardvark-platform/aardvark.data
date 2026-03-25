@@ -1,3 +1,9 @@
+### 1.0.2
+- fixed GLTF/GLB loading for non-seekable streams
+- fixed ZIP archive asset resolution for nested and parent-relative paths
+- preserved unmapped UV sets and stable texcoord ordering
+- fixed vertex-color import/export roundtrips and broader color accessor support
+
 ### 1.0.1
 - added simple flat scene for files not containing a Sg
 
