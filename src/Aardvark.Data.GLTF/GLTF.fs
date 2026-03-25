@@ -143,6 +143,72 @@ module GLTF =
             | :? array<V2d> as arr -> arr |> Array.map (fun v -> V2d(v.X, 1.0 - v.Y)) :> System.Array
             | _ -> failwithf "bad TC type: %A" arr
 
+        let normalizeToByte (value : float) =
+            let value = value |> max 0.0 |> min 1.0
+            int (Math.Round(value * 255.0))
+
+        let normalizeUInt16ToByte (value : uint16) =
+            normalizeToByte (float value / float UInt16.MaxValue)
+
+        let normalizeUInt32ToByte (value : uint32) =
+            normalizeToByte (float value / float UInt32.MaxValue)
+
+        let tryGetColors (arr : System.Array) =
+            match arr with
+            | :? array<C4b> as colors ->
+                colors |> Array.map (fun c -> C4b(int c.B, int c.G, int c.R, int c.A)) |> Some
+            | :? array<C3b> as colors ->
+                colors |> Array.map (fun c -> C4b(int c.B, int c.G, int c.R, 255)) |> Some
+            | :? array<C4us> as colors ->
+                colors |> Array.map (fun c -> C4b(normalizeUInt16ToByte c.R, normalizeUInt16ToByte c.G, normalizeUInt16ToByte c.B, normalizeUInt16ToByte c.A)) |> Some
+            | :? array<C3us> as colors ->
+                colors |> Array.map (fun c -> C4b(normalizeUInt16ToByte c.R, normalizeUInt16ToByte c.G, normalizeUInt16ToByte c.B, 255)) |> Some
+            | :? array<V4f> as colors ->
+                colors |> Array.map (fun c -> C4b(normalizeToByte (float c.X), normalizeToByte (float c.Y), normalizeToByte (float c.Z), normalizeToByte (float c.W))) |> Some
+            | :? array<V3f> as colors ->
+                colors |> Array.map (fun c -> C4b(normalizeToByte (float c.X), normalizeToByte (float c.Y), normalizeToByte (float c.Z), 255)) |> Some
+            | :? array<V4ui> as colors ->
+                colors |> Array.map (fun c -> C4b(normalizeUInt32ToByte c.X, normalizeUInt32ToByte c.Y, normalizeUInt32ToByte c.Z, normalizeUInt32ToByte c.W)) |> Some
+            | :? array<V3ui> as colors ->
+                colors |> Array.map (fun c -> C4b(normalizeUInt32ToByte c.X, normalizeUInt32ToByte c.Y, normalizeUInt32ToByte c.Z, 255)) |> Some
+            | _ ->
+                None
+
+        let normalizeArchivePath (path : string) =
+            let path = if isNull path then "" else path.Replace('\\', '/')
+            let parts = path.Split([| '/' |], StringSplitOptions.RemoveEmptyEntries)
+            let parts =
+                parts |> Array.fold (fun (parts : list<string>) part ->
+                    match part with
+                    | "." -> parts
+                    | ".." ->
+                        match parts with
+                        | head :: rest when head <> ".." -> rest
+                        | _ -> ".." :: parts
+                    | part ->
+                        part :: parts
+                ) []
+
+            parts |> List.rev |> String.concat "/"
+
+        let combineArchivePath (baseDir : string) (path : string) =
+            let path = if isNull path then "" else path.Replace('\\', '/')
+            let baseDir = normalizeArchivePath baseDir
+
+            let combined =
+                if String.IsNullOrWhiteSpace path then
+                    baseDir
+                elif String.IsNullOrWhiteSpace baseDir then
+                    path
+                else
+                    baseDir + "/" + path
+
+            let path = normalizeArchivePath combined
+            if path = ".." || path.StartsWith("../") then
+                None
+            else
+                Some path
+
         let getTrafo (node : glTFLoader.Schema.Node) =
 
             let mutable trafo = Trafo3d.Identity
@@ -242,7 +308,9 @@ module GLTF =
                                                 Log.warn "[GLTF] Cannot read image from %A" uri.OriginalString
                                                 None
                                         else
-                                            Some <| read img.Uri
+                                            match read img.Uri with
+                                            | null -> None
+                                            | data -> Some data
 
                                 with e ->
                                     Log.warn "[GLTF] Failed to read image %A: %s" img.Name e.Message
@@ -439,15 +507,19 @@ module GLTF =
                                             | true, id ->
                                                 match arr with
                                                 | :? array<V2f> as arr ->
-                                                    match Map.tryFind id tcMapping with
-                                                    | Some sems -> Some (arr, sems)
-                                                    | None -> None
+                                                    let sems =
+                                                        match Map.tryFind id tcMapping with
+                                                        | Some sems -> sems
+                                                        | None -> Set.empty
+                                                    Some (id, arr, sems)
                                                 | _arr ->
                                                     None
                                             | _ -> None
                                         else
                                             None
                                     )
+                                    |> Array.sortBy (fun (id, _, _) -> id)
+                                    |> Array.map (fun (_, arr, sems) -> arr, sems)
 
                                 let index =
                                     match index with
@@ -469,7 +541,7 @@ module GLTF =
 
                                 let colors =
                                     match Map.tryFind "COLOR_0" attributeMap with
-                                    | Some (:? array<C4b> as cs) -> Some cs
+                                    | Some arr -> tryGetColors arr
                                     | _ -> None
 
                                 let mesh =
@@ -585,17 +657,32 @@ module GLTF =
             let model =
                 Interface.LoadModel ms
 
+            let entryDirectory =
+                let path = normalizeArchivePath entry.FullName
+                let index = path.LastIndexOf '/'
+                if index < 0 then "" else path.Substring(0, index)
+
+            let entryLookup =
+                arch.Entries
+                |> Seq.map (fun e -> normalizeArchivePath e.FullName, e)
+                |> Map.ofSeq
+
             let read (url : string) =
                 if System.String.IsNullOrEmpty url then
                     use s = new System.IO.MemoryStream(data)
                     Interface.LoadBinaryBuffer(s)
                 else
-                    match arch.Entries |> Seq.tryFind (fun e -> e.Name = url) with
-                    | Some e ->
-                        use s = e.Open()
-                        s.ReadToEnd()
+                    match combineArchivePath entryDirectory url with
+                    | Some resolvedPath ->
+                        match Map.tryFind resolvedPath entryLookup with
+                        | Some e ->
+                            use s = e.Open()
+                            s.ReadToEnd()
+                        | None ->
+                            Log.warn "[GLTF] Asset not found in zip: %s" resolvedPath
+                            null
                     | None ->
-                        printfn "NOT FOUND: %A" url
+                        Log.warn "[GLTF] Asset path escapes zip root: %s" url
                         null
 
             toScene read model
@@ -630,7 +717,7 @@ module GLTF =
             let read (url : string) =
                 if System.String.IsNullOrEmpty url then
                     use ms = new System.IO.MemoryStream(arr)
-                    Interface.LoadBinaryBuffer(input)
+                    Interface.LoadBinaryBuffer(ms)
                 else
                     null
 
@@ -787,12 +874,12 @@ module GLTF =
                     elif t = typeof<C3f> then Accessor.TypeEnum.VEC3
 
                     elif t = typeof<V4f> then Accessor.TypeEnum.VEC4
-                    elif t = typeof<V4i> then Accessor.TypeEnum.VEC3
-                    elif t = typeof<V4ui> then Accessor.TypeEnum.VEC3
-                    elif t = typeof<C4b> then Accessor.TypeEnum.VEC3
-                    elif t = typeof<C4us> then Accessor.TypeEnum.VEC3
-                    elif t = typeof<C4ui> then Accessor.TypeEnum.VEC3
-                    elif t = typeof<C4f> then Accessor.TypeEnum.VEC3
+                    elif t = typeof<V4i> then Accessor.TypeEnum.VEC4
+                    elif t = typeof<V4ui> then Accessor.TypeEnum.VEC4
+                    elif t = typeof<C4b> then Accessor.TypeEnum.VEC4
+                    elif t = typeof<C4us> then Accessor.TypeEnum.VEC4
+                    elif t = typeof<C4ui> then Accessor.TypeEnum.VEC4
+                    elif t = typeof<C4f> then Accessor.TypeEnum.VEC4
 
                     else failwithf "Unsupported type: %A" t
 
@@ -902,7 +989,12 @@ module GLTF =
                 | Some ns -> res.Attributes.["TANGENT"] <- getAccessor false ns
                 | None -> ()
                 match mesh.Colors with
-                | Some ns -> res.Attributes.["COLOR_0"] <- getAccessor false ns
+                | Some ns ->
+                    let colors =
+                        ns |> Array.map (fun c ->
+                            V4f(float32 c.R / 255.0f, float32 c.G / 255.0f, float32 c.B / 255.0f, float32 c.A / 255.0f)
+                        )
+                    res.Attributes.["COLOR_0"] <- getAccessor false colors
                 | None -> ()
 
                 let mutable idx = 0
