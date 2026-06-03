@@ -189,52 +189,46 @@ namespace Aardvark.Data
 
         private static PixImage BitmapToPixImage(FIBITMAP bitmap)
         {
-            var bpp = FreeImage.GetBPP(bitmap);
+            var bpp = (int)FreeImage.GetBPP(bitmap);
+            var type = FreeImage.GetColorType(bitmap);
 
-            if (bpp == 1)
+            if (type is FREE_IMAGE_COLOR_TYPE.FIC_PALETTE or FREE_IMAGE_COLOR_TYPE.FIC_MINISWHITE or FREE_IMAGE_COLOR_TYPE.FIC_MINISBLACK)
             {
+                if (bpp > 8) throw new NotSupportedException($"Image has a palette with bit depth of {bpp}.");
+
                 var sx = (int)FreeImage.GetWidth(bitmap);
                 var sy = (int)FreeImage.GetHeight(bitmap);
                 var delta = (int)FreeImage.GetPitch(bitmap);
                 var bits = FreeImage.GetBits(bitmap) + sy * delta;
                 var palette = FreeImage.GetPaletteEx(bitmap);
-                var pi = new PixImage<byte>(Col.Format.BW, sx, sy);
+                var pi = new PixImage<byte>(Col.Format.BGR, sx, sy);
                 var data = pi.Volume.Data;
-                int i = 0;
-                if (palette != null && palette[0].rgbRed + palette[0].rgbGreen + palette[0].rgbBlue >= 384)
+
+                int mask = (1 << bpp) - 1;
+                int n = 8 / bpp; // pixel values (i.e. palette indices) per byte
+
+                for (var y = 0; y < sy; y++)
                 {
-                    for (var y = 0; y < sy; y++)
+                    bits -= delta;
+                    int i = 0;
+
+                    unsafe
                     {
-                        bits -= delta;
-                        byte bit = 0x80; int bi = 0;
-                        unsafe
+                        byte* pixel = (byte*)bits;
+                        for (var x = 0; x < sx; x++)
                         {
-                            byte* pixel = (byte*)bits;
-                            for (var x = 0; x < sx; x++)
-                            {
-                                data[i++] = ((pixel[bi] & bit) == 0) ? (byte)255 : (byte)0;
-                                bit >>= 1; if (bit == 0) { bit = 0x80; bi++; }
-                            }
+                            var color = palette[(pixel[x / n] >> (8 - (i + 1) * bpp)) & mask];
+                            var index = pi.VolumeInfo.Index(x, y, 0);
+
+                            data[index]     = color.rgbBlue;
+                            data[index + 1] = color.rgbGreen;
+                            data[index + 2] = color.rgbRed;
+
+                            if (++i == n) i = 0;
                         }
                     }
                 }
-                else
-                {
-                    for (var y = 0; y < sy; y++)
-                    {
-                        bits -= delta;
-                        byte bit = 0x80; int bi = 0;
-                        unsafe
-                        {
-                            byte* pixel = (byte*)bits;
-                            for (var x = 0; x < sx; x++)
-                            {
-                                data[i++] = ((pixel[bi] & bit) != 0) ? (byte)255 : (byte)0;
-                                bit >>= 1; if (bit == 0) { bit = 0x80; bi++; }
-                            }
-                        }
-                    }
-                }
+
                 return pi;
             }
 
