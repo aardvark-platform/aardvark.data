@@ -1,6 +1,7 @@
 ﻿namespace Aardvark.Data.Tests.PixLoader
 
 open Aardvark.Base
+open Aardvark.Base.TypeMeta
 open Aardvark.Data
 open System
 open System.IO
@@ -29,8 +30,50 @@ module PixLoaderTests =
 
     module PixImage =
 
+        type Matrix<'T> with
+            member this.Equals(other: Matrix<'T>) =
+                if this.Size = other.Size then
+                    let mutable equal = true
+                    this.ForeachCoord (fun coord ->
+                        if not <| Unchecked.equals this.[coord] other.[coord] then
+                            equal <- false
+                    )
+                    equal
+                else
+                    false
+
+        type PixImage<'T> with
+            member this.TryGetChannel(channel: Col.Channel) =
+                let candidates =
+                    match channel with
+                    | Col.Channel.Red | Col.Channel.Green | Col.Channel.Blue ->
+                        [ channel; Col.Channel.Gray; Col.Channel.BW ]
+
+                    | Col.Channel.Gray | Col.Channel.BW ->
+                        let isGrayRGB =
+                            let channels = this.ChannelArray |> Array.take (min this.ChannelCount 3)
+                            channels |> Array.skip 1 |> Array.forall _.Equals(channels.[0])
+
+                        if isGrayRGB then
+                            [ Col.Channel.Gray; Col.Channel.BW; Col.Channel.Red ]
+                        else
+                            [ Col.Channel.Gray; Col.Channel.BW ]
+
+                    | _ ->
+                        [ channel ]
+
+                candidates
+                |> List.tryFind (fun c -> Col.ChannelIndexNoThrow(this.Format, c) >= 0L)
+                |> Option.map this.GetChannel
+
+            member this.TryGetSwappedChannel(channel: Col.Channel) =
+                match channel with
+                | Col.Channel.Red  -> this.TryGetChannel Col.Channel.Blue
+                | Col.Channel.Blue -> this.TryGetChannel Col.Channel.Red
+                | _ -> None
+
         let private desktopPath =
-            Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop)
+            Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
 
         let saveToDesktop (fileName : string) (img : #PixImage) =
             let dir = Path.combine [desktopPath; "UnitTests"]
@@ -66,28 +109,68 @@ module PixLoaderTests =
             let background = C4f.White.ToArray()
             checkerboardGeneric<float32> format width height background Rnd.float32
 
-        let compare (input : PixImage<'T>) (output : PixImage<'T>) =
-            let channels = min input.ChannelCount output.ChannelCount
+        let private maxAlpha<'T> =
+            match typeof<'T> with
+            | UInt8   -> unbox<'T> <| Col.DoubleToByteClamped 1.0
+            | UInt16  -> unbox<'T> <| Col.DoubleToUShortClamped 1.0
+            | UInt32  -> unbox<'T> <| Col.DoubleToUIntClamped 1.0
+            | Float32 -> unbox<'T> 1.0f
+            | Float64 -> unbox<'T> 1.0
+            | t -> failwith $"Cannot determine max alpha for type {t}"
 
-            for x in 0 .. output.Size.X - 1 do
-                for y in 0 .. output.Size.Y - 1 do
-                    for c in 0 .. channels - 1 do
-                        let inputData = input.GetChannel(int64 c)
-                        let outputData = output.GetChannel(int64 c)
+        let compare (expected: PixImage) (actual: PixImage) =
+            Expect.equal actual.Size expected.Size "Size mismatch"
+            Expect.equal actual.PixFormat.Type expected.PixFormat.Type "Pixel format type mismatch"
 
-                        let coord = V2i(x, y)
+            let compareChannels (channel: Col.Channel) (expected: Matrix<'T>) (actual: Matrix<'T>) =
+                for x in 0L .. actual.Size.X - 1L do
+                    for y in 0L .. actual.Size.Y - 1L do
+                        let e = expected.[x, y]
+                        let a = actual.[x, y]
 
-                        let ref =
-                            if Vec.allGreaterOrEqual coord V2i.Zero && Vec.allSmaller coord input.Size then
-                                inputData.[coord]
-                            else
-                                Unchecked.defaultof<'T>
+                        if not <| Unchecked.equals a e  then
+                            failtest $"{channel} data mismatch at [{x}, {y}] (actual: {a}, expected: {e})"
 
-                        let message =
-                            let t = if c < 4 then "color" else "alpha"
-                            $"PixImage {t} data mismatch at [{x}, {y}]"
+            let check (expected: PixImage<'T>) (actual: PixImage<'T>) =
+                let channels = Col.ChannelsOfFormat(expected.Format)
 
-                        Expect.equal outputData.[x, y] ref message
+                for channel in channels do
+                    let expectedData = expected.GetChannel(channel)
+
+                    match actual.TryGetChannel channel with
+                    | Some actualData ->
+                        try
+                            compareChannels channel expectedData actualData
+                        with _ ->
+                            match actual.TryGetSwappedChannel channel with
+                            | Some otherData ->
+                                let mutable swapped = false
+                                try
+                                    compareChannels channel expectedData otherData
+                                    swapped <- true
+                                with _ -> ()
+                                if swapped then failtest "Red and blue channels are swapped"
+                            | _ -> ()
+                            reraise()
+
+                    | _ when channel = Col.Channel.Alpha ->
+                        expectedData.ForeachCoord(fun coord ->
+                            let e = expectedData.[coord]
+
+                            if not <| Unchecked.equals e maxAlpha then
+                                failtest $"Alpha channel is missing, but expected pixel ({coord.X}, {coord.Y}) has alpha {e}"
+                        )
+
+                    | _ ->
+                        failtest $"{channel} channel missing (format: {actual.Format})"
+
+            expected.Visit {
+                new IPixImageVisitor<int> with
+                    member _.Visit(expected: PixImage<'T>) =
+                        actual.AsPixImage<'T>() |> check expected
+                        0
+            }
+            |> ignore
 
     module private Gen =
 
@@ -150,7 +233,7 @@ module PixLoaderTests =
             )
 
         // Loader restrictions specifically for decoding
-        let private filterDecoder (useStream : bool) (format : PixFileFormat) (gen : Gen<IPixLoader>) =
+        let private filterDecoder (_useStream : bool) (format : PixFileFormat) (gen : Gen<IPixLoader>) =
             gen
             |> filterLoader format
             |> Gen.filter (fun loader ->
@@ -546,6 +629,58 @@ module PixLoaderTests =
             PixImage.compare src dst
         )
 #endif
+
+    let private fileLoadTest =
+        let loaders = [
+            PixImageFreeImage.Loader
+            PixImageDevil.Loader
+#if WINDOWS
+            PixImageWindowsMedia.Loader
+#endif
+        ]
+
+        let skipTestCase =
+            let ignored =
+                Map.ofList [
+                    PixImageDevil.Loader.Name, Set.ofList [
+                        "bw_1bpp_indexed_inverted.bmp" // InvalidFileHeader
+                        "gray_4bpp_indexed.bmp"        // InvalidFileHeader
+                        "rgb_4bpp_indexed.bmp"         // InvalidFileHeader
+                    ]
+                ]
+
+            fun (loader: IPixLoader) (file: string) ->
+                match ignored |> Map.tryFind loader.Name with
+                | Some cases -> cases |> Set.contains file
+                | _ -> false
+
+        fun (file: string) ->
+            let path = Path.Combine(__SOURCE_DIRECTORY__, "data", file)
+            let expected = PixImage.Load(path, PixImageSharp.Loader)
+
+            for loader in loaders do
+                try
+                    if not <| skipTestCase loader file then
+                        let actual = PixImage.Load(path, loader)
+                        PixImage.compare expected actual
+                with exn ->
+                    Assert.Fail($"{loader.Name}: {exn}")
+                    reraise()
+
+    let [<Test>] ``[PixLoader] Load BW 1bpp indexed BMP`` ()          = fileLoadTest "bw_1bpp_indexed.bmp"
+    let [<Test>] ``[PixLoader] Load BW 1bpp indexed inverted BMP`` () = fileLoadTest "bw_1bpp_indexed_inverted.bmp"
+    let [<Test>] ``[PixLoader] Load Gray 4bpp indexed BMP`` ()        = fileLoadTest "gray_4bpp_indexed.bmp"
+    let [<Test>] ``[PixLoader] Load Gray 8bpp PNG`` ()                = fileLoadTest "gray_8bpp.png"
+    let [<Test>] ``[PixLoader] Load Gray 8bpp indexed PNG`` ()        = fileLoadTest "gray_8bpp_indexed.png"
+    let [<Test>] ``[PixLoader] Load Gray 16bpp PNG`` ()               = fileLoadTest "gray_16bpp.png"
+    let [<Test>] ``[PixLoader] Load Gray Alpha 8bpp PNG`` ()          = fileLoadTest "grayalpha_8bpp.png"
+    let [<Test>] ``[PixLoader] Load Gray Alpha 16bpp PNG`` ()         = fileLoadTest "grayalpha_16bpp.png"
+    let [<Test>] ``[PixLoader] Load RGB 4bpp indexed BMP`` ()         = fileLoadTest "rgb_4bpp_indexed.bmp"
+    let [<Test>] ``[PixLoader] Load RGB 8bpp PNG`` ()                 = fileLoadTest "rgb_8bpp.png"
+    let [<Test>] ``[PixLoader] Load RGB 8bpp indexed PNG`` ()         = fileLoadTest "rgb_8bpp_indexed.png"
+    let [<Test>] ``[PixLoader] Load RGB 16bpp PNG`` ()                = fileLoadTest "rgb_16bpp.png"
+    let [<Test>] ``[PixLoader] Load RGBA 8bpp PNG`` ()                = fileLoadTest "rgba_8bpp.png"
+    let [<Test>] ``[PixLoader] Load RGBA 16bpp PNG`` ()               = fileLoadTest "rgba_16bpp.png"
 
     [<Test>]
     let ``[PixLoader] Add and remove loaders``() =
