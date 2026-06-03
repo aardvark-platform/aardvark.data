@@ -99,15 +99,15 @@ namespace Aardvark.Data
 
             { FREE_IMAGE_TYPE.FIT_INT16,   bitmap => BitmapToPixImage<short>(bitmap, Col.Format.Gray) },
             { FREE_IMAGE_TYPE.FIT_UINT16,  bitmap => BitmapToPixImage<ushort>(bitmap, Col.Format.Gray) },
-            { FREE_IMAGE_TYPE.FIT_RGB16,   bitmap => BitmapToPixImage<ushort>(bitmap, Col.Format.BGR) },
-            { FREE_IMAGE_TYPE.FIT_RGBA16,  bitmap => BitmapToPixImage<ushort>(bitmap, Col.Format.BGRA) },
+            { FREE_IMAGE_TYPE.FIT_RGB16,   bitmap => BitmapToPixImage<ushort>(bitmap, Col.Format.RGB) },
+            { FREE_IMAGE_TYPE.FIT_RGBA16,  bitmap => BitmapToPixImage<ushort>(bitmap, Col.Format.RGBA) },
 
             { FREE_IMAGE_TYPE.FIT_INT32,   bitmap => BitmapToPixImage<int>(bitmap, Col.Format.Gray) },
             { FREE_IMAGE_TYPE.FIT_UINT32,  bitmap => BitmapToPixImage<uint>(bitmap, Col.Format.Gray) },
 
             { FREE_IMAGE_TYPE.FIT_FLOAT,   bitmap => BitmapToPixImage<float>(bitmap, Col.Format.Gray) },
-            { FREE_IMAGE_TYPE.FIT_RGBF,    bitmap => BitmapToPixImage<float>(bitmap, Col.Format.BGR) },
-            { FREE_IMAGE_TYPE.FIT_RGBAF,   bitmap => BitmapToPixImage<float>(bitmap, Col.Format.BGRA) },
+            { FREE_IMAGE_TYPE.FIT_RGBF,    bitmap => BitmapToPixImage<float>(bitmap, Col.Format.RGB) },
+            { FREE_IMAGE_TYPE.FIT_RGBAF,   bitmap => BitmapToPixImage<float>(bitmap, Col.Format.RGBA) },
 
             { FREE_IMAGE_TYPE.FIT_DOUBLE,  bitmap => BitmapToPixImage<double>(bitmap, Col.Format.Gray) },
             { FREE_IMAGE_TYPE.FIT_COMPLEX, bitmap => BitmapToPixImage<double>(bitmap, Col.Format.RG) },
@@ -125,6 +125,13 @@ namespace Aardvark.Data
                 Col.Format.BGRP => Col.Format.RGBP,
                 _ => format
             };
+        }
+
+        // FreeImage uses BGR layout for byte formats while Aardvark assumes RGB as default
+        private static long[] GetNativeChannelOrder(this PixImage image)
+        {
+            var format = image.PixFormat.Type == typeof(byte) ? image.Format.SwapRGB() : image.Format;
+            return format.ChannelOrder();
         }
 
         private static Col.Format WithoutAlpha(this Col.Format format)
@@ -166,7 +173,7 @@ namespace Aardvark.Data
             var data = pi.Volume.Data;
             long i = 0;
 
-            var channelOrder = pi.Format.SwapRGB().ChannelOrder(); // FreeImage uses BGR layout while Aardvark assumes RGB as default
+            var channelOrder = pi.GetNativeChannelOrder();
 
             for (var y = 0; y < sy; y++)
             {
@@ -274,7 +281,7 @@ namespace Aardvark.Data
             var delta = (int)FreeImage.GetPitch(bitmap);
             var bits = FreeImage.GetBits(bitmap) + sy * delta;
 
-            var channelOrder = pi.Format.SwapRGB().ChannelOrder(); // FreeImage uses BGR layout while Aardvark assumes RGB as default
+            var channelOrder = pi.GetNativeChannelOrder();
 
             for (var y = 0; y < sy; y++)
             {
