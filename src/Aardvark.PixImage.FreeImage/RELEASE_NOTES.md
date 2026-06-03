@@ -1,3 +1,7 @@
+### 5.3.9
+- Fixed pixel layout handling for non-byte formats
+- Fixed decoding of indexed images with bit depth > 1
+
 ### 5.3.8
 - Fixed validation of unmanaged and managed size in MemoryArray
 
