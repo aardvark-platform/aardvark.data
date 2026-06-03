@@ -18,7 +18,8 @@
       "Tests\\CSharpTests\\CSharpTests.csproj",
       "Tests\\FSharpTests\\FSharpTests.fsproj",
       "Tests\\FreeImageTests\\Benchmarking\\Benchmarking.csproj",
-      "Tests\\FreeImageTests\\UnitTest\\UnitTest.csproj"
+      "Tests\\FreeImageTests\\UnitTest\\UnitTest.csproj",
+      "Tests\\PixLoaderTests\\PixLoaderTests.fsproj"
     ]
   }
 }

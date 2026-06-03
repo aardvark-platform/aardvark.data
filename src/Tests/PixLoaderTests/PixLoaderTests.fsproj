@@ -2,7 +2,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
+    <IsWindows>$([MSBuild]::IsOSPlatform('Windows'))</IsWindows>
+    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework Condition="'$(IsWindows)' == 'true'">net8.0-windows10.0.17763.0</TargetFramework>
     <GenerateProgramFile>false</GenerateProgramFile>
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
     <WarnOn>3389;3390;3395</WarnOn>
@@ -54,13 +56,14 @@
     <Compile Include="Benchmark.fs" />
     <Compile Include="TiffTests.fs" />
     <Compile Include="Program.fs" />
+    <Content Include="paket.references" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Aardvark.PixImage.DevIL\Aardvark.PixImage.DevIL.csproj" />
     <ProjectReference Include="..\..\Aardvark.PixImage.FreeImage\Aardvark.PixImage.FreeImage.csproj" />
     <ProjectReference Include="..\..\Aardvark.PixImage.ImageSharp\Aardvark.PixImage.ImageSharp.fsproj" />
     <ProjectReference Include="..\..\Aardvark.PixImage.Pfim\Aardvark.PixImage.Pfim.fsproj" />
-    <ProjectReference Include="..\..\Aardvark.PixImage.WindowsMedia\Aardvark.PixImage.WindowsMedia.csproj" />
+    <ProjectReference Include="..\..\Aardvark.PixImage.WindowsMedia\Aardvark.PixImage.WindowsMedia.csproj" Condition="'$(IsWindows)' == 'true'"/>
   </ItemGroup>
   <Import Project="..\..\..\.paket\Paket.Restore.targets" />
 </Project>

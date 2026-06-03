@@ -276,7 +276,9 @@ module PixLoaderTests =
                 let! loader =
                     Gen.pixLoader false PixFileFormat.Png
                     |> Gen.filter (fun l -> l.Name <> PixImageDevil.Loader.Name)        // DevIL does not support compression levels
+#if WINDOWS
                     |> Gen.filter (fun l -> l.Name <> PixImageWindowsMedia.Loader.Name) // Windows Media does not support compression levels
+#endif
 
                 return {
                     Image = pix
@@ -531,6 +533,7 @@ module PixLoaderTests =
                 PixImage.compare input.Image output
         )
 
+#if WINDOWS
     [<Test>]
     let ``[PixLoader] BW with Windows Media``() =
         let src = PixImage.checkerboard Col.Format.BW 256 256
@@ -542,6 +545,7 @@ module PixLoaderTests =
             let dst = PixImage.Load(file, PixImageWindowsMedia.Loader).AsPixImage<uint8>()
             PixImage.compare src dst
         )
+#endif
 
     [<Test>]
     let ``[PixLoader] Add and remove loaders``() =

@@ -40,7 +40,9 @@ module TiffTests =
             PixImageSharp.Loader
             PixImageDevil.Loader
             PixImageFreeImage.Loader
+#if WINDOWS
             PixImageWindowsMedia.Loader
+#endif
         ]
 
     let roundTripTest (image: PixImage) =
