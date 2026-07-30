@@ -394,6 +394,25 @@ namespace Aardvark.Data
 
             #region Save
 
+            // Based on source code (plugin->save_proc = NULL)
+            private static bool SupportsSave(FREE_IMAGE_FORMAT format)
+                => format switch
+                {
+                    FREE_IMAGE_FORMAT.FIF_CUT => false,
+                    FREE_IMAGE_FORMAT.FIF_DDS => false,
+                    FREE_IMAGE_FORMAT.FIF_IFF => false,
+                    FREE_IMAGE_FORMAT.FIF_KOALA => false,
+                    FREE_IMAGE_FORMAT.FIF_MNG => false,
+                    FREE_IMAGE_FORMAT.FIF_PCD => false,
+                    FREE_IMAGE_FORMAT.FIF_PCX => false,
+                    FREE_IMAGE_FORMAT.FIF_PICT => false,
+                    FREE_IMAGE_FORMAT.FIF_RAS => false,
+                    FREE_IMAGE_FORMAT.FIF_RAW => false,
+                    FREE_IMAGE_FORMAT.FIF_SGI => false,
+                    FREE_IMAGE_FORMAT.FIF_XBM => false,
+                    _ => true
+                };
+
             private static FREE_IMAGE_SAVE_FLAGS GetPngSaveFlags(PixPngSaveParams png)
                 => (png.CompressionLevel > 0)
                     ? (FREE_IMAGE_SAVE_FLAGS)png.CompressionLevel
@@ -454,6 +473,12 @@ namespace Aardvark.Data
 
                     if (pi.Format == Col.Format.Gray)
                         pi = pi.ToPixImage(Col.Format.BGR);
+                }
+
+                // Various formats do not support saving, most prominently DDS.
+                if (!SupportsSave(format))
+                {
+                    throw new NotSupportedException($"Saving {saveParams.Format} is not supported.");
                 }
 
                 if (!s_bitmapCreators.TryGetValue(pi.PixFormat, out var creator))
