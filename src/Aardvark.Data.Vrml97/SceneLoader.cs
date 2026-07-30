@@ -201,6 +201,21 @@ namespace Aardvark.Data.Vrml97
                 return returnFunc(map, visit);
             };
 
+            trav.PerNameVisitors[Vrml97NodeName.IndexedLineSet] = (map, visit) =>
+            {
+                if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
+                {
+                    var lineGeo = GetNode<VrmlLineSet>(map);
+
+                    if (currentShape == null)
+                        throw new Exception("invalid node placement");
+
+                    currentShape.Geometry = lineGeo;
+                }
+
+                return returnFunc(map, visit);
+            };
+
             trav.PerNameVisitors[Vrml97NodeName.Box] = (map, visit) =>
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)

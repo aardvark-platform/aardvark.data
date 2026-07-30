@@ -214,6 +214,274 @@ namespace Aardvark.Data.Vrml97
         #endregion
     }
 
+    public class VrmlLineSet : VrmlGeometry
+    {
+        // NOTE/TODO: Aardvark.Geometry.PolyLineSet ??
+        //            Aardvark.Geometry.PolyLine only represents a single PolyLine (joint list of line segments)
+        //             -> The implementation here follows the PolyMesh concept
+
+        /// <summary>
+        /// Vertices defining the PolyLines
+        /// </summary>
+        public V3f[] VertexArray;
+
+        /// <summary>
+        /// Vertex index array packing all PolyLine indices together (similar to VertexIndexArray of PolyMesh).
+        /// </summary>
+        public int[] VertexIndexArray;
+
+        /// <summary>
+        /// Start indices of individual PolyLines (similar to FirstIndexArray of PolyMesh).
+        /// </summary>
+        public int[] FirstIndexArray;
+
+        /// <summary>
+        /// NOTE: if null, ColorArray is directly applied to Vertices or PolyLines
+        /// </summary>
+        public int[] ColorIndexArray;
+
+        /// <summary>
+        /// Color array: can in index via ColorIndices, optionally either to Vertices or PolyLines
+        /// </summary>
+        public C3f[] ColorArray;
+
+        /// <summary>
+        /// Number of independent line 
+        /// </summary>
+        public int PolyLineCount => FirstIndexArray != null && FirstIndexArray.Length > 0 ? FirstIndexArray.Length - 1 : 0;
+
+        /// <summary>
+        /// Specifies if colors are
+        ///  - per vertex (true): length of colors/colorIndices expected to equal to the VertexArray
+        ///  - per polyline (false): length of colors/colorIndices expected to be FirstIndexArray.Length-1 (PolyLineCount)
+        /// </summary>
+        public bool PerVertexColors;
+
+        public VrmlLineSet() { }
+
+        internal override void Init(SymMapBase map)
+        {
+            base.Init(map);
+
+            // [Vrml97 SPEC]
+            //IndexedLineSet {
+            //    SFNode  color NULL
+            //    SFNode  coord NULL
+            //    MFInt32 colorIndex[]
+            //    SFBool colorPerVertex    TRUE
+            //    MFInt32 coordIndex[]
+            //}
+
+            SymMapBase color = map.Get<SymMapBase>(Vrml97Sym.color);
+            SymMapBase coord = map.Get<SymMapBase>(Vrml97Sym.coord);
+            var colorIndex = map.Get<List<int>>(Vrml97Sym.colorIndex);
+            var colorPerVertex = map.Get(Vrml97Sym.colorPerVertex, true);
+            var coordIndex = map.Get<List<int>>(Vrml97Sym.coordIndex);
+
+            if (coord == null)
+            {
+                throw new Exception(
+                    "Vrml97 spec violation!" +
+                    "IndexedLineSet node: field 'coord' MUST NOT be null."
+                    );
+            }
+
+            if (!coord.Contains(Vrml97Sym.point))
+            {
+                throw new Exception(
+                    "Vrml97 spec violation!" +
+                    "Coordinate node: field 'point' MUST NOT be null."
+                    );
+            }
+
+            var vertexPositionList = coord.Get<List<V3f>>(Vrml97Sym.point);
+            int vertexCount = vertexPositionList.Count;
+
+            if (vertexCount == 0)
+            {
+                Report.Line(2, "Note: Ignoring an IndexedLineSet with 0 vertices.");
+                return;
+            }
+
+            VertexArray = vertexPositionList.ToArray();
+
+            if (coordIndex == null)
+            {
+                throw new Exception(
+                    "Vrml97 spec violation!" +
+                    "IndexedLineSet node: field 'coordIndex' MUST NOT be null."
+                    );
+            }
+
+
+            // NOTE: coord index array must not end with -1
+            //       -> if last entry is not -1 then increase coordIndexCount by 1 and
+            //          pretend that there is -1 at the end when looping over the indices
+
+            int coordIndexCount = coordIndex[coordIndex.Count - 1] == -1
+                            ? coordIndex.Count
+                            : coordIndex.Count + 1;
+
+            var indices = new List<int>(coordIndex.Count);
+            var firstIndices = new List<int>(coordIndex.Count(i => i == -1) + 1);
+            firstIndices.Add(0);
+
+            //int lvc = 0;
+            
+            for (int xi = 0; xi < coordIndexCount; xi++)
+            {
+                int x = xi == coordIndex.Count ? -1 : coordIndex[xi]; 
+                if (x == -1) // Polyline end marker
+                {
+                    //if (lvc == 0)
+                    //{
+                    //    break; // can happen at the very end ???
+                    //}
+
+                    firstIndices.Add(indices.Count);
+                    //lvc = 0;
+                }
+                else
+                {
+                    //lvc++;
+                    indices.Add(coordIndex[xi]);
+                }
+            }
+
+            VertexIndexArray = indices.ToArray();
+            FirstIndexArray = firstIndices.ToArray();
+
+            if (color != null)
+            {
+                PerVertexColors = colorPerVertex;
+
+                if (!color.Contains("color"))
+                    throw new Exception(
+                        "Vrml97 spec violation!" +
+                        "Color node: field 'color' MUST NOT be null."
+                        );
+
+                var colorList = color.Get<List<C3f>>(Vrml97Sym.color);
+
+                ColorArray = colorList.ToArray();
+                ColorIndexArray = colorIndex?.ToArray();
+
+                // color attribute validation
+                if (colorPerVertex == false)
+                {
+                    var polyLineCount = firstIndices.Count - 1;
+                    if (colorIndex != null)
+                    {    
+                        if (colorList.Count < polyLineCount)
+                        {
+                            throw new Exception(
+                                "Vrml97 spec violation! "
+                                + "IndexedLineSet node: there shall be at "
+                                + "least as many indices in the colorIndex "
+                                + "field as there are faces in the "
+                                + "IndexedFaceSet");
+                        }
+                        if (colorIndex.Max() >= colorList.Count)
+                        { 
+                            throw new Exception(
+                                "Vrml97 spec violation! "
+                                + "If the greatest index in the colorIndex "
+                                + "field is N, then there shall be N+1 "
+                                + "colors in the Color node.");
+                        }
+                        if (colorIndex.Min() < 0)
+                        {
+                            throw new Exception(
+                                "Vrml97 spec violation! "
+                                + "The colorIndex field shall not contain "
+                                + "any negative entries.");
+                        }
+                    }
+                    else // if (colorIndex == null)
+                    {
+                        if (colorList.Count < polyLineCount)
+                        {
+                            throw new Exception(
+                                "Vrml97 spec violation! "
+                                + "There shall be at least as many colors "
+                                + "in the Color node as there are polylines.");
+                        }
+                    }
+                }
+                else // if (colorPerVertex == true)
+                {
+                    /*
+                     * [Vrml97 SPEC]
+                     * a. If the colorIndex field is not empty, then colours
+                     *    are applied to each vertex of the IndexedLineSet in
+                     *    exactly the same manner that the coordIndex field is
+                     *    used to choose coordinates for each vertex from the
+                     *    Coordinate node. The colorIndex field shall contain
+                     *    at least as many indices as the coordIndex field, and
+                     *    must contain end-of-polyline markers (-1) in exactly the
+                     *    same places as the coordIndex field. If the greatest
+                     *    index in the colorIndex field is N, then there 
+                     *    must be N+1 colors in the Color node.
+                     * 
+                     * b. If the colorIndex field is empty, then the coordIndex
+                     *    field is used to choose colors from the Color node.
+                     *    If the greatest index in the coordIndex field is N, 
+                     *    then there must be N+1 colors in the Color node.
+                     */
+                    
+                    if (colorIndex != null)
+                    {
+                        if (colorList.Count < vertexCount)
+                        {
+                            throw new Exception(
+                                "Vrml97 spec violation! "
+                                + "IndexedLineSet node: there shall be at "
+                                + "least as many indices in the colorIndex "
+                                + "field as there are vertices in the "
+                                + "IndexedLineSet");
+                        }
+                        if (colorIndex.Max() >= colorList.Count)
+                        {
+                            throw new Exception(
+                                "Vrml97 spec violation! "
+                                + "If the greatest index in the colorIndex "
+                                + "field is N, then there shall be N+1 "
+                                + "colors in the Color node.");
+                        }
+                        if (colorIndex.Min() < 0)
+                        {
+                            throw new Exception(
+                                "Vrml97 spec violation! "
+                                + "The colorIndex field shall not contain "
+                                + "any negative entries.");
+                        }
+                    }
+                    else
+                    {
+                        if (colorList.Count < vertexCount)
+                        {
+                            throw new Exception(
+                                "Vrml97 spec violation! "
+                                + "There shall be at least as many colors "
+                                + "in the Color node as there are vertices.");
+                        }
+                    }
+                }
+            }
+        }
+
+        #region IFieldCodeable Members
+
+        public override IEnumerable<FieldCoder> GetFieldCoders(int coderVersion)
+        {
+            foreach (var fc in base.GetFieldCoders(coderVersion))
+                yield return fc;
+            //yield return new FieldCoder(2, "FOO", (c, o) => c.CodeV3f(ref ((VrmlLineSet)o).FOO));
+        }
+
+        #endregion
+    }
+
     public class VrmlBox : VrmlGeometry 
     {
         public V3f Size;
@@ -1036,40 +1304,32 @@ namespace Aardvark.Data.Vrml97
             if (vrmlNode is VrmlShape) 
             {
                 VrmlShape shape = (VrmlShape)vrmlNode;
-                
-                if (shape.Geometry is VrmlMesh) return;
 
-                VrmlMesh mesh = new VrmlMesh();
-                mesh.Name = shape.Geometry.TrySelect(x => x.Name);
-
-                if (shape.Geometry is VrmlBox)
+                if (shape.Geometry == null || shape.Geometry is VrmlMesh)
                 {
-                    var box = (VrmlBox)shape.Geometry;
-                    mesh.Mesh = PolyMeshPrimitives.Box(Box3d.FromCenterAndSize(V3d.Zero, box.Size.XZY.ToV3d()), C4b.White);
-                }
-                else if (shape.Geometry is VrmlSphere)
-                {
-                    var sphere = (VrmlSphere)shape.Geometry;
-                    mesh.Mesh = PolyMeshPrimitives.Sphere(20, sphere.Radius, C4b.White);
-                }
-                else if (shape.Geometry is VrmlCone)
-                {
-                    var cone = (VrmlCone)shape.Geometry;
-                    mesh.Mesh = PolyMeshPrimitives.Cone(20, cone.Height, cone.BottomRadius, C4b.White);
-                }
-                else if (shape.Geometry is VrmlCylinder)
-                {
-                    var cylinder = (VrmlCylinder)shape.Geometry;
-                    mesh.Mesh = PolyMeshPrimitives.Cylinder2(20, cylinder.Height, cylinder.Radius, C4b.White, Geometry.PolyMesh.Property.DiffuseColorCoordinates);
-                }
-                else
-                {
-                    mesh.Mesh = new Geometry.PolyMesh();
+                    return; // nothing or already a mesh -> return
                 }
 
-                mesh.Mesh = mesh.Mesh.Transformed(Trafo3d.RotationXInDegrees(-90));
+                var mesh = shape.Geometry switch
+                {
+                    VrmlBox box => PolyMeshPrimitives.Box(Box3d.FromCenterAndSize(V3d.Zero, box.Size.XZY.ToV3d()), C4b.White),
+                    VrmlSphere sphere => PolyMeshPrimitives.Sphere(20, sphere.Radius, C4b.White),
+                    VrmlCone cone => PolyMeshPrimitives.Cone(20, cone.Height, cone.BottomRadius, C4b.White),
+                    VrmlCylinder cylinder => PolyMeshPrimitives.Cylinder2(20, cylinder.Height, cylinder.Radius, C4b.White, Geometry.PolyMesh.Property.DiffuseColorCoordinates),
+                    _ => null
+                };
 
-                shape.Geometry = mesh;
+                // NOTE: there should not be any unhandled cases that would cause mesh == null -> check anyway for completeness
+                if (mesh == null)
+                {   
+                    return;
+                }
+
+                shape.Geometry = new VrmlMesh()
+                {
+                    Name = shape.Geometry?.Name,
+                    Mesh = mesh.Transformed(Trafo3d.RotationXInDegrees(-90))
+                };
             }
         }
     }
