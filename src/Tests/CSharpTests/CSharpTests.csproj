@@ -12,6 +12,17 @@
     <OutputPath>..\..\..\bin\Release</OutputPath>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="data\IndexedLineSet_Cases.wrl" />
+    <EmbeddedResource Include="data\IndexedLineSet_Invalid_01.wrl" />
+    <EmbeddedResource Include="data\IndexedLineSet_Invalid_02.wrl" />
+    <EmbeddedResource Include="data\IndexedLineSet_Invalid_03.wrl" />
+    <EmbeddedResource Include="data\IndexedLineSet_Invalid_04.wrl" />
+    <EmbeddedResource Include="data\IndexedLineSet_Invalid_05.wrl" />
+    <EmbeddedResource Include="data\IndexedLineSet_Invalid_06.wrl" />
+    <EmbeddedResource Include="data\IndexedLineSet_Invalid_07.wrl" />
+    <EmbeddedResource Include="data\IndexedLineSet_Invalid_08.wrl" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\Aardvark.Data.Photometry\Aardvark.Data.Photometry.csproj" />
     <ProjectReference Include="..\..\Aardvark.Data.Vrml97\Aardvark.Data.Vrml97.csproj" />
   </ItemGroup>

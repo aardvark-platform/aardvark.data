@@ -1,0 +1,10 @@
+#VRML V2.0 utf8
+# MUST THROW: colorPerVertex TRUE with colorIndex shorter than coordIndex
+# (spec: "shall contain at least as many indices as the coordIndex field")
+Shape { geometry IndexedLineSet {
+  coord Coordinate { point [ 0 0 0, 1 0 0, 2 0 0 ] }
+  color Color { color [ 1 0 0, 0 1 0, 0 0 1 ] }
+  colorPerVertex TRUE
+  coordIndex [ 0 1 2 -1 ]
+  colorIndex [ 0 1 ]
+} }
