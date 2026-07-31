@@ -216,3 +216,32 @@ Group {
 
   ]
 }
+
+# [Vrml97 SPEC] 5.2: an int32 may be written in decimal or in hexadecimal with a 0x prefix
+# -> hex indices must parse to exactly the same line sets as their decimal twins
+Group {
+  children [
+
+    # 27) hex coordIndex, mixed with decimal (end-of-polyline markers stay decimal, signed hex is not legal Vrml97)
+    Shape { geometry IndexedLineSet {
+      coord Coordinate { point [ 0 0 0, 1 0 0, 1 1 0, 0 1 0, 2 0 0, 3 0 0, 4 0 0, 5 0 0, 6 0 0, 7 0 0, 8 0 0, 9 0 0, 10 0 0 ] }
+      coordIndex [ 0x0 0x1 2 3 -1 0xA 0xb 0xC -1 ]
+    } },
+
+    # 28) decimal twin of 27 - the parsed arrays must be identical
+    Shape { geometry IndexedLineSet {
+      coord Coordinate { point [ 0 0 0, 1 0 0, 1 1 0, 0 1 0, 2 0 0, 3 0 0, 4 0 0, 5 0 0, 6 0 0, 7 0 0, 8 0 0, 9 0 0, 10 0 0 ] }
+      coordIndex [ 0 1 2 3 -1 10 11 12 -1 ]
+    } },
+
+    # 29) hex colorIndex with per-polyline colors, upper and lower case prefix and digits
+    Shape { geometry IndexedLineSet {
+      coord Coordinate { point [ 0 0 0, 1 0 0, 2 0 0, 3 0 0 ] }
+      color Color { color [ 1 0 0, 0 1 0, 0 0 1 ] }
+      colorPerVertex FALSE
+      coordIndex [ 0x0 0x1 -1 0x2 0x3 -1 ]
+      colorIndex [ 0X2 0x0 ]
+    } }
+
+  ]
+}

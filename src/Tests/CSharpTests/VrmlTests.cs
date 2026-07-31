@@ -73,6 +73,41 @@ namespace Aardvark.Data.Vrml97
                     CollectLineSets(child, result);
         }
 
+        /// <summary>
+        /// Collects all VrmlShapes of the scene in document order.
+        /// </summary>
+        private static List<VrmlShape> GetShapes(VrmlNode node)
+        {
+            var result = new List<VrmlShape>();
+            CollectShapes(node, result);
+            return result;
+        }
+
+        private static void CollectShapes(VrmlNode node, List<VrmlShape> result)
+        {
+            if (node is VrmlShape shape)
+                result.Add(shape);
+
+            if (node is VrmlGroup group)
+                foreach (var child in group)
+                    CollectShapes(child, result);
+        }
+
+        /// <summary>
+        /// All embedded Vrml97 specification example scenes, as paths accepted by LoadEmbeddedData.
+        /// </summary>
+        private static IEnumerable<string> Vrml97SpecScenes()
+        {
+            var asm = Assembly.GetExecutingAssembly();
+            var name = Regex.Replace(asm.ManifestModule.Name, @"\.(exe|dll)$", "", RegexOptions.IgnoreCase);
+            var prefix = name + ".data.Vrml97Spec.";
+
+            return asm.GetManifestResourceNames()
+                      .Where(n => n.StartsWith(prefix) && n.EndsWith(".wrl"))
+                      .Select(n => @"data\Vrml97Spec\" + n.Substring(prefix.Length))
+                      .OrderBy(n => n);
+        }
+
         #endregion
 
         [Test]
@@ -83,8 +118,8 @@ namespace Aardvark.Data.Vrml97
                 var scene = LoadScene(filePath);
                 var ls = GetLineSets(scene);
 
-                // 28 Shapes carrying an IndexedLineSet (cases 10 and 11 have two each)
-                Assert.That(ls.Count, Is.EqualTo(28));
+                // 31 Shapes carrying an IndexedLineSet (cases 10 and 11 have two each)
+                Assert.That(ls.Count, Is.EqualTo(31));
 
                 // 1) single 2-point polyline (the only case in "00 Tracks")
                 Assert.That(ls[0].VertexArray, Is.EqualTo(new[] { V3f.OOO, V3f.OIO }));
@@ -192,6 +227,15 @@ namespace Aardvark.Data.Vrml97
                 // 26) scientific notation parsed correctly
                 Assert.That(ls[27].VertexArray[0], Is.EqualTo(new V3f(-1.5e-3f, 0, 2e2f)));
                 Assert.That(ls[27].VertexArray[1], Is.EqualTo(new V3f(1, -2.25f, 0.5f)));
+
+                // 27/28) hex indices must yield exactly the same line set as the decimal twin
+                Assert.That(ls[28].VertexIndexArray, Is.EqualTo(new[] { 0, 1, 2, 3, 10, 11, 12 }));
+                Assert.That(ls[28].VertexIndexArray, Is.EqualTo(ls[29].VertexIndexArray));
+                Assert.That(ls[28].FirstIndexArray, Is.EqualTo(ls[29].FirstIndexArray));
+
+                // 29) hex colorIndex, upper and lower case prefix and digits
+                Assert.That(ls[30].PerVertexColors, Is.False);
+                Assert.That(ls[30].ColorIndexArray, Is.EqualTo(new[] { 2, 0 }));
             });
         }
 
@@ -250,8 +294,31 @@ namespace Aardvark.Data.Vrml97
                 // have to distinguish geometry types, and PrimitivesToMeshes must leave them untouched
                 scene.PrimitivesToMeshes();
                 var geometries = GetLineSets(scene);
-                Assert.That(geometries.Count, Is.EqualTo(28));
+                Assert.That(geometries.Count, Is.EqualTo(31));
                 Assert.That(((VrmlGeometry)geometries[0]).GetIndexedGeometry(), Is.Not.Null);
+            });
+        }
+
+        /// <summary>
+        /// Smoke test over the official Vrml97 specification examples (see data\Vrml97Spec\README.md).
+        /// NOTE: none of them contains an IndexedLineSet, so this covers the loader as a whole
+        ///       (Script, Extrusion, Text, LOD, Anchor, sensors, interpolators, PROTOs, ...) and not the line set implementation.
+        /// </summary>
+        [Test]
+        [TestCaseSource(nameof(Vrml97SpecScenes))]
+        public static void Vrml97SpecificationExample(string dataPath)
+        {
+            LoadEmbeddedData(dataPath, (filePath) => {
+
+                var scene = LoadScene(filePath);
+                Assert.That(scene, Is.Not.Null);
+
+                // the whole pipeline must survive every scene: meshing the primitives and converting every geometry to a renderable IndexedGeometry
+                scene.PrimitivesToMeshes();
+                foreach (var shape in GetShapes(scene))
+                {
+                    Assert.That(() => shape.Geometry?.GetIndexedGeometry(), Throws.Nothing);
+                }
             });
         }
 

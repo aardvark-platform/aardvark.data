@@ -21,6 +21,28 @@
     <EmbeddedResource Include="data\IndexedLineSet_Invalid_06.wrl" />
     <EmbeddedResource Include="data\IndexedLineSet_Invalid_07.wrl" />
     <EmbeddedResource Include="data\IndexedLineSet_Invalid_08.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\ChopperBody.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\ChopperRotor.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Example02.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Example03.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Example04.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Example05.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Example06.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Example07.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Example08.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Example09.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Example10.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Example11.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Example12.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Example14.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Example15.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Example16.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Example17.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Example18.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Example19.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\exampleD_5.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\RefractiveMaterial.wrl" />
+    <EmbeddedResource Include="data\Vrml97Spec\Rotor.wrl" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Aardvark.Data.Photometry\Aardvark.Data.Photometry.csproj" />
