@@ -29,7 +29,7 @@ namespace Aardvark.Data.Vrml97
         }
 
         #endregion
-            
+
         #region IFieldCodeable Members
 
         public virtual IEnumerable<FieldCoder> GetFieldCoders(int coderVersion)
@@ -97,7 +97,7 @@ namespace Aardvark.Data.Vrml97
         {
             foreach (var fc in base.GetFieldCoders(coderVersion))
                 yield return fc;
-            yield return new FieldCoder(2, "Children", (c,o) => c.CodeList_of_T_(ref ((VrmlGroup)o).m_children));
+            yield return new FieldCoder(2, "Children", (c, o) => c.CodeList_of_T_(ref ((VrmlGroup)o).m_children));
         }
 
         #endregion
@@ -137,7 +137,7 @@ namespace Aardvark.Data.Vrml97
         public List<VrmlRoute> Routes = new List<VrmlRoute>();
         public List<VrmlPositionInterpolator> PositionInterpolators = new List<VrmlPositionInterpolator>();
         public List<VrmlOrientationInterpolator> OrientationInterpolators = new List<VrmlOrientationInterpolator>();
-        public List<VrmlTimeSensor> TimeSensors = new List<VrmlTimeSensor>();  
+        public List<VrmlTimeSensor> TimeSensors = new List<VrmlTimeSensor>();
 
         public VrmlScene() { }
 
@@ -178,12 +178,15 @@ namespace Aardvark.Data.Vrml97
         #endregion
     }
 
+    // NOTE: the conversion to a renderable IndexedGeometry is deliberately NOT part of this hierarchy,
+    //       it lives in VrmlIndexedGeometry.cs so that this file stays free of any rendering dependency.
     public abstract class VrmlGeometry : VrmlNode
     {
     }
 
-    public class VrmlMesh : VrmlGeometry {
-        
+    public class VrmlMesh : VrmlGeometry
+    {
+
         public PolyMesh Mesh;
 
         public VrmlMesh() { }
@@ -192,7 +195,7 @@ namespace Aardvark.Data.Vrml97
         {
             base.Init(map);
             Mesh = PolyMeshFromVrml97.CreateFromIfs(map, PolyMeshFromVrml97.Options.NoVertexColorsFromMaterial | PolyMeshFromVrml97.Options.TryFixSpecViolations);
-            // NOTE: If a geometry is annotated with a crease angle normals should be generated according to the vrml specification. 
+            // NOTE: If a geometry is annotated with a crease angle normals should be generated according to the vrml specification.
             //       Since geometry might be broken, it is better to first do some cleanup/repair, but this should be decided in the application.
             //if (Mesh.InstanceAttributes.Contains(PolyMesh.Property.CreaseAngle) && !Mesh.HasNormals)
             //{
@@ -214,14 +217,280 @@ namespace Aardvark.Data.Vrml97
         #endregion
     }
 
-    public class VrmlBox : VrmlGeometry 
+    public class VrmlLineSet : VrmlGeometry
+    {
+        // NOTE: PolyLine only represents a single polyline -> the implementation here follows the PolyMesh concept
+
+        /// <summary>Vertices defining the PolyLines.</summary>
+        public V3f[] VertexArray;
+
+        /// <summary>Vertex index array packing all PolyLine indices together, end-of-polyline markers stripped (similar to VertexIndexArray of PolyMesh).</summary>
+        public int[] VertexIndexArray;
+
+        /// <summary>Start indices of individual PolyLines (similar to FirstIndexArray of PolyMesh).</summary>
+        public int[] FirstIndexArray;
+
+        /// <summary>Optional indices into ColorArray; if null, ColorArray is applied directly. If PerVertexColors is true this array is parallel to VertexIndexArray (markers stripped), otherwise it holds one entry per PolyLine.</summary>
+        public int[] ColorIndexArray;
+
+        /// <summary>Color array, optionally indexed via ColorIndexArray, applied either to Vertices or PolyLines (see PerVertexColors).</summary>
+        public C3f[] ColorArray;
+
+        /// <summary>Number of independent PolyLines.</summary>
+        public int PolyLineCount => FirstIndexArray != null && FirstIndexArray.Length > 0 ? FirstIndexArray.Length - 1 : 0;
+
+        /// <summary>Colors/colorIndices apply per vertex (true, parallel to VertexIndexArray) or per polyline (false, one entry per PolyLine).</summary>
+        public bool PerVertexColors;
+
+        public VrmlLineSet() { }
+
+        internal override void Init(SymMapBase map)
+        {
+            base.Init(map);
+
+            // [Vrml97 SPEC]
+            // IndexedLineSet {
+            //     SFNode  color          NULL
+            //     SFNode  coord          NULL
+            //     MFInt32 colorIndex     []
+            //     SFBool  colorPerVertex TRUE
+            //     MFInt32 coordIndex     []
+            // }
+            static Exception Violation(string msg) => new Exception("Vrml97 spec violation! " + msg);
+            const string MarkerMismatch = "The colorIndex field must contain end-of-polyline markers (-1) in exactly the same places as the coordIndex field.";
+
+            var color = map.Get<SymMapBase>(Vrml97Sym.color);
+            var coord = map.Get<SymMapBase>(Vrml97Sym.coord);
+            var colorPerVertex = map.Get(Vrml97Sym.colorPerVertex, true);
+
+            // NOTE: both index fields default to [] -> treat an empty list like an absent field
+            var colorIndex = map.Get<List<int>>(Vrml97Sym.colorIndex);
+            var coordIndex = map.Get<List<int>>(Vrml97Sym.coordIndex);
+            if (colorIndex != null && colorIndex.Count == 0)
+                colorIndex = null;
+            if (coordIndex != null && coordIndex.Count == 0)
+                coordIndex = null;
+
+            PerVertexColors = colorPerVertex;
+
+            if (coord == null)
+                throw Violation("IndexedLineSet node: field 'coord' MUST NOT be null.");
+            if (!coord.Contains(Vrml97Sym.point))
+                throw Violation("Coordinate node: field 'point' MUST NOT be null.");
+
+            var vertexPositionList = coord.Get<List<V3f>>(Vrml97Sym.point);
+            int vertexCount = vertexPositionList != null ? vertexPositionList.Count : 0;
+
+            if (vertexCount == 0)
+            {
+                Report.Line(2, "Note: Ignoring an IndexedLineSet with 0 vertices.");
+                return;
+            }
+
+            // NOTE: an empty coordIndex is the field default and simply means "no lines"
+            if (coordIndex == null)
+            {
+                Report.Line(2, "Note: Ignoring an IndexedLineSet with an empty coordIndex.");
+                return;
+            }
+
+            List<C3f> colorList = null;
+            if (color != null)
+            {
+                if (!color.Contains(Vrml97Sym.color))
+                    throw Violation("Color node: field 'color' MUST NOT be null.");
+
+                colorList = color.Get<List<C3f>>(Vrml97Sym.color);
+                if (colorList == null || colorList.Count == 0)
+                {
+                    Report.Warn("IndexedLineSet: Color node without colors -> ignoring colors.");
+                    colorList = null;
+                }
+            }
+
+            if (colorList == null) // colorIndex is meaningless without colors
+                colorIndex = null;
+
+            if (colorIndex != null)
+            {
+                // -1 is only a legal entry in the per-vertex case (end-of-polyline marker)
+                if (colorIndex.Min() < (colorPerVertex ? -1 : 0))
+                    throw Violation("The colorIndex field shall not contain any negative entries.");
+                if (colorIndex.Max() >= colorList.Count)
+                    throw Violation("If the greatest index in the colorIndex field is N, then there shall be N+1 colors in the Color node.");
+            }
+
+            // [Vrml97 SPEC] colorPerVertex TRUE:
+            //  a. If the colorIndex field is not empty, it selects a color per vertex in exactly the same manner
+            //     that coordIndex chooses coordinates: it shall contain at least as many indices as coordIndex
+            //     and shall have its end-of-polyline markers (-1) in exactly the same places.
+            //  b. If the colorIndex field is empty, coordIndex is used to choose colors from the Color node.
+            //  In both cases the greatest used index N requires N+1 colors in the Color node.
+            var indexedPerVertexColors = colorPerVertex && colorIndex != null;
+            if (indexedPerVertexColors && colorIndex.Count < coordIndex.Count)
+                throw Violation("IndexedLineSet node: the colorIndex field shall contain at least as many indices as the coordIndex field.");
+
+            // NOTE: the trailing -1 is optional -> if missing, loop one entry further and pretend there is one
+            int coordIndexCount = coordIndex[coordIndex.Count - 1] == -1 ? coordIndex.Count : coordIndex.Count + 1;
+
+            var indices = new List<int>(coordIndex.Count);
+            var firstIndices = new List<int> { 0 };
+            var vertexColorIndices = indexedPerVertexColors ? new List<int>(coordIndex.Count) : null; // kept parallel to indices
+            var polyLineSources = new List<int>(); // ordinal of each emitted polyline within coordIndex (per-polyline colors must not shift when degenerate polylines are dropped)
+
+            var polyLineStart = 0;    // start of the current polyline within indices
+            var polyLineOrdinal = 0;  // ordinal of the current polyline within coordIndex
+            var polyLineValid = true; // false once an illegal index was seen -> the whole polyline is dropped
+
+            for (int xi = 0; xi < coordIndexCount; xi++)
+            {
+                int x = xi < coordIndex.Count ? coordIndex[xi] : -1;
+
+                if (x == -1) // polyline end marker
+                {
+                    if (indexedPerVertexColors && xi < colorIndex.Count && colorIndex[xi] != -1)
+                        throw Violation(MarkerMismatch);
+
+                    var polyLineVertexCount = indices.Count - polyLineStart;
+                    if (polyLineValid && polyLineVertexCount >= 2)
+                    {
+                        firstIndices.Add(indices.Count);
+                        polyLineSources.Add(polyLineOrdinal);
+                    }
+                    else // drop: empty polylines (consecutive/trailing -1) are common in the wild and stay silent, real data loss warns
+                    {
+                        indices.RemoveRange(polyLineStart, polyLineVertexCount);
+                        vertexColorIndices?.RemoveRange(polyLineStart, polyLineVertexCount);
+                        if (polyLineValid && polyLineVertexCount == 1)
+                            Report.Warn("IndexedLineSet: dropping polyline {0} with a single vertex.", polyLineOrdinal);
+                    }
+
+                    polyLineStart = indices.Count;
+                    polyLineOrdinal++;
+                    polyLineValid = true;
+                }
+                else if (x < 0 || x >= vertexCount) // Vrml97 spec violation -> drop the whole polyline instead of failing the load
+                {
+                    if (polyLineValid)
+                        Report.Warn("IndexedLineSet: coordIndex {0} out of range [0, {1}) -> dropping polyline {2}.", x, vertexCount, polyLineOrdinal);
+                    polyLineValid = false;
+                }
+                else
+                {
+                    indices.Add(x);
+                    if (indexedPerVertexColors)
+                    {
+                        if (colorIndex[xi] == -1)
+                            throw Violation(MarkerMismatch);
+                        vertexColorIndices.Add(colorIndex[xi]);
+                    }
+                }
+            }
+
+            if (polyLineSources.Count == 0)
+            {
+                Report.Line(2, "Note: Ignoring an IndexedLineSet without any valid polyline.");
+                return;
+            }
+
+            VertexArray = vertexPositionList.ToArray();
+            VertexIndexArray = indices.ToArray();
+            FirstIndexArray = firstIndices.ToArray();
+
+            if (colorList == null)
+                return;
+
+            ColorArray = colorList.ToArray();
+
+            if (colorPerVertex)
+            {
+                // (a) explicit indices, markers already stripped -> parallel to VertexIndexArray
+                // (b) no colorIndex -> VertexIndexArray doubles as color index and ColorIndexArray stays null
+                if (indexedPerVertexColors)
+                    ColorIndexArray = vertexColorIndices.ToArray();
+                else if (colorList.Count <= indices.Max())
+                    throw Violation("If the greatest index in the coordIndex field is N, then there shall be N+1 colors in the Color node.");
+            }
+            else if (colorIndex != null) // one color per polyline, addressed by the ordinal within coordIndex
+            {
+                if (colorIndex.Count < polyLineOrdinal)
+                    throw Violation("IndexedLineSet node: there shall be at least as many indices in the colorIndex field as there are polylines in the IndexedLineSet.");
+                ColorIndexArray = polyLineSources.Select(i => colorIndex[i]).ToArray();
+            }
+            else
+            {
+                if (colorList.Count < polyLineOrdinal)
+                    throw Violation("There shall be at least as many colors in the Color node as there are polylines.");
+
+                // only needed if dropped polylines have shifted the ordinals
+                if (polyLineSources.Count != polyLineOrdinal)
+                    ColorIndexArray = polyLineSources.ToArray();
+            }
+        }
+
+        /// <summary>
+        /// Number of line segments of the PolyLine with the given index (a PolyLine of n vertices has n-1 segments).
+        /// </summary>
+        public int GetSegmentCount(int polyLineIndex)
+        {
+            return FirstIndexArray[polyLineIndex + 1] - FirstIndexArray[polyLineIndex] - 1;
+        }
+
+        /// <summary>
+        /// Resolves the color of the vertex at position i within VertexIndexArray, belonging to the PolyLine with index pi.
+        /// </summary>
+        public C4b GetColor(int pi, int i)
+        {
+            // per vertex: index via ColorIndexArray, or via VertexIndexArray if the Vrml97 colorIndex field was empty
+            // per polyline: index via ColorIndexArray, or directly by the PolyLine index
+            var ci = PerVertexColors
+                ? (ColorIndexArray != null ? ColorIndexArray[i] : VertexIndexArray[i])
+                : (ColorIndexArray != null ? ColorIndexArray[pi] : pi);
+
+            return new C4b(ColorArray[ci]);
+        }
+
+        /// <summary>
+        /// Total number of line segments of all PolyLines.
+        /// </summary>
+        public int SegmentCount
+        {
+            get
+            {
+                var count = 0;
+                for (int pi = 0; pi < PolyLineCount; pi++)
+                {
+                    count += GetSegmentCount(pi);
+                }
+                return count;
+            }
+        }
+
+        #region IFieldCodeable Members
+
+        public override IEnumerable<FieldCoder> GetFieldCoders(int coderVersion)
+        {
+            foreach (var fc in base.GetFieldCoders(coderVersion))
+                yield return fc;
+            yield return new FieldCoder(2, "VertexArray", (c, o) => c.CodeV3fArray(ref ((VrmlLineSet)o).VertexArray));
+            yield return new FieldCoder(3, "VertexIndexArray", (c, o) => c.CodeIntArray(ref ((VrmlLineSet)o).VertexIndexArray));
+            yield return new FieldCoder(4, "FirstIndexArray", (c, o) => c.CodeIntArray(ref ((VrmlLineSet)o).FirstIndexArray));
+            yield return new FieldCoder(5, "ColorIndexArray", (c, o) => c.CodeIntArray(ref ((VrmlLineSet)o).ColorIndexArray));
+            yield return new FieldCoder(6, "ColorArray", (c, o) => c.CodeC3fArray(ref ((VrmlLineSet)o).ColorArray));
+            yield return new FieldCoder(7, "PerVertexColors", (c, o) => c.CodeBool(ref ((VrmlLineSet)o).PerVertexColors));
+        }
+
+        #endregion
+    }
+
+    public class VrmlBox : VrmlGeometry
     {
         public V3f Size;
 
         internal override void Init(SymMapBase map)
         {
             Size = map.Get<V3f>(Vrml97Sym.size, new V3f(2, 2, 2));
-                
+
             base.Init(map);
         }
 
@@ -510,10 +779,10 @@ namespace Aardvark.Data.Vrml97
 
         public VrmlNode SelectedNode
         {
-            get 
+            get
             {
-                return SelectionIndex < 0 || m_children == null || m_children.Count <= SelectionIndex ? 
-                            null : m_children[SelectionIndex]; 
+                return SelectionIndex < 0 || m_children == null || m_children.Count <= SelectionIndex ?
+                            null : m_children[SelectionIndex];
             }
         }
 
@@ -613,7 +882,7 @@ namespace Aardvark.Data.Vrml97
             foreach (var fc in base.GetFieldCoders(coderVersion))
                 yield return fc;
 
-            yield return new FieldCoder(2, "Key", (c, o) => c.CodeList_of_Float_(ref ((VrmlPositionInterpolator) o).Key));
+            yield return new FieldCoder(2, "Key", (c, o) => c.CodeList_of_Float_(ref ((VrmlPositionInterpolator)o).Key));
             yield return new FieldCoder(3, "KeyValue", (c, o) => c.CodeList_of_V3f_(ref ((VrmlPositionInterpolator)o).KeyValue));
         }
 
@@ -768,13 +1037,13 @@ namespace Aardvark.Data.Vrml97
                 var path = map.Get<string>(Vrml97Sym.path);
                 if (!path.IsNullOrEmpty())
                     filenames = filenames.Select(fp => Path.Combine(path, fp));
-                
+
                 m_filenames = new List<string>(filenames);
             }
 
             RepeatS = map.Get<bool>(Vrml97Sym.repeatS);
             RepeatT = map.Get<bool>(Vrml97Sym.repeatT);
-            
+
             base.Init(map);
         }
 
@@ -799,7 +1068,7 @@ namespace Aardvark.Data.Vrml97
         internal override void Init(SymMapBase map)
         {
             var x = map.Get<List<string>>(Vrml97Sym.url);
-            Url = x != null ? x.FirstOrDefault() : null;
+            Url = x?.FirstOrDefault();
 
             base.Init(map);
         }
@@ -864,15 +1133,15 @@ namespace Aardvark.Data.Vrml97
 
             public bool Equals(VrmlNode x, VrmlNode y)
             {
-                if (x is VrmlShape && y is VrmlShape)
-                    return ((VrmlShape)x).Geometry == ((VrmlShape)y).Geometry;
+                if (x is VrmlShape shapeX && y is VrmlShape shapeY)
+                    return shapeX.Geometry == shapeY.Geometry;
                 return x == y;
             }
 
             public int GetHashCode(VrmlNode obj)
             {
-                if (obj is VrmlShape && ((VrmlShape)obj).Geometry != null)
-                    return ((VrmlShape)obj).Geometry.GetHashCode();
+                if (obj is VrmlShape shape && shape.Geometry != null)
+                    return shape.Geometry.GetHashCode();
                 return obj.GetHashCode();
             }
 
@@ -908,12 +1177,12 @@ namespace Aardvark.Data.Vrml97
         static public void RemoveUselessGroups(this VrmlGroup self)
         {
             self.Children = self.Select(child =>
-                {
-                    if (child.GetType() != typeof(VrmlGroup) || child.IsNamed()) return child;
-                    var group = (VrmlGroup)child;
-                    if (group.ChildCount == 0) return null;
-                    return group.ChildCount == 1 ? group.Children.First() : group;
-                }).WhereNotNull().ToList();
+            {
+                if (child.GetType() != typeof(VrmlGroup) || child.IsNamed()) return child;
+                var group = (VrmlGroup)child;
+                if (group.ChildCount == 0) return null;
+                return group.ChildCount == 1 ? group.Children.First() : group;
+            }).WhereNotNull().ToList();
         }
 
         static public IEnumerable<VrmlGroup> GetFrames(this VrmlGroup self)
@@ -935,7 +1204,7 @@ namespace Aardvark.Data.Vrml97
         {
             return !self.Name.IsNullOrEmpty() && !self.Name.StartsWith(self.GetType().Name);
         }
-        
+
         static public VrmlGroup Baked(this VrmlSwitch switchNode)
         {
             var selection = switchNode.SelectedNode;
@@ -949,7 +1218,7 @@ namespace Aardvark.Data.Vrml97
         /// <summary>
         /// Performs the switches and places the selected nodes in a group.
         /// </summary>
-        static public T WithBakedSwitches<T>(this T vrmlNode, bool removeEmpty = true) where T: VrmlGroup
+        static public T WithBakedSwitches<T>(this T vrmlNode, bool removeEmpty = true) where T : VrmlGroup
         {
             VrmlGroup resultGroup = null;
 
@@ -975,8 +1244,8 @@ namespace Aardvark.Data.Vrml97
             for (int i = resultGroup.ChildCount - 1; i >= 0; i--)
             {
                 var child = resultGroup.Children[i];
-                if (child is VrmlGroup)
-                    child = ((VrmlGroup)child).WithBakedSwitches();
+                if (child is VrmlGroup group)
+                    child = group.WithBakedSwitches();
 
                 if (child == null)
                     resultGroup.Children.RemoveAt(i);
@@ -992,18 +1261,17 @@ namespace Aardvark.Data.Vrml97
         /// </summary>
         public static VrmlNode ResolveInlines(this VrmlNode vrmlNode, string path)
         {
-            if (vrmlNode is VrmlGroup)
+            if (vrmlNode is VrmlGroup g)
             {
-                var g = ((VrmlGroup)vrmlNode);
                 if (g.Children != null)
                 {
                     for (int i = 0; i < g.Children.Count; i++)
                         g.Children[i] = g.Children[i].ResolveInlines(path);
                 }
             }
-            else if (vrmlNode is VrmlInline)
+            else if (vrmlNode is VrmlInline inline)
             {
-                var file = ((VrmlInline)vrmlNode).Url; // relative filename -> use path build build absolute path
+                var file = inline.Url; // relative filename -> use path build build absolute path
 
                 try
                 {
@@ -1024,52 +1292,54 @@ namespace Aardvark.Data.Vrml97
             return vrmlNode;
         }
 
+        /// <summary>
+        /// Builds the PolyMesh of a Vrml97 primitive (Box, Sphere, Cone, Cylinder).
+        /// Returns null for any other geometry, INCLUDING a VrmlMesh (use its Mesh directly) and a VrmlLineSet.
+        /// NOTE: the primitives are created in Aardvark convention and rotated into the y-up convention of Vrml97,
+        ///       geometry that comes from the file (VrmlMesh, VrmlLineSet) is already in Vrml97 convention.
+        /// </summary>
+        public static PolyMesh PrimitiveToPolyMesh(this VrmlGeometry geometry)
+        {
+            var mesh = geometry switch
+            {
+                VrmlBox box => PolyMeshPrimitives.Box(Box3d.FromCenterAndSize(V3d.Zero, box.Size.XZY.ToV3d()), C4b.White),
+                VrmlSphere sphere => PolyMeshPrimitives.Sphere(20, sphere.Radius, C4b.White),
+                VrmlCone cone => PolyMeshPrimitives.Cone(20, cone.Height, cone.BottomRadius, C4b.White),
+                VrmlCylinder cylinder => PolyMeshPrimitives.Cylinder2(20, cylinder.Height, cylinder.Radius, C4b.White, Geometry.PolyMesh.Property.DiffuseColorCoordinates),
+                _ => null
+            };
+
+            return mesh?.Transformed(Trafo3d.RotationXInDegrees(-90));
+        }
+
+        /// <summary>
+        /// Replaces all primitive geometries of the scene by meshes.
+        /// NOTE: a VrmlLineSet is left untouched, it is not meshable but already renderable via GetIndexedGeometry.
+        /// </summary>
         public static void PrimitivesToMeshes(this VrmlNode vrmlNode)
         {
-            if (vrmlNode is VrmlGroup)
+            if (vrmlNode is VrmlGroup group)
             {
-                var g = ((VrmlGroup)vrmlNode);
-                if (g.ChildCount > 0)
-                    g.Children.ForEach(x => x.PrimitivesToMeshes());
+                if (group.ChildCount > 0)
+                    group.Children.ForEach(x => x.PrimitivesToMeshes());
             }
 
-            if (vrmlNode is VrmlShape) 
+            if (vrmlNode is VrmlShape shape)
             {
-                VrmlShape shape = (VrmlShape)vrmlNode;
-                
-                if (shape.Geometry is VrmlMesh) return;
+                var mesh = shape.Geometry?.PrimitiveToPolyMesh();
 
-                VrmlMesh mesh = new VrmlMesh();
-                mesh.Name = shape.Geometry.TrySelect(x => x.Name);
-
-                if (shape.Geometry is VrmlBox)
+                // NOTE: null for anything that is not a primitive (nothing, an already converted mesh, a line set)
+                //       and also makes the conversion idempotent, which matters because DEF/USE shares shapes
+                if (mesh == null)
                 {
-                    var box = (VrmlBox)shape.Geometry;
-                    mesh.Mesh = PolyMeshPrimitives.Box(Box3d.FromCenterAndSize(V3d.Zero, box.Size.XZY.ToV3d()), C4b.White);
-                }
-                else if (shape.Geometry is VrmlSphere)
-                {
-                    var sphere = (VrmlSphere)shape.Geometry;
-                    mesh.Mesh = PolyMeshPrimitives.Sphere(20, sphere.Radius, C4b.White);
-                }
-                else if (shape.Geometry is VrmlCone)
-                {
-                    var cone = (VrmlCone)shape.Geometry;
-                    mesh.Mesh = PolyMeshPrimitives.Cone(20, cone.Height, cone.BottomRadius, C4b.White);
-                }
-                else if (shape.Geometry is VrmlCylinder)
-                {
-                    var cylinder = (VrmlCylinder)shape.Geometry;
-                    mesh.Mesh = PolyMeshPrimitives.Cylinder2(20, cylinder.Height, cylinder.Radius, C4b.White, Geometry.PolyMesh.Property.DiffuseColorCoordinates);
-                }
-                else
-                {
-                    mesh.Mesh = new Geometry.PolyMesh();
+                    return;
                 }
 
-                mesh.Mesh = mesh.Mesh.Transformed(Trafo3d.RotationXInDegrees(-90));
-
-                shape.Geometry = mesh;
+                shape.Geometry = new VrmlMesh()
+                {
+                    Name = shape.Geometry.Name,
+                    Mesh = mesh
+                };
             }
         }
     }

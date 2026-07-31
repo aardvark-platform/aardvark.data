@@ -139,8 +139,8 @@ namespace Aardvark.Data.Vrml97
 
             public override string ToString() => m_data;
             public Symbol ToSymbol() => m_data.ToSymbol();
-            public int ToInt32() => Int32.Parse(m_data, m_format);
-            public uint ToUInt32() => UInt32.Parse(m_data, m_format);
+            public int ToInt32() => IsHex ? unchecked((int)HexValue) : Int32.Parse(m_data, m_format);
+            public uint ToUInt32() => IsHex ? HexValue : UInt32.Parse(m_data, m_format);
             public float ToFloat() => float.Parse(m_data, m_format);
             public double ToDouble() => double.Parse(m_data, m_format);
             public Int64 ToInt64() => Int64.Parse(m_data, m_format);
@@ -152,6 +152,10 @@ namespace Aardvark.Data.Vrml97
             public bool IsBracketClose => m_data == "]";
             public bool IsQuotedString => m_data[0] == '"' && m_data[m_data.Length - 1] == '"';
 
+            // NOTE: runs once per integer token -> plain char compares instead of StartsWith(OrdinalIgnoreCase);
+            //       Length > 2 also rejects a bare "0x" that would otherwise reach the parse with an empty string
+            public bool IsHex => m_data.Length > 2 && m_data[0] == '0' && (m_data[1] == 'x' || m_data[1] == 'X');
+
             /**
              * Returns string without quotes, or
              * throws exception if token is no quoted string.
@@ -162,10 +166,17 @@ namespace Aardvark.Data.Vrml97
                         "Quoted string expected. Found " + m_data + " instead!"
                         );
 
-            private string m_data;
-            private static IFormatProvider m_format = new CultureInfo("en-US", false);
-        }
+            // [Vrml97 SPEC] an int32 may be written in decimal or in hexadecimal with a 0x prefix
+            // NOTE: parsed as uint so that a full-width value such as 0xFFFFFFFF does not overflow ToInt32;
+            //       the Substring allocation only happens on the rare hex path
+            private uint HexValue => UInt32.Parse(m_data.Substring(2), NumberStyles.HexNumber, m_format);
 
+            private string m_data;
+
+            // NOTE: concrete NumberFormatInfo instead of IFormatProvider saves the NumberFormatInfo.GetInstance lookup inside every Parse call;
+            //       invariant matches en-US for everything Vrml97 can contain (separators, signs, digits) and differs only in the infinity/NaN symbols, which Vrml97 has no syntax for
+            private static readonly NumberFormatInfo m_format = NumberFormatInfo.InvariantInfo;
+        }
 
         private bool Eof() => (m_bufferSize == 0) || (m_end < m_bufferSize && m_pos == m_end);
 

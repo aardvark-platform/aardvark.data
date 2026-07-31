@@ -1,0 +1,9 @@
+#VRML V2.0 utf8
+# MUST THROW: colorPerVertex TRUE, no colorIndex -> coordIndex selects colors,
+# greatest coordIndex is 2 but Color node has only 2 colors (needs 3)
+Shape { geometry IndexedLineSet {
+  coord Coordinate { point [ 0 0 0, 1 0 0, 2 0 0 ] }
+  color Color { color [ 1 0 0, 0 1 0 ] }
+  colorPerVertex TRUE
+  coordIndex [ 0 1 2 -1 ]
+} }

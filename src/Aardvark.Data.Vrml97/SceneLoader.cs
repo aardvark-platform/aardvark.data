@@ -5,8 +5,10 @@ using System.IO;
 
 namespace Aardvark.Data.Vrml97
 {
-	public class SceneLoader
-	{
+    public class SceneLoader
+    {
+        // NOTE: keyed on the SymMapBase instance -> since the parse tree resolves USE to the very same map instance,
+        //       a USEd node yields the identical VrmlNode object here (see GetNode and the DEF/USE note at returnFunc)
         Dictionary<SymMapBase, VrmlNode> m_nodes = new Dictionary<SymMapBase, VrmlNode>();
         HashSet<SymMapBase> m_traversedNodes = new HashSet<SymMapBase>();
 
@@ -26,9 +28,9 @@ namespace Aardvark.Data.Vrml97
         }
 
         public static VrmlScene Load(Vrml97Scene vrmlParseTree)
-		{
+        {
             return new SceneLoader().Perform(vrmlParseTree);
-		}
+        }
 
         public static VrmlScene Load(Vrml97Scene vrmlParseTree, out Dictionary<SymMapBase, VrmlNode> nodeMap)
         {
@@ -39,21 +41,25 @@ namespace Aardvark.Data.Vrml97
         }
 
         VrmlScene Perform(Vrml97Scene root)
-		{
+        {
             SymMapBaseTraversal trav = new SymMapBaseTraversal(SymMapBaseTraversal.Mode.Modifying, SymMapBaseTraversal.Visit.PreAndPost);
-            
+
             var filename = root.ParseTree.Get<string>((Symbol)"filename");
             var path = Path.GetDirectoryName(filename);
 
-            var scene = new VrmlScene() 
+            var scene = new VrmlScene()
             {
                 Name = Path.GetFileName(filename),
             };
 
             Stack<VrmlGroup> frameHierarchy = new Stack<VrmlGroup>(scene.IntoIEnumerable());
-            Dictionary<string, SymMapBase> defs = new Dictionary<string,SymMapBase>();
+            Dictionary<string, SymMapBase> defs = new Dictionary<string, SymMapBase>();
 
             VrmlShape currentShape = null;
+
+            // NOTE: the DEF/USE visitors below are not needed because the parse tree already resolves both:
+            //       DEF stores the name in the "DEFname" field (picked up by VrmlNode.Init) and USE refers to the
+            //       identical SymMapBase instance, which m_nodes/m_traversedNodes turn into node sharing (see returnFunc).
 
             //trav.PerNameVisitors["DEF"] = (map, visit) =>
             //{
@@ -87,27 +93,30 @@ namespace Aardvark.Data.Vrml97
             //    return map;
             //};
 
+            // NOTE: returns the map on its first visit (-> traverse the subtree) and s_emptyMap on any repeated Pre visit.
+            //       That way a USEd node is handled by its visitor again (which hits the m_nodes cache) but its subtree
+            //       is not traversed a second time.
             var returnFunc = new Func<SymMapBase, SymMapBaseTraversal.Visit, SymMapBase>((map, visit) => m_traversedNodes.Add(map) ? map : ((visit & SymMapBaseTraversal.Visit.Post) != 0) ? map : s_emptyMap);
             //var returnFunc = new Func<SymMapBase, SymMapBaseTraversal.Visit, SymMapBase>((map, visit) => map);
 
             trav.PerNameVisitors["WorldInfo"] = (map, visit) =>
+            {
+                if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
-                    if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
+                    if (scene.Info == null && scene.Title == null)
                     {
-                        if (scene.Info == null && scene.Title == null)
-                        {
-                            var info = map.Get<List<string>>((Symbol)"info");
-                            scene.Info = info != null ? info.ToArray() : null;
-                            scene.Title = map.Get<string>((Symbol)"title");
-                        }
-                        else
-                        {
-                            Report.Warn("file contains multiple WorldInfo nodes (ignored)");
-                        }
+                        var info = map.Get<List<string>>((Symbol)"info");
+                        scene.Info = info != null ? info.ToArray() : null;
+                        scene.Title = map.Get<string>((Symbol)"title");
                     }
+                    else
+                    {
+                        Report.Warn("file contains multiple WorldInfo nodes (ignored)");
+                    }
+                }
 
-                    return returnFunc(map, visit);
-                };
+                return returnFunc(map, visit);
+            };
 
             trav.PerNameVisitors[Vrml97NodeName.Transform] = (map, visit) =>
             {
@@ -167,6 +176,9 @@ namespace Aardvark.Data.Vrml97
                 return returnFunc(map, visit);
             };
 
+            // NOTE: the shape is added unconditionally, so it also ends up in the hierarchy if its geometry turns out
+            //       to be empty (e.g. an IndexedLineSet without any valid polyline -> VrmlLineSet with null arrays).
+            //       Consumers must therefore handle geometries that do not produce anything renderable.
             trav.PerNameVisitors[Vrml97NodeName.Shape] = (map, visit) =>
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
@@ -201,15 +213,33 @@ namespace Aardvark.Data.Vrml97
                 return returnFunc(map, visit);
             };
 
+            // NOTE: the Coordinate/Color child nodes have no visitors of their own, VrmlLineSet.Init reads them
+            //       directly from the sub-maps. A USEd Coordinate node is shared, but each IndexedLineSet map is
+            //       distinct, so every line set still gets its own VrmlLineSet.
+            trav.PerNameVisitors[Vrml97NodeName.IndexedLineSet] = (map, visit) =>
+            {
+                if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
+                {
+                    var lineGeo = GetNode<VrmlLineSet>(map);
+
+                    if (currentShape == null)
+                        throw new Exception("invalid node placement");
+
+                    currentShape.Geometry = lineGeo;
+                }
+
+                return returnFunc(map, visit);
+            };
+
             trav.PerNameVisitors[Vrml97NodeName.Box] = (map, visit) =>
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
                     var box = GetNode<VrmlBox>(map);
-                    
+
                     if (currentShape == null)
                         throw new Exception("invalid node placement");
-                    
+
                     currentShape.Geometry = box;
                 }
 
@@ -262,7 +292,7 @@ namespace Aardvark.Data.Vrml97
                 return returnFunc(map, visit);
             };
 
-            trav.PerNameVisitors[Vrml97NodeName.PointLight] =  (map, visit) =>
+            trav.PerNameVisitors[Vrml97NodeName.PointLight] = (map, visit) =>
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
                 {
@@ -296,7 +326,7 @@ namespace Aardvark.Data.Vrml97
             };
 
             #region Appearance
-            
+
             trav.PerNameVisitors["Appearance"] = (map, visit) =>
             {
                 if ((visit & SymMapBaseTraversal.Visit.Pre) != 0)
@@ -416,11 +446,11 @@ namespace Aardvark.Data.Vrml97
             #endregion
 
             trav.Traverse(root.ParseTree);
-            
+
             //scene.RemoveUselessGroups();
 
             return scene;
-		}
+        }
 
         string GetName(SymMapBase m, Type type)
         {
@@ -436,7 +466,10 @@ namespace Aardvark.Data.Vrml97
             return name;
         }
 
-        T GetNode<T>(SymMapBase map) where T: VrmlNode, new()
+        // NOTE: nodes are cached per SymMapBase -> a DEFed node that is USEd multiple times results in a single
+        //       shared VrmlNode instance. Consumers that derive data from a node (e.g. VrmlLineSet.GetIndexedGeometry)
+        //       should cache their result as well instead of recomputing it for every occurrence.
+        T GetNode<T>(SymMapBase map) where T : VrmlNode, new()
         {
             VrmlNode node;
             if (!m_nodes.TryGetValue(map, out node))
@@ -448,10 +481,10 @@ namespace Aardvark.Data.Vrml97
             }
             else if (!(node is T))
             {
-                throw new Exception(String.Format("invalid cast: {1} is {2}", typeof(T).Name, node.GetType().Name));
+                throw new Exception(String.Format("invalid cast: {0} is {1}", typeof(T).Name, node.GetType().Name));
             }
 
             return (T)node;
         }
-	}
+    }
 }

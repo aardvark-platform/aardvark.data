@@ -107,7 +107,7 @@ namespace Aardvark.Data.Vrml97
             if (!coord.Contains(Vrml97Sym.point))
                 throw new Exception(
                     "Vrml97 spec violation!" +
-                    "Coordinate node: field 'coord' MUST NOT be null."
+                    "Coordinate node: field 'point' MUST NOT be null."
                     );
 
             List<V3f> vertexPositionList = coord.Get<List<V3f>>(Vrml97Sym.point);
