@@ -1402,7 +1402,6 @@ namespace Aardvark.Data.Vrml97
                     Report.Warn($"[Vrml97] FieldParser: \"{fieldName}\" unknown/unexpected token!");
 
                 token = t.NextToken();
-                Thread.Sleep(0);
             }
 
             return result;
