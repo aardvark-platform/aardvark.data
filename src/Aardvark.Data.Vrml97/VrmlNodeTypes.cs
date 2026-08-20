@@ -429,14 +429,6 @@ namespace Aardvark.Data.Vrml97
         }
 
         /// <summary>
-        /// Number of line segments of the PolyLine with the given index (a PolyLine of n vertices has n-1 segments).
-        /// </summary>
-        public int GetSegmentCount(int polyLineIndex)
-        {
-            return FirstIndexArray[polyLineIndex + 1] - FirstIndexArray[polyLineIndex] - 1;
-        }
-
-        /// <summary>
         /// Resolves the color of the vertex at position i within VertexIndexArray, belonging to the PolyLine with index pi.
         /// </summary>
         public C4b GetColor(int pi, int i)
@@ -451,20 +443,14 @@ namespace Aardvark.Data.Vrml97
         }
 
         /// <summary>
+        /// Number of line segments of the PolyLine with the given index (a PolyLine of n vertices has n-1 segments).
+        /// </summary>
+        public int GetSegmentCount(int polyLineIndex) => VrmlHelpers.GetSegmentCount(polyLineIndex, FirstIndexArray);
+
+        /// <summary>
         /// Total number of line segments of all PolyLines.
         /// </summary>
-        public int SegmentCount
-        {
-            get
-            {
-                var count = 0;
-                for (int pi = 0; pi < PolyLineCount; pi++)
-                {
-                    count += GetSegmentCount(pi);
-                }
-                return count;
-            }
-        }
+        public int SegmentCount => VrmlHelpers.GetTotalSegmentCount(FirstIndexArray);
 
         #region IFieldCodeable Members
 

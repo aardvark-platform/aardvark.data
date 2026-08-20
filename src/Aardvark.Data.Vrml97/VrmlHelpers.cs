@@ -93,5 +93,50 @@ namespace Aardvark.Data.Vrml97
 
             return BuildVrmlGeometryTrafo(c, r, s, sr, t);
         }
+
+        /// <summary>
+        /// Number of line segments of the PolyLine with the given index (a PolyLine of n vertices has n-1 segments).
+        /// </summary>
+        public static int GetSegmentCount(int polyLineIndex, int[] firstIndexArray)
+        {
+            return firstIndexArray[polyLineIndex + 1] - firstIndexArray[polyLineIndex] - 1;
+        }
+
+        /// <summary>
+        /// Calculates the total amount of segements
+        /// </summary>
+        public static int GetTotalSegmentCount(int[] firstIndexArray)
+        {
+            var count = 0;
+            for (int pi = 0; pi < firstIndexArray.Length - 1; pi++)
+            {
+                count += GetSegmentCount(pi, firstIndexArray);
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// Transforms the VertexIndexArray suitable for LineList
+        /// Enabling drawing multiple unconnected lines with one draw-call
+        /// </summary>
+        public static int[] BuildLineListIndexArray(int[] firstIndexArray, int[] vertexIndexArray)
+        {
+            var count = GetTotalSegmentCount(firstIndexArray);
+
+            var lineListIndexArray = new int[count * 2];
+
+            var vi = 0;
+            for (int pi = 0; pi < firstIndexArray.Length - 1; pi++)
+            {
+                for (int i = firstIndexArray[pi]; i < firstIndexArray[pi + 1] - 1;)
+                {
+                    lineListIndexArray[vi++] = vertexIndexArray[i];
+                    lineListIndexArray[vi++] = vertexIndexArray[++i];
+                }
+            }
+
+            return lineListIndexArray;
+        }
     }
 }
