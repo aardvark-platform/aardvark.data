@@ -208,7 +208,9 @@ namespace Aardvark.Data
                 var delta = (int)FreeImage.GetPitch(bitmap);
                 var bits = FreeImage.GetBits(bitmap) + sy * delta;
                 var palette = FreeImage.GetPaletteEx(bitmap);
-                var pi = new PixImage<byte>(Col.Format.BGR, sx, sy);
+                var transparencyTable = FreeImage.IsTransparent(bitmap) ? FreeImage.GetTransparencyTableEx(bitmap) : null;
+                var transparencyCount = transparencyTable != null ? Math.Min((int)FreeImage.GetTransparencyCount(bitmap), transparencyTable.Length) : 0;
+                var pi = new PixImage<byte>(transparencyCount > 0 ? Col.Format.BGRA : Col.Format.BGR, sx, sy);
                 var data = pi.Volume.Data;
 
                 int mask = (1 << bpp) - 1;
@@ -224,12 +226,18 @@ namespace Aardvark.Data
                         byte* pixel = (byte*)bits;
                         for (var x = 0; x < sx; x++)
                         {
-                            var color = palette[(pixel[x / n] >> (8 - (i + 1) * bpp)) & mask];
+                            var paletteIndex = (pixel[x / n] >> (8 - (i + 1) * bpp)) & mask;
+                            var color = palette[paletteIndex];
                             var index = pi.VolumeInfo.Index(x, y, 0);
 
                             data[index]     = color.rgbBlue;
                             data[index + 1] = color.rgbGreen;
                             data[index + 2] = color.rgbRed;
+
+                            if (transparencyCount > 0)
+                            {
+                                data[index + 3] = paletteIndex < transparencyCount ? transparencyTable[paletteIndex] : (byte)255;
+                            }
 
                             if (++i == n) i = 0;
                         }
