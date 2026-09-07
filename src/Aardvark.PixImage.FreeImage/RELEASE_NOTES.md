@@ -1,3 +1,7 @@
+### 5.3.10
+- Fixed transparency support for indexed images
+- Throw explicit exception if saving is not supported
+
 ### 5.3.9
 - Fixed pixel layout handling for non-byte formats
 - Fixed decoding of indexed images with bit depth > 1

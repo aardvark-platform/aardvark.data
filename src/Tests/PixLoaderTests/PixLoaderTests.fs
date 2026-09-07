@@ -646,6 +646,7 @@ module PixLoaderTests =
                         "bw_1bpp_indexed_inverted.bmp" // InvalidFileHeader
                         "gray_4bpp_indexed.bmp"        // InvalidFileHeader
                         "rgb_4bpp_indexed.bmp"         // InvalidFileHeader
+                        "rgba_8bpp_indexed.png"        // Does not load the alpha channel
                     ]
                 ]
 
@@ -680,6 +681,7 @@ module PixLoaderTests =
     let [<Test>] ``[PixLoader] Load RGB 8bpp indexed PNG`` ()         = fileLoadTest "rgb_8bpp_indexed.png"
     let [<Test>] ``[PixLoader] Load RGB 16bpp PNG`` ()                = fileLoadTest "rgb_16bpp.png"
     let [<Test>] ``[PixLoader] Load RGBA 8bpp PNG`` ()                = fileLoadTest "rgba_8bpp.png"
+    let [<Test>] ``[PixLoader] Load RGBA 8bpp indexed PNG`` ()        = fileLoadTest "rgba_8bpp_indexed.png"
     let [<Test>] ``[PixLoader] Load RGBA 16bpp PNG`` ()               = fileLoadTest "rgba_16bpp.png"
 
     [<Test>]
