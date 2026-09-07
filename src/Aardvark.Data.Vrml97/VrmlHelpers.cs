@@ -107,6 +107,11 @@ namespace Aardvark.Data.Vrml97
         /// </summary>
         public static int GetTotalSegmentCount(int[] firstIndexArray)
         {
+            if (firstIndexArray.IsEmptyOrNull())
+            {
+                return 0;
+            }
+
             var count = 0;
             for (int pi = 0; pi < firstIndexArray.Length - 1; pi++)
             {
@@ -123,6 +128,10 @@ namespace Aardvark.Data.Vrml97
         public static int[] BuildLineListIndexArray(int[] firstIndexArray, int[] vertexIndexArray)
         {
             var count = GetTotalSegmentCount(firstIndexArray);
+            if (count == 0)
+            {
+                return new int[0];
+            }
 
             var lineListIndexArray = new int[count * 2];
 
