@@ -1,3 +1,6 @@
+### 5.3.12
+- Fixed BuildEquidistantMatrix with C1 Symmetry (data from 270 to 90 degrees)
+
 ### 5.3.11
 - Improved robustness of parsing attributes that might have decimal values
 
