@@ -72,10 +72,11 @@ namespace Aardvark.Data.Photometry
         /// Calculates the luminous flux from the measurement data.
         /// 
         /// NOTE/ISSUE: Only works of euqidistance measurement data !! -> throws NotImplementedException
+        ///             -> Use IntensityProfileSampler.SampleLumFlux instead
         /// </summary>
         public double CalculateLumFlux()
         {
-            if (IsNonEquidistant(this.HorizontalAngles) || IsNonEquidistant(this.VerticalAngles))
+            if (!this.IsEquidistant)
                 throw new NotImplementedException();
 
             var lumFlux = 0.0;
@@ -200,10 +201,16 @@ namespace Aardvark.Data.Photometry
         /// Calculates luminous flux per zone
         /// Zones: 0-10, 10-20, 20-30, ... 170-180 
         /// Gives a total of 18 zones.
+        /// 
+        /// NOTE/ISSUE: Only works of euqidistance measurement data !! -> throws NotImplementedException
+        ///             -> Use IntensityProfileSampler.SampleZones instead
         /// </summary>
         /// <returns>Array of length 18 containing luminous flux per zone</returns>
         public double[] CalculateZones()
         {
+            if (!this.IsEquidistant)
+                throw new NotImplementedException();
+
             // zones 0-10, 10-20, 20-30, ... 170-180 
             var zones = new double[18];
 

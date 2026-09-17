@@ -9,7 +9,7 @@ namespace Aardvark.Data.Photometry
     [TestFixture]
     public class PhotometryTest
     {
-        static readonly string PhotometryDataPath = @"\\euclid\Hilite\Data\IntensityProfileTestLights\Photometry UnitTest Files";
+        static readonly string PhotometryDataPath = @"\\heap\luksch\Hilite\Data\IntensityProfileTestLights\Photometry UnitTest Files";
 
         [Test]
         public void GetCPlaneTest()
@@ -125,20 +125,27 @@ namespace Aardvark.Data.Photometry
 
             var data = LightMeasurementData.FromFile(file);
 
-            Report.Line("Info: Symmetry={0} VerticalRange={1}", data.HorizontalSymmetry, data.VerticalRange);
+            var isEquidistant = data.IsEquidistant;
+            Report.Line("Info: Symmetry={0} VerticalRange={1} IsEquidistant={2}", data.HorizontalSymmetry, data.VerticalRange, isEquidistant);
+
+            if (!isEquidistant) // Calculate Zones only works for equidistant data
+            {
+                Report.Warn("Skipping non-equidistant measurement file");
+                return;
+            }
 
             var zones = data.CalculateZones();
             var sampler = new IntensityProfileSampler(data);
             var zonesSampled = sampler.SampleZones(16000);
 
-            Assert.True(zones.Length == 18);
+            Assert.True(zones.Length == 18, "Number of Zones is not 18");
 
             var totFlux = zones.Sum();
             var totFluxSampled = zonesSampled.Sum();
 
             var fluxRatio = totFlux / totFluxSampled;
 
-            Assert.True(fluxRatio.ApproximateEquals(1, 1e-2));
+            Assert.True(fluxRatio.ApproximateEquals(1, 1e-2), "Flux is Different: {0} != {1}", totFlux, totFluxSampled);
 
             var e = data.LumFlux * 1e-2;
 
@@ -178,7 +185,14 @@ namespace Aardvark.Data.Photometry
 
             var data = LightMeasurementData.FromFile(file);
 
-            Report.Line("Info: Symmetry={0} VerticalRange={1}", data.HorizontalSymmetry, data.VerticalRange);
+            var isEquidistant = data.IsEquidistant;
+            Report.Line("Info: Symmetry={0} VerticalRange={1} IsEquidistant={2}", data.HorizontalSymmetry, data.VerticalRange, isEquidistant);
+
+            if (!isEquidistant) // Calculate Zones only works for equidistant data
+            {
+                Report.Warn("Skipping non-equidistant measurement file");
+                return;
+            }
 
             var eqMtx = data.BuildEquidistantMatrix();
             var lumFluxCalc = data.CalculateLumFlux();

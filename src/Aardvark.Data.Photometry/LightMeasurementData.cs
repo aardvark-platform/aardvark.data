@@ -339,10 +339,14 @@ namespace Aardvark.Data.Photometry
 
                     for (var plane = 0; plane < planeCount; plane++)
                     {
-                        var myAngle = angles[0] + plane * minStep;
+                        var currentAngle = angles[0] + plane * minStep;
+                        if (currentAngle >= 360)
+                            currentAngle -= 360;
 
-                        // check if upper lookupAngle is to small
-                        if (myAngle > angles[searchIndex + 1]) searchIndex++;
+                        // step forward if current angle > next angle (difference positive)
+                        var nextAngle = angles[searchIndex + 1];
+                        var nextDiff = AngleDifference(currentAngle, nextAngle);
+                        if (nextDiff > 0) searchIndex++; 
 
                         var refLower = angles[searchIndex];
                         var refUpper = angles[searchIndex + 1];
@@ -350,7 +354,9 @@ namespace Aardvark.Data.Photometry
                         var lowerV = data[valueOnPlane, searchIndex];
                         var upperV = data[valueOnPlane, searchIndex + 1];
 
-                        var t = (myAngle - refLower) / (refUpper - refLower);
+                        var origStep = AngleDifference(refUpper, refLower); // step size in original data
+                        var deltaAngle = AngleDifference(currentAngle, refLower); // angle difference to lower bound
+                        var t = deltaAngle / origStep;
 
                         var value = Fun.Lerp(t, lowerV, upperV);
 
