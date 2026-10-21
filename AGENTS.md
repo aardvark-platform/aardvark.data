@@ -61,10 +61,10 @@ This project uses **Paket** for dependency management.
 
 - **.NET Version**: 8.0.0 (see `global.json`, rollForward: latestFeature)
 - **Target Frameworks**:
-  - Libraries: `netstandard2.0` (cross-platform) or `net8.0`
-  - Tests: `net8.0` or `net8.0-windows10.0.17763.0`
+  - Libraries: `netstandard2.0` (cross-platform) or `net10.0`
+  - Tests: `net10.0` or `net10.0-windows7.0`
 - **C# LangVersion**: 12
-- **F# Projects**: Explicit FSharp.Core >= 8.0.0
+- **F# Projects**: Explicit FSharp.Core >= 10.0.100
 
 ## Common Failure Modes & Fixes
 

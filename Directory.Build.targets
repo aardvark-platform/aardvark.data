@@ -9,4 +9,8 @@
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-jjfr-hcj7-qf5w" />
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-wmxv-xphr-5c9g" />
   </ItemGroup>
+  <PropertyGroup>
+    <!-- https://github.com/fsprojects/Paket/issues/4307 -->
+    <NoWarn>$(NoWarn);NU1510</NoWarn>
+  </PropertyGroup>
 </Project>

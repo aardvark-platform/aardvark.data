@@ -172,7 +172,7 @@ public static class LoadingTest
 ### PixLoaderTests (Expecto + FsCheck + Benchmarks)
 **Location**: `src/Tests/PixLoaderTests/`
 **Framework**: Expecto, FsCheck (property-based), BenchmarkDotNet
-**Target**: .NET 8.0 **Windows-only** (`net8.0-windows10.0.17763.0`)
+**Target**: .NET 8.0 **Windows-only** (`net10.0-windows7.0`)
 
 **Structure**:
 - `PixLoaderTests.fs` - Property-based tests for image loaders
@@ -388,7 +388,7 @@ use stream = asm.GetManifestResourceStream(name)
 
 ## Gotchas
 
-1. **PixLoaderTests is Windows-only**: Target framework `net8.0-windows10.0.17763.0` - uses Windows Media APIs
+1. **PixLoaderTests is Windows-only**: Target framework `net10.0-windows7.0` - uses Windows Media APIs
 2. **Native DLLs**: FreeImage tests require `FreeImage.dll` in output directory
 3. **Expecto vs NUnit**:
    - Expecto tests run as executables (`OutputType=Exe`)

@@ -3,8 +3,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsWindows>$([MSBuild]::IsOSPlatform('Windows'))</IsWindows>
-    <TargetFramework>net8.0</TargetFramework>
-    <TargetFramework Condition="'$(IsWindows)' == 'true'">net8.0-windows10.0.17763.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework Condition="'$(IsWindows)' == 'true'">net10.0-windows7.0</TargetFramework>
     <GenerateProgramFile>false</GenerateProgramFile>
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
     <WarnOn>3389;3390;3395</WarnOn>
