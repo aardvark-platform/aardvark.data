@@ -1,5 +1,3 @@
-group Test
-
 FsUnit
 FsCheck
 FsCheck.NUnit

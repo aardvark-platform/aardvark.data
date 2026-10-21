@@ -39,19 +39,17 @@ nuget Xbim.Geometry.Engine.Interop                          ~> 6.3.873-netcore
 nuget Xbim.ModelGeometry.Scene                              ~> 6.3.873-netcore
 nuget Microsoft.Database.ManagedEsent                       = 2.0.3
 
-group Test
-    framework: auto-detect
-    storage: none
-    source https://api.nuget.org/v3/index.json
+// Tests
+nuget Aardvark.PixImage.PixCodec                            ~> 1.0.0
 
-    nuget NUnit                                             ~> 3.13.3
-    nuget FsUnit                                            ~> 5.4.0
-    nuget FsCheck                                           ~> 2.16.4
-    nuget FsCheck.NUnit                                     ~> 2.16.4
-    nuget NUnit3TestAdapter                                 ~> 4.5.0
-    nuget Microsoft.NET.Test.Sdk                            ~> 17.7.2
-    nuget Expecto                                           ~> 10.1.0
-    nuget Expecto.FsCheck                                   ~> 10.1.0
-    nuget YoloDev.Expecto.TestSdk                           ~> 0.14.2
+nuget NUnit                                                 ~> 3.13.3
+nuget FsUnit                                                ~> 5.4.0
+nuget FsCheck                                               ~> 2.16.4
+nuget FsCheck.NUnit                                         ~> 2.16.4
+nuget NUnit3TestAdapter                                     ~> 4.5.0
+nuget Microsoft.NET.Test.Sdk                                ~> 17.7.2
+nuget Expecto                                               ~> 10.1.0
+nuget Expecto.FsCheck                                       ~> 10.1.0
+nuget YoloDev.Expecto.TestSdk                               ~> 0.14.2
 
-    nuget BenchmarkDotNet                                   ~> 0.13.9
+nuget BenchmarkDotNet                                       ~> 0.13.9

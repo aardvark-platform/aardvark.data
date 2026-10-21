@@ -37,6 +37,7 @@ module TiffTests =
 
     let loaders : IPixLoader list =
         [
+            PixCodec.Loader
             PixImageSharp.Loader
             PixImageDevil.Loader
             PixImageFreeImage.Loader
@@ -167,14 +168,16 @@ module TiffTests =
                             loader.Name, load loader expectedFormat path
                         )
                     let r = results |> List.map snd |> prettyPrint 
-                    Some $"{file.PadRight(filePadding)} | {r} |"
+                    Some $"| {file.PadRight(filePadding)} | {r} |"
                 else
                     None
             )
-        
-        let file = "file".PadRight(filePadding)
+
+        let file = "File".PadRight(filePadding)
         let loaderHeaders = loaders |> List.map (_.Name >> padResult) |> String.concat " | "
+        let dividerLoaders = loaders |> List.map (fun _ -> String.replicate 20 "-") |> String.concat " | "
         Console.WriteLine("WF means wrong Format, FAIL means there was an exception, OK means Format and Type matches while channel order is ignored.")
-        Console.WriteLine($"{file} | {loaderHeaders} |")
+        Console.WriteLine()
+        Console.WriteLine($"| {file} | {loaderHeaders} |")
+        Console.WriteLine($"""| {String.replicate filePadding "-"} | {dividerLoaders} |""")
         Console.Write(results |> String.concat Environment.NewLine)
-                    

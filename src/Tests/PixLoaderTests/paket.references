@@ -1,5 +1,4 @@
-group Test
-
+Aardvark.PixImage.PixCodec
 FsCheck
 FsCheck.NUnit
 Expecto

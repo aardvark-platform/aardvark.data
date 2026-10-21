@@ -213,12 +213,21 @@ module PixLoaderTests =
             let loaders = PixImage.GetLoaders() |> Seq.filter (fun l -> l.Name <> "Aardvark PGM")
             Gen.elements loaders
 
+        let private supportsWebP =
+            flip List.contains [
+                PixImageFreeImage.Loader
+                PixImageSharp.Loader
+                PixCodec.Loader
+            ]
+
         // Loader restrictions for encoding or decoding
         let private filterLoader (format : PixFileFormat) (gen : Gen<IPixLoader>) =
             gen |> Gen.filter (fun loader ->
-                not (loader.Name = "ImageSharp" && format = PixFileFormat.Tiff) &&                                 // ImageSharp support for TIFFs is buggy atm (2.X)
-                not (loader.Name <> "FreeImage" && loader.Name <> "ImageSharp" && format = PixFileFormat.Webp) &&  // Only FreeImage and ImageSharp support WebP
-                not (loader.Name <> "FreeImage" && format = PixFileFormat.Exr)                                     // Only FreeImage supports EXR (we don't talk about DevIL)
+                not (loader.Name = "ImageSharp" && format = PixFileFormat.Tiff) &&    // ImageSharp support for TIFFs is buggy atm (2.X)
+                not (loader.Name = "DevIL" && format = PixFileFormat.Webp) &&
+                not (loader.Name = "Pfim" && format = PixFileFormat.Webp) &&
+                not (loader.Name = "Windows Media" && format = PixFileFormat.Webp) &&
+                not (loader.Name <> "FreeImage" && format = PixFileFormat.Exr)        // Only FreeImage supports EXR (we don't talk about DevIL)
             )
 
         // Loader restrictions specifically for encoding
@@ -401,6 +410,7 @@ module PixLoaderTests =
                 let! loader =
                     Gen.pixLoader false PixFileFormat.Tiff
                     |> Gen.filter (fun l -> l.Name <> PixImageDevil.Loader.Name) // DevIL does not support compression
+                    |> Gen.filter (fun l -> l.Name <> PixCodec.Loader.Name || compression <> PixTiffCompression.Jpeg) // PixCodec does not support TIFF JPEG compression
 
                 return {
                     Image = pix
@@ -657,7 +667,7 @@ module PixLoaderTests =
 
         fun (file: string) ->
             let path = Path.Combine(__SOURCE_DIRECTORY__, "data", file)
-            let expected = PixImage.Load(path, PixImageSharp.Loader)
+            let expected = PixImage.Load(path, PixCodec.Loader)
 
             for loader in loaders do
                 try
@@ -699,7 +709,7 @@ module PixLoaderTests =
         let priorities = PixImage.GetLoadersWithPriority()
         priorities.Get(PixImageDevil.Loader) |> should equal 1338
 
-        PixImage.RemoveLoader(PixImageSharp.Loader)
+        PixImage.RemoveLoader(PixCodec.Loader)
         PixImage.RemoveLoader(PixImageDevil.Loader)
         PixImage.GetLoaders() |> Seq.length |> should equal (count - 2)
 
@@ -735,7 +745,7 @@ module PixLoaderTests =
         )
 
         // On the other hand, if the first loader succeeds it should not matter
-        PixImage.SetLoader(PixImageSharp.Loader, 1338)
+        PixImage.SetLoader(PixCodec.Loader, 1338)
 
         tempFile (fun filename ->
             File.Delete filename
