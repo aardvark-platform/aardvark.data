@@ -100,7 +100,5 @@ jobs:
           user: ${{ secrets.NUGET_USER }}
 
       - name: NuGet
-        env:
-          NUGET_KEY: ${{ secrets.NUGET_KEY }}
         shell: cmd
-        run: dotnet nuget push "bin\pack\**.nupkg" -k %NUGET_KEY% -s "https://api.nuget.org/v3/index.json" --skip-duplicate
+        run: dotnet nuget push "bin\pack\**.nupkg" -k ${{steps.login.outputs.NUGET_API_KEY}} -s "https://api.nuget.org/v3/index.json" --skip-duplicate
