@@ -41,7 +41,7 @@ NUGET
       Aardvark.Geometry.Clustering (5.5.11)
       Aardvark.Geometry.Intersection (5.5.11)
       Aardvark.Rendering.Common (>= 5.5)
-    Aardvark.PixImage.PixCodec (1.0)
+    Aardvark.PixImage.PixCodec (1.0.2)
       Aardvark.Base.Tensors (>= 5.3.27 < 5.4)
     Aardvark.Rendering.Common (5.5)
       Aardvark.Base (>= 5.3)

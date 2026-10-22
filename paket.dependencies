@@ -40,7 +40,7 @@ nuget Xbim.ModelGeometry.Scene                              ~> 6.3.873-netcore
 nuget Microsoft.Database.ManagedEsent                       = 2.0.3
 
 // Tests
-nuget Aardvark.PixImage.PixCodec                            ~> 1.0.0
+nuget Aardvark.PixImage.PixCodec                            ~> 1.0.2
 
 nuget NUnit                                                 ~> 3.13.3
 nuget FsUnit                                                ~> 5.4.0

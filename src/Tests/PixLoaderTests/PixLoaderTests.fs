@@ -213,21 +213,22 @@ module PixLoaderTests =
             let loaders = PixImage.GetLoaders() |> Seq.filter (fun l -> l.Name <> "Aardvark PGM")
             Gen.elements loaders
 
-        let private supportsWebP =
-            flip List.contains [
-                PixImageFreeImage.Loader
-                PixImageSharp.Loader
-                PixCodec.Loader
-            ]
-
         // Loader restrictions for encoding or decoding
         let private filterLoader (format : PixFileFormat) (gen : Gen<IPixLoader>) =
             gen |> Gen.filter (fun loader ->
-                not (loader.Name = "ImageSharp" && format = PixFileFormat.Tiff) &&    // ImageSharp support for TIFFs is buggy atm (2.X)
-                not (loader.Name = "DevIL" && format = PixFileFormat.Webp) &&
-                not (loader.Name = "Pfim" && format = PixFileFormat.Webp) &&
-                not (loader.Name = "Windows Media" && format = PixFileFormat.Webp) &&
-                not (loader.Name <> "FreeImage" && format = PixFileFormat.Exr)        // Only FreeImage supports EXR (we don't talk about DevIL)
+                // ImageSharp support for TIFFs is buggy atm (3.X)
+                not (loader.Name = "ImageSharp" && format = PixFileFormat.Tiff) &&
+
+                // Only FreeImage, ImageSharp, and PixCodec support WebP
+                not (loader.Name <> "FreeImage" &&
+                     loader.Name <> "ImageSharp" &&
+                     loader.Name <> "PixCodec" &&
+                     format = PixFileFormat.Webp) &&
+
+                // Only FreeImage and PixCodec supports EXR (we don't talk about DevIL)
+                not (loader.Name <> "FreeImage" &&
+                     loader.Name <> "PixCodec" &&
+                     format = PixFileFormat.Exr)
             )
 
         // Loader restrictions specifically for encoding
@@ -235,10 +236,17 @@ module PixLoaderTests =
             gen
             |> filterLoader format
             |> Gen.filter (fun loader ->
-                not (loader.Name = "DevIL" && format = PixFileFormat.Gif) &&               // DevIL does not support saving GIFs
-                not (loader.Name = "DevIL" && format = PixFileFormat.Tiff && useStream) && // DevIL does not support saving TIFFs to streams
-                not (loader.Name = "FreeImage" && format = PixFileFormat.Gif) &&           // FreeImage does not support saving GIFs
-                not (loader.Name = "Pfim")                                                 // Pfim does not support saving
+                // DevIL does not support saving GIFs
+                not (loader.Name = "DevIL" && format = PixFileFormat.Gif) &&
+
+                // DevIL does not support saving TIFFs to streams
+                not (loader.Name = "DevIL" && format = PixFileFormat.Tiff && useStream) &&
+
+                // FreeImage does not support saving GIFs
+                not (loader.Name = "FreeImage" && format = PixFileFormat.Gif) &&
+
+                // Pfim does not support saving
+                not (loader.Name = "Pfim")
             )
 
         // Loader restrictions specifically for decoding
@@ -246,8 +254,8 @@ module PixLoaderTests =
             gen
             |> filterLoader format
             |> Gen.filter (fun loader ->
-                not (loader.Name = "FreeImage" && format = PixFileFormat.Gif) &&
-                not (loader.Name = "Pfim" && format <> PixFileFormat.Dds && format <> PixFileFormat.Targa)  // Pfim only supports DDS and TGA
+                // Pfim only supports DDS and TGA
+                not (loader.Name = "Pfim" && format <> PixFileFormat.Dds && format <> PixFileFormat.Targa)
             )
 
         let pixEncoder (useStream : bool) (format : PixFileFormat) =
@@ -644,6 +652,7 @@ module PixLoaderTests =
         let loaders = [
             PixImageFreeImage.Loader
             PixImageDevil.Loader
+            PixCodec.Loader
 #if WINDOWS
             PixImageWindowsMedia.Loader
 #endif
