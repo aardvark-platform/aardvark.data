@@ -16,39 +16,8 @@ concurrency:
 jobs:
   test:
     name: Test
-    runs-on: ${{ matrix.os }}
-    strategy:
-        matrix:
-            os: [ubuntu-latest, windows-latest, macos-15-intel, macos-latest]
-            include:
-              - os: ubuntu-latest
-                solution-suffix: NonWindows.slnf
-              - os: windows-latest
-                solution-suffix: sln
-              - os: macos-15-intel
-                solution-suffix: NonWindows.slnf
-              - os: macos-latest
-                solution-suffix: NonWindows.slnf
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+    uses: ./.github/workflows/test.yml
 
-      - name: Install Dotnet
-        uses: actions/setup-dotnet@v5
-        with:
-          global-json-file: global.json
-
-      - name: Restore Tools
-        run: dotnet tool restore
-
-      - name: Restore
-        run: dotnet paket restore
-
-      - name: Build
-        run: dotnet build -c Release src/Aardvark.Data.${{ matrix.solution-suffix }}
-
-      - name: Test
-        run: dotnet test src/Aardvark.Data.${{ matrix.solution-suffix }} -c Release --no-build --nologo --logger:"console;verbosity=normal"
   pack:
     name: Package
     runs-on: windows-latest
