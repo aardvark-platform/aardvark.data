@@ -1,3 +1,6 @@
+### 5.2.35
+- Update to Aardvark.Geometry.PolyMesh 5.6
+
 ### 5.2.34
 - Added IndexedLineSet 
 - Added wrl tests

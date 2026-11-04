@@ -1,3 +1,6 @@
+### 5.2.35
+- Update to .NET 10
+
 ### 5.2.34
 - Added support for TIFF compression schemes
 - Fixed saving BW images

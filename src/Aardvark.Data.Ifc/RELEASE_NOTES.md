@@ -1,3 +1,7 @@
+### 1.1.1
+- Update to .NET 10
+- Update to Aardvark.Geometry.PolyMesh 5.6
+
 ### 1.1.0
 - Update xBIM-libs and enable access of IfcStore (pinned MeasuredEsent to 2.0.3)
 

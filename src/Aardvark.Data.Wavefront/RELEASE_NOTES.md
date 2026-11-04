@@ -1,3 +1,6 @@
+### 5.3.11
+- Update to Aardvark.Geometry.PolyMesh 5.6
+
 ### 5.3.10
 - Updated to NET 8 and Aardvark.Base 5.3
 
