@@ -1,3 +1,7 @@
+### 1.1.2
+- Extended polylines
+- Added axis shapes representations
+
 ### 1.1.1
 - Update to .NET 10
 - Update to Aardvark.Geometry.PolyMesh 5.6

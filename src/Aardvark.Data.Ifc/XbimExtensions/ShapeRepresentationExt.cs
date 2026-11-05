@@ -52,13 +52,16 @@ namespace Aardvark.Data.Ifc
 
         #region 3D Axis
         public static IIfcShapeRepresentation CreateShapeRepresentationAxis3d(this IIfcRepresentationItem item)
+            => item.Model.CreateShapeRepresentationAxis3d([item]);
+
+        public static IIfcShapeRepresentation CreateShapeRepresentationAxis3d(this IModel model, IEnumerable<IIfcRepresentationItem> items)
         {
-            return item.Model.Factory().ShapeRepresentation(r =>
+            return model.Factory().ShapeRepresentation(r =>
             {
                 r.RepresentationIdentifier = "Axis";
                 r.RepresentationType = "Curve3D";
-                r.Items.Add(item);
-                r.ContextOfItems = item.Model.GetOrCreateAxisSubContext();
+                r.Items.AddRange(items);
+                r.ContextOfItems = model.GetOrCreateAxisSubContext();
             });
         }
         #endregion

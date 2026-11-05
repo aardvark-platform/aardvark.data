@@ -304,6 +304,15 @@ namespace Aardvark.Data.Ifc
             });
         }
 
+        public static IIfcIndexedPolyCurve CreateIndexedPolyCurve(this IModel model, IIfcCartesianPointList points, IEnumerable<int[]> indices = null)
+        {
+            return model.IndexedPolyCurveFactory(poly =>
+            {
+                poly.Points = points;
+                AddSegments(poly, indices);
+            });
+        }
+
         // NOTE: indices are 1-based, 2 indices are a line segment, 3 an arc through the middle point
         private static void AddSegments(IIfcIndexedPolyCurve poly, IEnumerable<int[]> indices)
         {

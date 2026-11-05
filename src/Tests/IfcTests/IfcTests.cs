@@ -13,6 +13,7 @@ using Xbim.Common;
 using Xbim.Common.Enumerations;
 using Xbim.Common.Step21;
 using Xbim.Ifc;
+using Xbim.Ifc4.GeometryResource;
 using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.MeasureResource;
 using Xbim.IO;
@@ -834,19 +835,20 @@ namespace Aardvark.Data.Tests.Ifc
 
             IIfcBuildingElementProxy withBody;
             IIfcBuildingElementProxy axisOnly;
+            IIfcBuildingElementProxy withGap;
 
             using (var txn = model.BeginTransaction("Create products with axis"))
             {
                 var factory = model.Factory();
                 var site = model.Instances.OfType<IIfcSite>().First();
 
-                // track along x, 2 m long, 50 mm cross section, axis runs through the centre of the body
+                // track along x, 2 m long, 50 mm cross section, axis runs through the centre of the body and sticks out the far end so it is visible
                 var length = 2000.0;
                 var body = PolyMeshPrimitives.Box(new Box3d(new V3d(0, -25, -25), new V3d(length, 25, 25)), C4b.Gray);
 
                 withBody = factory.BuildingElementProxy(p => p.Name = "Track with body");
                 withBody.CreateAttachRepresentation(model.CreateLocalPlacement(V3d.Zero), body, C4d.Gray)
-                        .AddRepresentation(model.CreateIndexedPolyCurve([V3d.Zero, new V3d(2*length, 0, 0)]).CreateShapeRepresentationAxis3d());
+                        .AddRepresentation(model.CreateIndexedPolyCurve([V3d.Zero, new V3d(2 * length, 0, 0)]).CreateShapeRepresentationAxis3d());
                 site.AddElement(withBody);
 
                 // no body here, so AddRepresentation has to create the product shape itself
@@ -858,6 +860,21 @@ namespace Aardvark.Data.Tests.Ifc
                 });
                 axisOnly.AddRepresentation(model.CreateIndexedPolyCurve(bent, [[1, 2], [2, 3, 4]]).CreateShapeRepresentationAxis3d());
                 site.AddElement(axisOnly);
+
+                // one axis with a gap: two curves on a shared point list, a line from 1 to 2, then an arc from 3 over 4 to 5
+                var gapPoints = model.CreateCartesianPointList3D(
+                    new V3d(0, 2500, 0), new V3d(1000, 2500, 0),
+                    new V3d(1500, 2500, 0), new V3d(2000, 3000, 0), new V3d(2500, 2500, 0));
+                withGap = factory.BuildingElementProxy(p =>
+                {
+                    p.Name = "Track with gap";
+                    p.ObjectPlacement = model.CreateLocalPlacement(V3d.Zero);
+                });
+                withGap.AddRepresentation(model.CreateShapeRepresentationAxis3d([
+                    model.CreateIndexedPolyCurve(gapPoints, [[1, 2]]),
+                    model.CreateIndexedPolyCurve(gapPoints, [[3, 4, 5]]),
+                ]));
+                site.AddElement(withGap);
 
                 txn.Commit();
             }
@@ -875,8 +892,23 @@ namespace Aardvark.Data.Tests.Ifc
             Assert.AreEqual(1, axisOnlyReps.Length);
             AssertAxis(axisOnlyReps[0], expectedSegments: 2);
 
-            // both axes share one sub-context
+            // gap: one axis representation holding two curves that share their point list
+            var withGapReps = withGap.Representation.Representations.OfType<IIfcShapeRepresentation>().ToArray();
+            Assert.AreEqual(1, withGapReps.Length);
+            Assert.AreEqual("Axis", withGapReps[0].RepresentationIdentifier.ToString());
+            Assert.AreEqual("Curve3D", withGapReps[0].RepresentationType.ToString());
+
+            var gapCurves = withGapReps[0].Items.OfType<IIfcIndexedPolyCurve>().ToArray();
+            Assert.AreEqual(2, gapCurves.Length);
+            Assert.AreSame(gapCurves[0].Points, gapCurves[1].Points);
+            Assert.AreEqual(1, gapCurves[0].Segments.Count);
+            Assert.AreEqual(1, gapCurves[1].Segments.Count);
+            Assert.IsInstanceOf<IfcLineIndex>(gapCurves[0].Segments.First());
+            Assert.IsInstanceOf<IfcArcIndex>(gapCurves[1].Segments.First());
+
+            // all axes share one sub-context
             Assert.AreSame(withBodyReps[1].ContextOfItems, axisOnlyReps[0].ContextOfItems);
+            Assert.AreSame(withBodyReps[1].ContextOfItems, withGapReps[0].ContextOfItems);
             Assert.AreEqual(1, model.Instances.OfType<IIfcGeometricRepresentationSubContext>().Count(c => c.ContextIdentifier.ToString() == "Axis"));
 
             model.SaveAs("test_AxisRepresentation.ifc");
