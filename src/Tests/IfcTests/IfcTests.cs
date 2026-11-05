@@ -826,6 +826,74 @@ namespace Aardvark.Data.Tests.Ifc
         }
 
         [Test]
+        public static void AxisRepresentation()
+        {
+            using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
+
+            model.CreateMinimalProject();
+
+            IIfcBuildingElementProxy withBody;
+            IIfcBuildingElementProxy axisOnly;
+
+            using (var txn = model.BeginTransaction("Create products with axis"))
+            {
+                var factory = model.Factory();
+                var site = model.Instances.OfType<IIfcSite>().First();
+
+                // track along x, 2 m long, 50 mm cross section, axis runs through the centre of the body
+                var length = 2000.0;
+                var body = PolyMeshPrimitives.Box(new Box3d(new V3d(0, -25, -25), new V3d(length, 25, 25)), C4b.Gray);
+
+                withBody = factory.BuildingElementProxy(p => p.Name = "Track with body");
+                withBody.CreateAttachRepresentation(model.CreateLocalPlacement(V3d.Zero), body, C4d.Gray)
+                        .AddRepresentation(model.CreateIndexedPolyCurve([V3d.Zero, new V3d(2*length, 0, 0)]).CreateShapeRepresentationAxis3d());
+                site.AddElement(withBody);
+
+                // no body here, so AddRepresentation has to create the product shape itself
+                V3d[] bent = [new V3d(0, 500, 0), new V3d(1000, 500, 0), new V3d(1500, 1000, 0), new V3d(1000, 1500, 0)];
+                axisOnly = factory.BuildingElementProxy(p =>
+                {
+                    p.Name = "Track axis only";
+                    p.ObjectPlacement = model.CreateLocalPlacement(V3d.Zero);
+                });
+                axisOnly.AddRepresentation(model.CreateIndexedPolyCurve(bent, [[1, 2], [2, 3, 4]]).CreateShapeRepresentationAxis3d());
+                site.AddElement(axisOnly);
+
+                txn.Commit();
+            }
+
+            Assert.IsEmpty(model.ValidateModel());
+
+            // body stays first, axis is appended behind it
+            var withBodyReps = withBody.Representation.Representations.OfType<IIfcShapeRepresentation>().ToArray();
+            Assert.AreEqual(2, withBodyReps.Length);
+            Assert.AreNotEqual("Axis", withBodyReps[0].RepresentationIdentifier.ToString());
+            AssertAxis(withBodyReps[1], expectedSegments: 0);
+
+            // product without a shape got one created
+            var axisOnlyReps = axisOnly.Representation.Representations.OfType<IIfcShapeRepresentation>().ToArray();
+            Assert.AreEqual(1, axisOnlyReps.Length);
+            AssertAxis(axisOnlyReps[0], expectedSegments: 2);
+
+            // both axes share one sub-context
+            Assert.AreSame(withBodyReps[1].ContextOfItems, axisOnlyReps[0].ContextOfItems);
+            Assert.AreEqual(1, model.Instances.OfType<IIfcGeometricRepresentationSubContext>().Count(c => c.ContextIdentifier.ToString() == "Axis"));
+
+            model.SaveAs("test_AxisRepresentation.ifc");
+        }
+
+        static void AssertAxis(IIfcShapeRepresentation rep, int expectedSegments)
+        {
+            Assert.AreEqual("Axis", rep.RepresentationIdentifier.ToString());
+            Assert.AreEqual("Curve3D", rep.RepresentationType.ToString());
+
+            var curve = rep.Items.Single() as IIfcIndexedPolyCurve;
+            Assert.IsNotNull(curve);
+            Assert.IsInstanceOf<IIfcCartesianPointList3D>(curve.Points);
+            Assert.AreEqual(expectedSegments, curve.Segments.Count);
+        }
+
+        [Test]
         public static void AardvarkPrimitivesTest()
         {
             using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);

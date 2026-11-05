@@ -67,6 +67,20 @@ namespace Aardvark.Data.Ifc
             return product.LinkToType(objectType);
         }
 
+        public static IIfcProduct AddRepresentation(this IIfcProduct product, IIfcShapeRepresentation representation)
+        {
+            if (product.Representation == null)
+            {
+                product.Representation = product.Model.Factory().ProductDefinitionShape(r => r.Representations.Add(representation));
+            }
+            else
+            {
+                product.Representation.Representations.Add(representation);
+            }
+
+            return product;
+        }
+
         public static IIfcProduct CreateAttachRepresentation(this IIfcProduct product, IIfcObjectPlacement placement, PolyMesh mesh, C4d? fallbackColor, IIfcSurfaceStyle surfaceStyle = null, IIfcPresentationLayerAssignment layer = null, bool triangulated = true)
         {
 

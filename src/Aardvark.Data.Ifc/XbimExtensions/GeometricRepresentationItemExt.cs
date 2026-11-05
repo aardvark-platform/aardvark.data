@@ -1,12 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using Aardvark.Base;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
-using Aardvark.Base;
-
 using Xbim.Common;
 using Xbim.Ifc;
-using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.GeometryResource;
+using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.MeasureResource;
 
 namespace Aardvark.Data.Ifc
@@ -14,10 +14,26 @@ namespace Aardvark.Data.Ifc
     public static class GeometricRepresentationItemExt
     {
         public static IIfcGeometricRepresentationContext GetGeometricRepresentationContextPlan(this IModel model)
-            => model.Instances.OfType<IIfcGeometricRepresentationContext>().Where(c => c.ContextType == "Plan").First();
+            => model.Instances.OfType<IIfcGeometricRepresentationContext>().First(c => (c is not IIfcGeometricRepresentationSubContext) && (c.ContextType == "Plan"));
 
         public static IIfcGeometricRepresentationContext GetGeometricRepresentationContextModel(this IModel model)
-            => model.Instances.OfType<IIfcGeometricRepresentationContext>().Where(c => c.ContextType == "Model").First();
+            => model.Instances.OfType<IIfcGeometricRepresentationContext>().First(c => (c is not IIfcGeometricRepresentationSubContext) && (c.ContextType == "Model"));
+
+        public static IIfcGeometricRepresentationSubContext GetOrCreateAxisSubContext(this IModel model)
+        {
+            IIfcGeometricRepresentationSubContext existing = model.Instances.OfType<IIfcGeometricRepresentationSubContext>().FirstOrDefault(c => c.ContextIdentifier == "Axis");
+            if (existing != null)
+                return existing;
+
+            var parent = model.GetGeometricRepresentationContextModel();
+            return model.Factory().GeometricRepresentationSubContext(c =>
+            {
+                c.ContextIdentifier = "Axis";
+                c.ContextType = "Model";
+                c.ParentContext = parent;
+                c.TargetView = IfcGeometricProjectionEnum.GRAPH_VIEW;
+            });
+        }
 
         #region CartesianPoint
         public static void Set(this IIfcCartesianPoint point, V2d vec) 
@@ -271,22 +287,35 @@ namespace Aardvark.Data.Ifc
         public static IIfcIndexedPolyCurve CreateIndexedPolyCurve(this IModel model, IEnumerable<V2d> points, IEnumerable<int[]> indices = null)
         {
             // only available in IFC4+
-            // NOTE: Indices start with 1!
             return model.IndexedPolyCurveFactory(poly =>
             {
                 poly.Points = model.CreateCartesianPointList2D(points.ToArray());
-
-                if (indices != null)
-                {
-                    var index = indices.Select(i =>
-                    {
-                        if (i.Length == 3) return (IfcSegmentIndexSelect)new IfcArcIndex(i.Select(x => new IfcPositiveInteger(x)).ToList());
-                        else if (i.Length == 2) return (IfcSegmentIndexSelect)new IfcLineIndex(i.Select(x => new IfcPositiveInteger(x)).ToList());
-                        else return null;
-                    });
-                    poly.Segments.AddRange(index);
-                }
+                AddSegments(poly, indices);
             });
+        }
+
+        public static IIfcIndexedPolyCurve CreateIndexedPolyCurve(this IModel model, IEnumerable<V3d> points, IEnumerable<int[]> indices = null)
+        {
+            // only available in IFC4+
+            return model.IndexedPolyCurveFactory(poly =>
+            {
+                poly.Points = model.CreateCartesianPointList3D(points.ToArray());
+                AddSegments(poly, indices);
+            });
+        }
+
+        // NOTE: indices are 1-based, 2 indices are a line segment, 3 an arc through the middle point
+        private static void AddSegments(IIfcIndexedPolyCurve poly, IEnumerable<int[]> indices)
+        {
+            if (indices == null)
+                return;
+
+            poly.Segments.AddRange(indices.Select(i => i.Length switch
+            {
+                2 => (IfcSegmentIndexSelect)new IfcLineIndex(i.Select(x => new IfcPositiveInteger(x)).ToList()),
+                3 => new IfcArcIndex(i.Select(x => new IfcPositiveInteger(x)).ToList()),
+                _ => throw new ArgumentException($"segment index needs 2 or 3 entries, got {i.Length}"),
+            }));
         }
 
         #endregion
