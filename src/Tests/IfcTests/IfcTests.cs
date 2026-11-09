@@ -273,10 +273,11 @@ namespace Aardvark.Data.Tests.Ifc
             try
             {
                 TestUtils.LoadEmbeddedData(@"data\slab.ifc", (filePath) => {
-                    using var parsed = IFCParser.PreprocessIFC(filePath, enableCaching: false);
+                    // editor credentials are needed for the owner history xBIM attaches to every new IfcRoot entity
+                    using var parsed = IFCParser.PreprocessIFC(filePath, editor: TestUtils.AardvarkTestCredentials, enableCaching: false);
                     Assert.IsFalse(parsed.IsCaching);
 
-                    // the file itself is not fully valid, so only failures introduced by the edit count
+                    // only failures introduced by the edit count
                     var failuresBefore = parsed.IfcStore.ValidateModel().Count();
 
                     using (var txn = parsed.IfcStore.BeginTransaction("Edit imported model"))
@@ -286,7 +287,8 @@ namespace Aardvark.Data.Tests.Ifc
                         txn.Commit();
                     }
 
-                    Assert.AreEqual(failuresBefore, parsed.IfcStore.ValidateModel().Count(), "editing introduced validation failures");
+                    var failuresAfter = parsed.IfcStore.ValidateModel().ToArray();
+                    Assert.AreEqual(failuresBefore, failuresAfter.Length, "editing introduced validation failures: " + string.Join("; ", failuresAfter.Select(r => r.Message)));
                     parsed.IfcStore.SaveAs(outPath);
                 });
 
@@ -306,7 +308,7 @@ namespace Aardvark.Data.Tests.Ifc
         public static void EndCachingAllowsEditing()
         {
             TestUtils.LoadEmbeddedData(@"data\slab.ifc", (filePath) => {
-                using var parsed = IFCParser.PreprocessIFC(filePath);
+                using var parsed = IFCParser.PreprocessIFC(filePath, editor: TestUtils.AardvarkTestCredentials);
                 Assert.IsTrue(parsed.IsCaching);
 
                 parsed.EndCaching();
