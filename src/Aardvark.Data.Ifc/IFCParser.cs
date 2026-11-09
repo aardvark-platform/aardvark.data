@@ -20,45 +20,54 @@ namespace Aardvark.Data.Ifc
     {
         static readonly XbimColourMap _colourMap = new XbimColourMap();
 
-        public static IFCData PreprocessIFC(string filePath, XbimEditorCredentials editor = null, XGeometryEngineVersion geometryEngine = XGeometryEngineVersion.V6, bool singleThreading = true)
+        /// <summary>
+        /// Opens an IFC file, tessellates its geometry if the store does not contain any yet and wraps model, meshes, materials and hierarchy into an IFCData.
+        /// </summary>
+        /// <param name="filePath">path of the .ifc file</param>
+        /// <param name="editor">optional editor credentials used by xBIM for the owner history</param>
+        /// <param name="geometryEngine">xBIM geometry engine used for tessellation</param>
+        /// <param name="singleThreading">tessellate on a single thread, avoids deadlocks in the xBIM geometry engine</param>
+        /// <param name="enableCaching">keep xBIM's inverse and entity caches alive for fast queries on the returned data.
+        /// xBIM refuses to open a transaction while the inverse cache is active, so use IFCData.EndCaching or pass false before editing the store.</param>
+        public static IFCData PreprocessIFC(string filePath, XbimEditorCredentials editor = null, XGeometryEngineVersion geometryEngine = XGeometryEngineVersion.V6, bool singleThreading = true, bool enableCaching = true)
         {
-            Dict<IfcGloballyUniqueId, IFCContent> content = null;
-            Dictionary<string, IFCMaterial> materials = null;
-
             var model = IfcStore.Open(filePath, editor);
 
-            model.BeginInverseCaching();
-            model.BeginEntityCaching();
-
-            if (model.GeometryStore.IsEmpty)
+            // the caches speed up the inverse lookups done by geometry creation, parsing and the hierarchy traversal
+            // they are started once and handed to IFCData, which owns them from here on
+            IInverseCache cacheInverse = null;
+            IEntityCache cacheEntity = null;
+            if (enableCaching)
             {
-                var context = new Xbim3DModelContext(model, engineVersion: geometryEngine);
-                if (singleThreading) context.MaxThreads = 1;
-                //upgrade to new geometry representation, uses the default 3D model
-                context.CreateContext(null, true, false);
+                cacheInverse = model.BeginInverseCaching();
+                cacheEntity = model.BeginEntityCaching();
             }
+
+            CreateGeometry(model, geometryEngine, singleThreading);
 
             foreach (var modelReference in model.ReferencedModels)
             {
                 // creates federation geometry contexts if needed
-                Report.Line(modelReference.Name);
                 if (modelReference.Model == null)
                     continue;
-                if (!modelReference.Model.GeometryStore.IsEmpty)
-                    continue;
-                var context = new Xbim3DModelContext(modelReference.Model, engineVersion: geometryEngine);
-                if (singleThreading) context.MaxThreads = 1;
-                //upgrade to new geometry representation, uses the default 3D model
-                context.CreateContext(null, true, false);
+                CreateGeometry(modelReference.Model, geometryEngine, singleThreading);
             }
 
-            var cacheInverse = model.BeginInverseCaching();
-            var cacheEntity = model.BeginEntityCaching();
-
-            (content, materials) = ParseIFC(model);
+            var (content, materials) = ParseIFC(model);
             var hierarchy = HierarchyExt.CreateHierarchy(model);
 
             return new IFCData(model, cacheInverse, cacheEntity, content, materials, hierarchy);
+        }
+
+        private static void CreateGeometry(IModel model, XGeometryEngineVersion geometryEngine, bool singleThreading)
+        {
+            if (!model.GeometryStore.IsEmpty)
+                return;
+
+            var context = new Xbim3DModelContext(model, engineVersion: geometryEngine);
+            if (singleThreading) context.MaxThreads = 1;
+            //upgrade to new geometry representation, uses the default 3D model
+            context.CreateContext(null, true, false);
         }
 
         private static (Dict<IfcGloballyUniqueId, IFCContent>, Dictionary<string, IFCMaterial>) ParseIFC(IModel model)
@@ -69,7 +78,6 @@ namespace Aardvark.Data.Ifc
 
             var materialsByName = new Dictionary<string, IFCMaterial>();
             var materialsByStyleId = new Dictionary<int, IFCMaterial>();
-            var nameToStyle = new Dictionary<string, int>();
             var repeatedShapeGeometries = new Dictionary<int, PolyMesh>();
 
             using (var geomStore = model.GeometryStore)
@@ -90,7 +98,11 @@ namespace Aardvark.Data.Ifc
 
                 foreach (var shapeInstance in shapeInstances)
                 {
-                    var ifcObject = (IIfcObject)model.Instances[shapeInstance.IfcProductLabel];
+                    if (model.Instances[shapeInstance.IfcProductLabel] is not IIfcObject ifcObject)
+                    {
+                        Report.Warn("Shape instance refers to missing product #{0}, skipping!", shapeInstance.IfcProductLabel);
+                        continue;
+                    }
 
                     // work out style
                     var styleId = shapeInstance.StyleLabel > 0 ? shapeInstance.StyleLabel : shapeInstance.IfcTypeId * -1;
@@ -117,11 +129,11 @@ namespace Aardvark.Data.Ifc
                         // use default material of prodType
                         var m = GetMaterialByExpressType(model, shapeInstance.IfcTypeId);
                         materialsByStyleId.Add(styleId, m);
-                        materialsByName.Add(m.Name, m);
-                        nameToStyle.Add(m.Name, styleId);
+                        if (!materialsByName.ContainsKey(m.Name))
+                            materialsByName.Add(m.Name, m);
                     }
 
-                    //GET THE ACTUAL GEOMETRY 
+                    //GET THE ACTUAL GEOMETRY
 
                     //see if we have already read it
                     if (!repeatedShapeGeometries.TryGetValue(shapeInstance.ShapeGeometryLabel, out PolyMesh polyMesh))
@@ -136,7 +148,9 @@ namespace Aardvark.Data.Ifc
                         }
                         catch (Exception e)
                         {
-                            Report.Error("Creating PolyMesh from IFC failed! {0}", e.ToString());
+                            // skip the instance, a content entry without a mesh is of no use to the caller
+                            Report.Error("Creating PolyMesh from IFC failed for product #{0}! {1}", shapeInstance.IfcProductLabel, e.ToString());
+                            continue;
                         }
 
                         if (shapeGeom.ReferenceCount > 1) //only store if we are going to use again
@@ -281,12 +295,8 @@ namespace Aardvark.Data.Ifc
             }
             catch (ArgumentException e)
             {
-                if (e is ArgumentException arg)
-                {
-                    materials.Add(new IFCMaterial(arg.ParamName, null)); // material name only - no visual description (Null)
-                }
-                else
-                    Report.Error("Associated Material Creation Failed! {0}", e.Message);
+                // GetMaterial reports a material without visual representation through the parameter name, keep it as name-only material
+                materials.Add(new IFCMaterial(e.ParamName, null));
             }
         }
 
@@ -311,14 +321,7 @@ namespace Aardvark.Data.Ifc
                 return null;
             }
 
-            var surfStyle = GetFirstSurfaceStyle() switch
-            {
-                Xbim.Ifc2x3.PresentationAppearanceResource.IfcSurfaceStyle s2x3 => s2x3,
-                Xbim.Ifc4.PresentationAppearanceResource.IfcSurfaceStyle s4 => s4,
-                Xbim.Ifc4x3.PresentationAppearanceResource.IfcSurfaceStyle s4x3 => s4x3,
-                IIfcPresentationStyleAssignment a => a.SurfaceStyles.FirstOrDefault(),
-                _ => throw new ArgumentException("No surfStyle", name)
-            };
+            var surfStyle = GetFirstSurfaceStyle() ?? throw new ArgumentException("No surfStyle", name);
 
             var properties = mat.GetPropertiesDict();
             
@@ -332,7 +335,15 @@ namespace Aardvark.Data.Ifc
 
         public static IFCMaterial GetMaterialByStyle(IModel model, int styleId)
         {
-            var sStyle = model.Instances[styleId] as IIfcSurfaceStyle;  
+            if (model.Instances[styleId] is not IIfcSurfaceStyle sStyle)
+            {
+                // the geometry store references a style label that is not a surface style, fall back to xBIM's default colour
+                Report.Warn("Style #{0} is not an IfcSurfaceStyle, using default colour!", styleId);
+                var fallback = XbimTexture.Create(XbimColour.DefaultColour);
+                fallback.DefinedObjectId = styleId;
+                return new IFCMaterial("Style-" + styleId, fallback);
+            }
+
             var texture = XbimTexture.Create(sStyle);
             texture.DefinedObjectId = styleId;
 

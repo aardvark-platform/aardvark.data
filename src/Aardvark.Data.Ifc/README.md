@@ -22,6 +22,7 @@ Check the [quick start guide](https://docs.xbim.net/quick-start.html) to gain an
 	- Materials are retrieved to enable quick rendering.
 	- Hierarchy provides a node based project description to build your scene graph.
 3. Edit existing Ifc-Object or attach new Ifc-Object
-	- Use the xBIM toolkit or any of our [extensions functions](https://github.com/aardvark-platform/aardvark.data/blob/master/src/Aardvark.Data.Ifc/IFCHelper.cs).
+	- Use the xBIM toolkit or any of our [extension functions](https://github.com/aardvark-platform/aardvark.data/tree/master/src/Aardvark.Data.Ifc/XbimExtensions).
 	- Don't forget to use *Transactions* while manipulating the IfcStore.
+	- xBIM refuses to open a transaction while its inverse cache is active. Call ```IFCData.EndCaching()``` before editing an imported model, or load it with ```PreprocessIFC(filepath, enableCaching: false)```.
 4. Export your enriched file via ```IfcStore.SaveAs(string fieName)```.

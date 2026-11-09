@@ -20,60 +20,161 @@ using Xbim.IO;
 
 namespace Aardvark.Data.Tests.Ifc
 {
-    [TestFixture]
-    public static class LoadingTest
+    internal static class TestUtils
     {
-        private static void LoadEmbeddedData(string inputString, Action<string> action)
+        public static readonly XbimEditorCredentials AardvarkTestCredentials = new() {
+            ApplicationDevelopersName = "Aardvark-Developer",
+            ApplicationFullName = "IfcExportTest",
+            ApplicationIdentifier = "Identifier",
+            ApplicationVersion = "1.0",
+            EditorsFamilyName = "Family",
+            EditorsGivenName = "Name",
+            EditorsOrganisationName = "Organisation"
+        };
+
+        /// <summary>
+        /// Path of a fresh temporary .ifc file, the caller is responsible for deleting it.
+        /// </summary>
+        public static string TempIfcPath()
+            => Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Path.GetRandomFileName(), ".ifc"));
+
+        /// <summary>
+        /// Path inside the test work directory, exported models are kept there so they can be inspected in a BIM viewer.
+        /// </summary>
+        public static string OutputPath(string fileName)
+        {
+            var dir = Path.Combine(TestContext.CurrentContext.WorkDirectory, "ifc-output");
+            Directory.CreateDirectory(dir);
+            return Path.Combine(dir, fileName);
+        }
+
+        /// <summary>
+        /// Extracts an embedded test file to a temporary location, runs the action on it and cleans up afterwards.
+        /// </summary>
+        public static void LoadEmbeddedData(string inputString, Action<string> action)
         {
             // necessary to run tests on github build servers
             var asm = Assembly.GetExecutingAssembly();
             var name = Regex.Replace(asm.ManifestModule.Name, @"\.(exe|dll)$", "", RegexOptions.IgnoreCase);
             var path = Regex.Replace(inputString, @"(\\|\/)", ".");
             using var stream = asm.GetManifestResourceStream(name + "." + path) ?? throw new Exception($"Cannot open resource stream with name {path}");
-            var filePath = Path.ChangeExtension(Path.GetRandomFileName(), ".ifc");
+            var filePath = TempIfcPath();
             try
             {
-                using var memoryStream = new MemoryStream();
-                stream.CopyTo(memoryStream);
-                var data = memoryStream.ToArray();
-                File.WriteAllBytes(filePath, data);
+                using (var file = File.Create(filePath))
+                    stream.CopyTo(file);
                 action.Invoke(filePath);
             }
             finally
             {
                 if (File.Exists(filePath))
-                {
                     File.Delete(filePath);
-                }
             }
         }
 
+        /// <summary>
+        /// Creates an in-memory store with a minimal project and site.
+        /// </summary>
+        public static IfcStore CreateModel(XbimSchemaVersion schema = XbimSchemaVersion.Ifc4)
+        {
+            var model = IfcStore.Create(AardvarkTestCredentials, schema, XbimStoreType.InMemoryModel);
+            model.CreateMinimalProject();
+            return model;
+        }
+
+        /// <summary>
+        /// Every parsed product must carry a mesh with faces, a material and a transformation, and the hierarchy must start at the project.
+        /// </summary>
+        public static void AssertConsistent(IFCData parsed)
+        {
+            Assert.IsNotNull(parsed.Hierarchy);
+            Assert.IsInstanceOf<IIfcProject>(parsed.Hierarchy.MetaData);
+            Assert.IsNotNull(parsed.Project);
+
+            foreach (var content in parsed.Content.Values)
+            {
+                Assert.IsNotNull(content.IFCObject);
+                Assert.IsNotNull(content.Mesh, $"{content.Name} has no mesh");
+                Assert.IsNotNull(content.Mesh.PositionArray, $"{content.Name} has no positions");
+                Assert.IsNotNull(content.Material, $"{content.Name} has no material");
+                Assert.IsTrue(parsed.Materials.ContainsKey(content.Material.Name), $"material {content.Material.Name} is not listed");
+                Assert.IsFalse(double.IsNaN(content.Trafo.Forward.M00), $"{content.Name} has an invalid transformation");
+            }
+        }
+
+        /// <summary>
+        /// The node and all its descendants.
+        /// </summary>
+        public static IEnumerable<IIFCNode> Flatten(IIFCNode node)
+            => [node, .. node.SubNodes.SelectMany(Flatten)];
+
+        /// <summary>
+        /// Bounding box of the mesh in model coordinates, i.e. with the instance transformation applied.
+        /// </summary>
+        public static Box3d WorldBounds(IFCContent content)
+            => new(content.Mesh.PositionArray.Select(p => content.Trafo.Forward.TransformPos(p)));
+
+        public static void AssertBoxEquals(Box3d expected, Box3d actual, double tolerance)
+        {
+            Assert.IsTrue(expected.Min.ApproximateEquals(actual.Min, tolerance), $"min {actual.Min} differs from {expected.Min}");
+            Assert.IsTrue(expected.Max.ApproximateEquals(actual.Max, tolerance), $"max {actual.Max} differs from {expected.Max}");
+        }
+    }
+
+    [TestFixture]
+    public static class LoadingTest
+    {
         [Test]
         public static void LoadPrimitive()
         {
-            LoadEmbeddedData(@"data\surface-model.ifc", (filePath) => {
-                var parsed = IFCParser.PreprocessIFC(filePath);
+            TestUtils.LoadEmbeddedData(@"data\surface-model.ifc", (filePath) => {
+                using var parsed = IFCParser.PreprocessIFC(filePath);
+                TestUtils.AssertConsistent(parsed);
                 Assert.AreEqual(1, parsed.Materials.Count);
+                Assert.AreEqual(1, parsed.Content.Count);
                 Assert.AreEqual(0.001, parsed.UnitScale);
+                Assert.IsInstanceOf<IIfcBuildingElementProxy>(parsed.Content.Values.Single().IFCObject);
             });
         }
 
         [Test]
         public static void LoadWall()
         {
-            LoadEmbeddedData(@"data\wall.ifc", (filePath) => {
-                var parsed = IFCParser.PreprocessIFC(filePath);
+            TestUtils.LoadEmbeddedData(@"data\wall.ifc", (filePath) => {
+                using var parsed = IFCParser.PreprocessIFC(filePath);
+                TestUtils.AssertConsistent(parsed);
                 Assert.AreEqual(4, parsed.Materials.Count);
                 Assert.AreEqual(0.001, parsed.UnitScale);
+
+                // the wall has no surface style, so the first layer of its material layer set is used
+                // the layer materials carry no representation and are listed by name only
+                var wall = parsed.Content.Values.Single();
+                Assert.IsInstanceOf<IIfcWall>(wall.IFCObject);
+                Assert.Greater(wall.Mesh.FaceCount, 0);
+                Assert.AreEqual("Masonry - Brick - Brown", wall.Material.Name);
+                Assert.IsNull(wall.Material.Texture);
+                Assert.IsTrue(parsed.Materials.ContainsKey("DefMat-IfcWall"));
+                Assert.IsTrue(parsed.Materials.ContainsKey("Air Infiltration Barrier"));
+                Assert.IsTrue(parsed.Materials.ContainsKey("Masonry"));
+
+                // project -> building -> wall
+                var building = parsed.Hierarchy.SubNodes.Single();
+                Assert.IsInstanceOf<IIfcBuilding>(building.MetaData);
+                Assert.AreSame(wall.IFCObject, building.SubNodes.Single().MetaData);
+
+                // 5000 x 270 x 2000 mm extrusion
+                TestUtils.AssertBoxEquals(new Box3d(V3d.Zero, new V3d(5000, 270, 2000)), TestUtils.WorldBounds(wall), 1e-3);
             });
         }
 
         [Test]
         public static void LoadSlab()
         {
-            LoadEmbeddedData(@"data\slab.ifc", (filePath) => {
-                var parsed = IFCParser.PreprocessIFC(filePath);
+            TestUtils.LoadEmbeddedData(@"data\slab.ifc", (filePath) => {
+                using var parsed = IFCParser.PreprocessIFC(filePath);
+                TestUtils.AssertConsistent(parsed);
                 Assert.AreEqual(2, parsed.Materials.Count);
+                Assert.AreEqual(1, parsed.Content.Count);
             });
         }
 
@@ -84,33 +185,67 @@ namespace Aardvark.Data.Tests.Ifc
             //  var context = new Xbim3DModelContext(model);
             //  context.MaxThreads = 1; <- SINGLE-Thread works!
 
-            LoadEmbeddedData(@"data\simple_scene.ifc", (filePath) => {
-                var parsed = IFCParser.PreprocessIFC(filePath, geometryEngine: Xbim.Geometry.Abstractions.XGeometryEngineVersion.V5, singleThreading: false);
+            TestUtils.LoadEmbeddedData(@"data\simple_scene.ifc", (filePath) => {
+                using var parsed = IFCParser.PreprocessIFC(filePath, geometryEngine: Xbim.Geometry.Abstractions.XGeometryEngineVersion.V5, singleThreading: false);
                 Assert.AreEqual(5, parsed.Materials.Count);
                 Assert.AreEqual(1, parsed.UnitScale);
             });
 
-            LoadEmbeddedData(@"data\simple_scene.ifc", (filePath) => {
-                var parsed = IFCParser.PreprocessIFC(filePath, geometryEngine: Xbim.Geometry.Abstractions.XGeometryEngineVersion.V5, singleThreading: true);
+            TestUtils.LoadEmbeddedData(@"data\simple_scene.ifc", (filePath) => {
+                using var parsed = IFCParser.PreprocessIFC(filePath, geometryEngine: Xbim.Geometry.Abstractions.XGeometryEngineVersion.V5, singleThreading: true);
                 Assert.AreEqual(5, parsed.Materials.Count);
             });
 
-            LoadEmbeddedData(@"data\simple_scene.ifc", (filePath) => {
-                var parsed = IFCParser.PreprocessIFC(filePath, geometryEngine: Xbim.Geometry.Abstractions.XGeometryEngineVersion.V6, singleThreading: false);
+            TestUtils.LoadEmbeddedData(@"data\simple_scene.ifc", (filePath) => {
+                using var parsed = IFCParser.PreprocessIFC(filePath, geometryEngine: Xbim.Geometry.Abstractions.XGeometryEngineVersion.V6, singleThreading: false);
                 Assert.AreEqual(5, parsed.Materials.Count);
             });
 
-            LoadEmbeddedData(@"data\simple_scene.ifc", (filePath) => {
-                var parsed = IFCParser.PreprocessIFC(filePath, geometryEngine: Xbim.Geometry.Abstractions.XGeometryEngineVersion.V6, singleThreading: true);
+            TestUtils.LoadEmbeddedData(@"data\simple_scene.ifc", (filePath) => {
+                using var parsed = IFCParser.PreprocessIFC(filePath, geometryEngine: Xbim.Geometry.Abstractions.XGeometryEngineVersion.V6, singleThreading: true);
                 Assert.AreEqual(5, parsed.Materials.Count);
+            });
+        }
+
+        [Test]
+        public static void LoadScene()
+        {
+            TestUtils.LoadEmbeddedData(@"data\simple_scene.ifc", (filePath) => {
+                using var parsed = IFCParser.PreprocessIFC(filePath);
+                TestUtils.AssertConsistent(parsed);
+
+                // slab, covering and wall
+                Assert.AreEqual(3, parsed.Content.Count);
+                var slab = parsed.Content.Values.Single(c => c.IFCObject is IIfcSlab);
+                Assert.IsTrue(parsed.Content.Values.Any(c => c.IFCObject is IIfcCovering));
+                Assert.IsTrue(parsed.Content.Values.Any(c => c.IFCObject is IIfcWall));
+
+                // properties of the product and of its material survive the import
+                var loadBearing = slab.IFCObject.GetProperty("LoadBearing");
+                Assert.IsNotNull(loadBearing);
+                Assert.IsTrue(loadBearing.TryGetSimpleValue(out bool isLoadBearing) && isLoadBearing);
+
+                var concrete = parsed.Materials["Stahlbeton Decke"];
+                Assert.AreEqual(2400.0, concrete.MassDensity, 1e-9);
+                Assert.AreEqual(2.5, concrete.ThermalConductivity, 1e-9);
+                Assert.AreEqual(1000.0, concrete.SpecificHeatCapacity, 1e-9);
+
+                // the spatial structure and all products with geometry show up in the hierarchy
+                // the file references entities that were stripped from it, so only the presence is checked, not the exact tree shape
+                var nodes = TestUtils.Flatten(parsed.Hierarchy).Select(n => n.MetaData).ToArray();
+                Assert.IsTrue(nodes.Any(n => n is IIfcSite));
+                Assert.IsTrue(nodes.Any(n => n is IIfcBuilding));
+                Assert.IsTrue(nodes.Any(n => n is IIfcBuildingStorey));
+                foreach (var content in parsed.Content.Values)
+                    Assert.IsTrue(nodes.Contains(content.IFCObject), $"{content.Name} is missing in the hierarchy");
             });
         }
 
         [Test]
         public static void LoadMaterial()
         {
-            LoadEmbeddedData(@"data\test_Material.ifc", (filePath) => {
-                var parsed = IFCParser.PreprocessIFC(filePath, geometryEngine: Xbim.Geometry.Abstractions.XGeometryEngineVersion.V6, singleThreading: false);
+            TestUtils.LoadEmbeddedData(@"data\test_Material.ifc", (filePath) => {
+                using var parsed = IFCParser.PreprocessIFC(filePath, geometryEngine: Xbim.Geometry.Abstractions.XGeometryEngineVersion.V6, singleThreading: false);
                 var carbonMaterial = parsed.Materials["Carbon"];
                 Assert.IsTrue(carbonMaterial.ThermalConductivity.ApproximateEquals(100.0) && carbonMaterial.MassDensity.ApproximateEquals(1234.0));
                 Assert.AreEqual(.001, parsed.UnitScale);
@@ -120,39 +255,263 @@ namespace Aardvark.Data.Tests.Ifc
         [Test]
         public static void LoadIfc4x3()
         {
-            LoadEmbeddedData(@"data\Viadotto Acerno_ifc43.ifc", (filePath) => {
-                var parsed = IFCParser.PreprocessIFC(filePath, singleThreading: true);
+            TestUtils.LoadEmbeddedData(@"data\Viadotto Acerno_ifc43.ifc", (filePath) => {
+                using var parsed = IFCParser.PreprocessIFC(filePath, singleThreading: true);
+                TestUtils.AssertConsistent(parsed);
                 Assert.AreEqual(26, parsed.Materials.Count);
+                Assert.Greater(parsed.Content.Count, 0);
             });
+        }
+
+        [Test]
+        public static void EditAfterImportWithoutCaching()
+        {
+            // xBIM refuses to open a transaction while its inverse cache is alive, so loading without caching must allow edits right away
+            var outPath = TestUtils.TempIfcPath();
+            try
+            {
+                TestUtils.LoadEmbeddedData(@"data\wall.ifc", (filePath) => {
+                    using var parsed = IFCParser.PreprocessIFC(filePath, enableCaching: false);
+                    Assert.IsFalse(parsed.IsCaching);
+
+                    using (var txn = parsed.IfcStore.BeginTransaction("Edit imported model"))
+                    {
+                        var wall = parsed.IfcStore.Instances.OfType<IIfcWall>().First();
+                        wall.CreateAttachPropertySet("Edited", new Dictionary<string, object> { { "touched", true } });
+                        txn.Commit();
+                    }
+
+                    Assert.IsEmpty(parsed.IfcStore.ValidateModel());
+                    parsed.IfcStore.SaveAs(outPath);
+                });
+
+                using var reloaded = IfcStore.Open(outPath);
+                var pset = reloaded.Instances.OfType<IIfcWall>().First().GetPropertySet("Edited");
+                Assert.IsNotNull(pset);
+                Assert.AreEqual("touched", pset.HasProperties.Single().Name.ToString());
+            }
+            finally
+            {
+                if (File.Exists(outPath))
+                    File.Delete(outPath);
+            }
+        }
+
+        [Test]
+        public static void EndCachingAllowsEditing()
+        {
+            TestUtils.LoadEmbeddedData(@"data\wall.ifc", (filePath) => {
+                using var parsed = IFCParser.PreprocessIFC(filePath);
+                Assert.IsTrue(parsed.IsCaching);
+
+                parsed.EndCaching();
+                Assert.IsFalse(parsed.IsCaching);
+
+                using (var txn = parsed.IfcStore.BeginTransaction("Edit after caching"))
+                {
+                    var wall = parsed.IfcStore.Instances.OfType<IIfcWall>().First();
+                    wall.CreateAttachPropertySet("Edited", new Dictionary<string, object> { { "touched", true } });
+                    txn.Commit();
+                }
+
+                Assert.IsNotNull(parsed.IfcStore.Instances.OfType<IIfcWall>().First().GetPropertySet("Edited"));
+            });
+        }
+    }
+
+    [TestFixture]
+    public static class RoundTripTest
+    {
+        [Test]
+        public static void ExportThenImport()
+        {
+            var path = TestUtils.TempIfcPath();
+            var box = new Box3d(V3d.Zero, new V3d(500, 300, 200));
+            var offset = new V3d(1000, 2000, 300);
+
+            try
+            {
+                using (var model = TestUtils.CreateModel())
+                {
+                    using (var txn = model.BeginTransaction("Create round trip scene"))
+                    {
+                        var factory = model.Factory();
+                        var site = model.Instances.OfType<IIfcSite>().First();
+                        var mesh = PolyMeshPrimitives.Box(box, C4b.Red);
+                        var redStyle = model.CreateSurfaceStyle(C3d.Red, name: "RoundTripRed");
+
+                        site.AddElement(factory.Wall(w => w.Name = "RoundTripWall").CreateAttachRepresentation(V3d.Zero, mesh, null, redStyle));
+                        site.AddElement(factory.Slab(s => s.Name = "RoundTripSlab").CreateAttachRepresentation(offset, mesh, null, redStyle));
+
+                        txn.Commit();
+                    }
+
+                    Assert.IsEmpty(model.ValidateModel());
+                    model.SaveAs(path);
+                }
+
+                using var parsed = IFCParser.PreprocessIFC(path);
+                TestUtils.AssertConsistent(parsed);
+
+                // CreateMinimalProject defaults to centimetres
+                Assert.AreEqual(0.01, parsed.UnitScale, 1e-12);
+                Assert.AreEqual(2, parsed.Content.Count);
+
+                var wall = parsed.Content.Values.Single(c => c.IFCObject is IIfcWall);
+                var slab = parsed.Content.Values.Single(c => c.IFCObject is IIfcSlab);
+                Assert.AreEqual("RoundTripWall", wall.Name);
+                Assert.AreEqual("RoundTripSlab", slab.Name);
+                Assert.Greater(wall.Mesh.FaceCount, 0);
+                Assert.Greater(slab.Mesh.FaceCount, 0);
+
+                // the placement is part of the instance transformation, so both world boxes must match the exported ones
+                TestUtils.AssertBoxEquals(box, TestUtils.WorldBounds(wall), 1e-3);
+                TestUtils.AssertBoxEquals(box.Translated(offset), TestUtils.WorldBounds(slab), 1e-3);
+
+                // both products share the explicit surface style, which comes back as one style material
+                Assert.AreEqual(1, parsed.Materials.Count);
+                Assert.AreEqual("Style-RoundTripRed", wall.Material.Name);
+                Assert.AreSame(wall.Material, slab.Material);
+                Assert.IsNotNull(wall.Material.Texture);
+
+                // project -> site -> wall, slab
+                var site = parsed.Hierarchy.SubNodes.Single();
+                Assert.IsInstanceOf<IIfcSite>(site.MetaData);
+                Assert.AreEqual(2, site.SubNodes.Count);
+            }
+            finally
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+        }
+    }
+
+    [TestFixture]
+    public static class ConversionTest
+    {
+        [Test]
+        public static void Axis2Placement2DIsRotationNotReflection()
+        {
+            using var model = TestUtils.CreateModel();
+            using var txn = model.BeginTransaction("Create placement");
+
+            // x axis points along +y, so the frame is rotated by 90 degrees counter clockwise
+            var placement = model.CreateAxis2Placement2D(new V2d(10, 20), new V2d(0, 1));
+            var trafo = placement.ToTrafo2D();
+
+            Assert.IsTrue(trafo.Forward.TransformPos(new V2d(1, 0)).ApproximateEquals(new V2d(10, 21), 1e-9));
+            Assert.IsTrue(trafo.Forward.TransformPos(new V2d(0, 1)).ApproximateEquals(new V2d(9, 20), 1e-9));
+
+            // a lifted 2d placement must stay right handed
+            var trafo3d = ((IIfcAxis2Placement)placement).ToTrafo3d();
+            Assert.IsTrue(trafo3d.Forward.C2.XYZ.ApproximateEquals(V3d.ZAxis, 1e-9));
+        }
+
+        [Test]
+        public static void Axis2Placement3DDefaults()
+        {
+            using var model = TestUtils.CreateModel();
+            using var txn = model.BeginTransaction("Create placements");
+            var factory = model.Factory();
+
+            // only the axis is given, the reference direction defaults per IFC to +X or to +Y when the axis is parallel to +X
+            var axisOnly = factory.Axis2Placement3D(a =>
+            {
+                a.Location = model.CreatePoint(new V3d(1, 2, 3));
+                a.Axis = model.CreateDirection(V3d.XAxis);
+            });
+            var trafo = axisOnly.ToTrafo3d();
+            Assert.IsTrue(trafo.Forward.C2.XYZ.ApproximateEquals(V3d.XAxis, 1e-9));
+            Assert.IsTrue(trafo.Forward.C0.XYZ.ApproximateEquals(V3d.YAxis, 1e-9));
+            Assert.IsTrue(trafo.Forward.C1.XYZ.ApproximateEquals(V3d.ZAxis, 1e-9));
+            Assert.IsTrue(trafo.Forward.C3.XYZ.ApproximateEquals(new V3d(1, 2, 3), 1e-9));
+
+            // only the reference direction is given, the axis defaults to +Z
+            var refOnly = factory.Axis2Placement3D(a =>
+            {
+                a.Location = model.CreatePoint(V3d.Zero);
+                a.RefDirection = model.CreateDirection(V3d.YAxis);
+            });
+            var trafoRef = refOnly.ToTrafo3d();
+            Assert.IsTrue(trafoRef.Forward.C0.XYZ.ApproximateEquals(V3d.YAxis, 1e-9));
+            Assert.IsTrue(trafoRef.Forward.C1.XYZ.ApproximateEquals(-V3d.XAxis, 1e-9));
+            Assert.IsTrue(trafoRef.Forward.C2.XYZ.ApproximateEquals(V3d.ZAxis, 1e-9));
+
+            // a reference direction that is not orthogonal to the axis gets projected
+            var skewed = model.CreateAxis2Placement3D(V3d.Zero, new V3d(1, 0, 1), V3d.ZAxis);
+            var trafoSkewed = skewed.ToTrafo3d();
+            Assert.IsTrue(trafoSkewed.Forward.C0.XYZ.ApproximateEquals(V3d.XAxis, 1e-9));
+            Assert.IsTrue(trafoSkewed.Forward.C2.XYZ.ApproximateEquals(V3d.ZAxis, 1e-9));
+        }
+
+        [Test]
+        public static void SimpleValueConversion()
+        {
+            Assert.IsTrue(new IfcInteger(42).TryGetSimpleValue(out int i) && i == 42);
+            Assert.IsTrue(new IfcInteger(42).TryGetSimpleValue(out long l) && l == 42);
+            Assert.IsTrue(new IfcReal(2.5).TryGetSimpleValue(out double d) && d == 2.5);
+            Assert.IsTrue(new IfcBoolean(true).TryGetSimpleValue(out bool b) && b);
+            Assert.IsTrue(new IfcLengthMeasure(12.5).TryGetSimpleValue(out double length) && length == 12.5);
+        }
+
+        [Test]
+        public static void AardvarkPrimitivesTest()
+        {
+            using var model = TestUtils.CreateModel();
+
+            using (var txn = model.BeginTransaction("Convertsion Test"))
+            {
+                V3d[] input = [V3d.Zero, V3d.One, new V3d(1,-5,30)];
+                var test = model.CreateCartesianPointList3D(input);
+                var output = test.ToV3d().ToArray();
+                Assert.AreEqual(input, output);
+
+                var inputLine = model.CreatePolyLine(input);
+                var outputPoints = inputLine.ToV3d();
+                Assert.AreEqual(input, outputPoints);
+
+                var inputBox = Box3d.Unit;
+                var ifcBox = model.Factory().BoundingBox(b => b.Set(inputBox));
+                var outputBox = ifcBox.ToBox3d();
+                Assert.AreEqual(inputBox, outputBox);
+
+                var inputTrafo = Trafo3d.Translation(new V3d(10, 15, 20)) * Trafo3d.RotationXInDegrees(45);
+                var ifcTrafo = model.CreateAxis2Placement3D(inputTrafo.Forward.GetModelOrigin(), inputTrafo.Forward.C0.XYZ, inputTrafo.Forward.C2.XYZ);
+                var outputTrafo = ifcTrafo.ToTrafo3d();
+                var ifcTrafo2 = model.CreateAxis2Placement3D(inputTrafo);
+                var outputTrafo2 = ifcTrafo2.ToTrafo3d();
+                Assert.IsTrue(inputTrafo.ApproximateEquals(outputTrafo, 0.000001) && inputTrafo.ApproximateEquals(outputTrafo2, 0.000001));
+
+                var inputVec = new V3d(10, 10, 0);
+                var ifcVec = model.CreateVector(inputVec);
+                var outputVec = ifcVec.ToV3d();
+                Assert.AreEqual(inputVec, outputVec);
+
+                var inputColor = C3f.Azure;
+                var ifcCol = model.CreateColor(inputColor);
+                var outputColor = ifcCol.ToC3f();
+                Assert.AreEqual(inputColor, outputColor);
+            }
+
+            Assert.IsEmpty(model.ValidateModel());
         }
     }
 
     [TestFixture]
     public static class ExportTest
     {
-        private static readonly XbimEditorCredentials AardvarkTestCredentials = new() {
-            ApplicationDevelopersName = "Aardvark-Developer",
-            ApplicationFullName = "IfcExportTest",
-            ApplicationIdentifier = "Identifier",
-            ApplicationVersion = "1.0",
-            EditorsFamilyName = "Family",
-            EditorsGivenName = "Name",
-            EditorsOrganisationName = "Organisation"
-        };
-        
         [Test]
         public static void PropertyTest()
         {
-            using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
-
-            model.CreateMinimalProject();
+            using var model = TestUtils.CreateModel();
 
             using (var txn = model.BeginTransaction("Create Wall Properties"))
             {
                 var site = model.Instances.OfType<IIfcSite>().FirstOrDefault();
 
-                //create simple object and use lambda initializer to set the name
-                var wall = (Xbim.Ifc4.SharedBldgElements.IfcWall) model.Factory().Wall(w => w.Name = "The very first wall"); // <- remove cast (necessary for PurgePropertySet, SetPropertySingleValue...)
+                // everything below works on the cross-schema interface, no cast to a concrete schema type needed
+                var wall = model.Factory().Wall(w => w.Name = "The very first wall");
                 site.AddElement(wall);
                 var prop = new Dictionary<string, object>
                         {
@@ -188,17 +547,54 @@ namespace Aardvark.Data.Tests.Ifc
             }
 
             Assert.IsEmpty(model.ValidateModel());
-            Assert.IsTrue(model.Instances.OfType<Xbim.Ifc4.SharedBldgElements.IfcWall>().First().PropertySets.Count() == 2); // Set-C with "untouched" and "overrid" AND Set-B
-            model.SaveAs("test_Properties.ifc");
+
+            var result = model.Instances.OfType<IIfcWall>().First();
+            Assert.IsNull(result.GetPropertySet("SetA"));
+            Assert.IsNotNull(result.GetPropertySet("SetB"));
+            Assert.AreEqual(3, result.GetProperties("SetB").Count());
+            Assert.IsTrue(result.GetProperties("SetB").Single(p => p.Name == (IfcIdentifier)"p2").TryGetSimpleValue(out double p2) && p2.ApproximateEquals(123.15));
+
+            var setC = result.GetPropertySet("SetC");
+            Assert.IsNotNull(setC);
+            Assert.AreEqual(2, setC.HasProperties.Count);
+            Assert.AreEqual("override", (string)(IfcText)result.GetPropertySingleValue("SetC", "my_prop1").NominalValue);
+            Assert.IsNull(result.GetPropertySingleValue("SetC", "my_prop3"));
+
+            // purged properties and sets must be gone from the model, not only detached
+            Assert.IsFalse(model.Instances.OfType<IIfcPropertySet>().Any(p => p.Name == "SetA"));
+            Assert.AreEqual(5, model.Instances.OfType<IIfcPropertySingleValue>().Count());
+
+            model.SaveAs(TestUtils.OutputPath("test_Properties.ifc"));
+        }
+
+        [Test]
+        public static void PropertyTest2x3()
+        {
+            // property access through the cross-schema interfaces has to work for IFC2x3 as well
+            using var model = TestUtils.CreateModel(XbimSchemaVersion.Ifc2X3);
+
+            using (var txn = model.BeginTransaction("Create Wall Properties"))
+            {
+                var site = model.Instances.OfType<IIfcSite>().FirstOrDefault();
+                var wall = model.Factory().Wall(w => w.Name = "2x3 wall");
+                site.AddElement(wall);
+                wall.CreateAttachPropertySet("SetA", new Dictionary<string, object> { { "p1", "A" }, { "p2", 123.15 }, { "p3", false } });
+                txn.Commit();
+            }
+
+            Assert.IsEmpty(model.ValidateModel());
+
+            var result = model.Instances.OfType<IIfcWall>().First();
+            Assert.AreEqual(3, result.GetProperties().Count());
+            Assert.AreEqual(3, result.GetPropertiesDict("SetA").Count);
+            Assert.IsTrue(result.GetProperties("SetA").Single(p => p.Name == (IfcIdentifier)"p2").TryGetSimpleValue(out double p2) && p2.ApproximateEquals(123.15));
+            Assert.IsTrue(result.GetProperties("SetA").Single(p => p.Name == (IfcIdentifier)"p3").TryGetSimpleValue(out bool p3) && !p3);
         }
 
         [Test]
         public static void WallTest()
         {
-            using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
-
-            model.CreateMinimalProject();
-            
+            using var model = TestUtils.CreateModel();
 
             using (var txn = model.BeginTransaction("Create Wall"))
             {
@@ -215,12 +611,7 @@ namespace Aardvark.Data.Tests.Ifc
 
                 var box = new Box3d(V3d.Zero, new V3d(200, 100, 500)); // mm
 
-                //// IfcPresentationLayerAssignment is required for CAD presentation
-                //var cadLayer = model.New<IfcPresentationLayerAssignment>(layer =>
-                //{
-                //    layer.Name = "Building Element";
-                //    //layer.AssignedItems.Add(boxShape);
-                //});
+                // IfcPresentationLayerAssignment is required for CAD presentation
                 var cadLayer = model.CreateLayer("Building Element");
 
                 var boxShape = model.CreateShapeRepresentationSolidBox(box, cadLayer);
@@ -232,6 +623,10 @@ namespace Aardvark.Data.Tests.Ifc
                 // create visual style
                 repItem.CreateStyleItem(defaultStyle);
 
+                // the surface helper must not flip the caller's polygon
+                var polygon = new Polygon2d(Enumerable.Reverse(box.XY.Translated(-box.XY.Center).ComputeCornersCCW()).ToArray());
+                var firstPoint = polygon[0];
+
                 wall.Representation =
                     factory.ProductDefinitionShape(definition =>
                     {
@@ -242,21 +637,23 @@ namespace Aardvark.Data.Tests.Ifc
                             model.CreateShapeRepresentationBoundingBox(box),
                             model.CreateShapeRepresentationSurface(Plane3d.XPlane, new Polygon2d(box.YZ.Translated(-box.YZ.Center).ComputeCornersCCW())),
                             model.CreateShapeRepresentationSurface(Plane3d.YPlane, new Polygon2d(box.XZ.Translated(-box.XZ.Center).ComputeCornersCCW())),
-                            model.CreateShapeRepresentationSurface(Plane3d.ZPlane, new Polygon2d(box.XY.Translated(-box.XY.Center).ComputeCornersCCW())),
+                            model.CreateShapeRepresentationSurface(Plane3d.ZPlane, polygon),
                         ]);
                     });
+
+                Assert.AreEqual(firstPoint, polygon[0]);
 
                 txn.Commit();
             }
 
             Assert.IsEmpty(model.ValidateModel());
-            model.SaveAs("test_TestWall.ifc");
+            model.SaveAs(TestUtils.OutputPath("test_TestWall.ifc"));
         }
 
         [Test]
         public static void WallTest2X3()
         {
-            using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc2X3, XbimStoreType.InMemoryModel);
+            using var model = IfcStore.Create(TestUtils.AardvarkTestCredentials, XbimSchemaVersion.Ifc2X3, XbimStoreType.InMemoryModel);
 
             var factory = new EntityCreator(model);
 
@@ -372,20 +769,18 @@ namespace Aardvark.Data.Tests.Ifc
                 error.Details.ForEach(detail => Report.Line(detail.IssueSource + " " + detail.IssueType));
             });
 
-            //// OUTPUT: 
+            //// OUTPUT:
             //  0: Entity #49=IFCSTYLEDITEM(#40,(),$); has validation failures. with 1
             //  0: IfcStyledItem.WR11 EntityWhereClauses
 
-            model.SaveAs("test_TestWall2x3.ifc");
+            model.SaveAs(TestUtils.OutputPath("test_TestWall2x3.ifc"));
             //Assert.IsEmpty(result);   // TODO.. check with later version of xBIM Essentials
         }
 
         [Test]
         public static void GeometryTest()
         {
-            using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
-
-            model.CreateMinimalProject();
+            using var model = TestUtils.CreateModel();
 
             using (var txn = model.BeginTransaction("Create Geometries"))
             {
@@ -412,15 +807,24 @@ namespace Aardvark.Data.Tests.Ifc
             }
 
             Assert.IsEmpty(model.ValidateModel());
-            model.SaveAs("test_Geometries.ifc");
+
+            // one representation per wall, IFC4 uses tessellated face sets
+            var walls = model.Instances.OfType<IIfcWall>().ToArray();
+            Assert.AreEqual(6, walls.Length);
+            foreach (var wall in walls)
+            {
+                var body = wall.Representation.Representations.OfType<IIfcShapeRepresentation>().Single();
+                Assert.AreEqual("Tessellation", body.RepresentationType.ToString());
+                Assert.IsInstanceOf<IIfcTessellatedFaceSet>(body.Items.Single());
+            }
+
+            model.SaveAs(TestUtils.OutputPath("test_Geometries.ifc"));
         }
 
         [Test]
         public static void LightTest()
         {
-            using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
-
-            model.CreateMinimalProject();
+            using var model = TestUtils.CreateModel();
 
             using (var txn = model.BeginTransaction("Create Light"))
             {
@@ -451,7 +855,7 @@ namespace Aardvark.Data.Tests.Ifc
                 var generalInfo = model.CreatePropertySet("General Information", prop);
 
                 var lightType = model.CreateLightType(IfcLightFixtureTypeEnum.POINTSOURCE, [repMap], [generalInfo]);
-                
+
                 // instantiate via light-type
                 var li = lightType.Instantiate("Empty_Light_fromtype", model.CreateLocalPlacement(-shiftVec), Trafo3d.RotationZInDegrees(45), IfcLightFixtureTypeEnum.POINTSOURCE);
                 li.AddPropertySet(model.Pset_LightFixtureTypeCommon("reference", 1, 1000, 20, 50, 20, 33, "working", "hanging", "ceiling"));
@@ -467,7 +871,7 @@ namespace Aardvark.Data.Tests.Ifc
 
                 site.AddElement(model.CreateLightPositional("Positional_Light", C3d.Green, new V3d(0, 0, 2000), 150, V3d.Zero, model.CreateLocalPlacement(3 * shiftVec), repMap.Instantiate(trafo4)));
                 site.AddElement(model.CreateLightSpot("Spot_Light", C3d.Yellow, new V3d(0, 0, 1000), V3d.ZAxis, 100, V3d.Zero, 50, 20, model.CreateLocalPlacement(4 * shiftVec), repMap.Instantiate(trafo5)));
-                
+
                 var dist = model.CreateLightIntensityDistribution(IfcLightDistributionCurveEnum.TYPE_C, []);
                 site.AddElement(model.CreateLightGoniometric("Goniometric_Light", C3d.Orange, new V3d(0, 0, 3000), 3500, 1000, dist, model.CreateLocalPlacement(5 * shiftVec), repMap.Instantiate(trafo6)));
 
@@ -475,15 +879,18 @@ namespace Aardvark.Data.Tests.Ifc
             }
 
             Assert.IsEmpty(model.ValidateModel());
-            model.SaveAs("test_Lights.ifc");
+
+            // the instantiated light got the quantity set through the cross-schema interface
+            var typed = model.Instances.OfType<IIfcLightFixture>().First(l => l.Name == "Empty_Light_fromtype");
+            Assert.IsTrue(typed.GetQuantities().OfType<IIfcQuantityWeight>().Single().TryGetSimpleValue(out double weight) && weight == 50);
+
+            model.SaveAs(TestUtils.OutputPath("test_Lights.ifc"));
         }
 
         [Test]
         public static void LightTest2x3()
         {
-            using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc2X3, XbimStoreType.InMemoryModel);
-
-            model.CreateMinimalProject();
+            using var model = TestUtils.CreateModel(XbimSchemaVersion.Ifc2X3);
 
             using (var txn = model.BeginTransaction("Create Light"))
             {
@@ -525,7 +932,7 @@ namespace Aardvark.Data.Tests.Ifc
                 site.AddElement(model.CreateLightAmbientIFC2x3("Ambient_Light", C3d.Red, model.CreateLocalPlacement(shiftVec), repMap.Instantiate(trafo2)).AttachPropertySet(generalInfo));
 
                 // properties linked via light-type
-                site.AddElement(model.CreateLightDirectionalIFC2x3("Directional_Light", C3d.Blue, V3d.ZAxis, model.CreateLocalPlacement(2 * shiftVec), repMap.Instantiate(trafo3))); 
+                site.AddElement(model.CreateLightDirectionalIFC2x3("Directional_Light", C3d.Blue, V3d.ZAxis, model.CreateLocalPlacement(2 * shiftVec), repMap.Instantiate(trafo3)));
                 // .LinkToType(lightType) <- Only maximum of one relationship to an underlying type (by an IfcRelDefinesByType relationship) should be given for an object instance. In case for IFC2x3 an ObjectType is created by default!
 
                 site.AddElement(model.CreateLightPositionalIFC2x3("Positional_Light", C3d.Green, new V3d(0, 0, 2000), 150, V3d.Zero, model.CreateLocalPlacement(3 * shiftVec), repMap.Instantiate(trafo4)));
@@ -538,18 +945,16 @@ namespace Aardvark.Data.Tests.Ifc
             }
 
             Assert.IsEmpty(model.ValidateModel());
-            model.SaveAs("test_Lights2x3.ifc");
+            model.SaveAs(TestUtils.OutputPath("test_Lights2x3.ifc"));
         }
 
         [Test]
         public static void MaterialTest()
         {
-            using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
+            using var model = TestUtils.CreateModel();
 
             var massDensity = 1234.0;
             var thermalConductivity = 100;
-
-            model.CreateMinimalProject();
 
             using (var txn = model.BeginTransaction("Create Slab with Material"))
             {
@@ -557,8 +962,8 @@ namespace Aardvark.Data.Tests.Ifc
 
                 var site = model.Instances.OfType<IIfcSite>().FirstOrDefault();
 
-                // MATERIAL
-                var material = (Xbim.Ifc4.MaterialResource.IfcMaterial) factory.Material(m => m.Name = "Carbon"); // <- remove cast!
+                // MATERIAL, property sets are attached through the cross-schema interface
+                var material = factory.Material(m => m.Name = "Carbon");
                 material.CreateAttachPsetMaterialCommon(98.7654, 0.54, massDensity);
                 material.CreateAttachPsetMaterialThermal(thermalConductivity, 500, 99, -10);
                 material.CreateAttachStyledRepresentation(C3d.Magenta);
@@ -610,23 +1015,32 @@ namespace Aardvark.Data.Tests.Ifc
             Assert.IsEmpty(model.ValidateModel());
 
             var mat = model.Instances.OfType<IIfcMaterial>().First();
+            Assert.AreEqual(2, mat.HasProperties.Count());
 
             var myMaterial = IFCParser.GetMaterial(mat);
             Assert.IsTrue(myMaterial.MassDensity == massDensity);
             Assert.IsTrue(myMaterial.ThermalConductivity == thermalConductivity);
+            Assert.IsTrue(myMaterial.SpecificHeatCapacity == 500);
+            Assert.IsNotNull(myMaterial.Texture);
 
             // Cast to IIfcMaterial results into invalid null values for the first 3 properties in .NET8.0 -> resolved with xbim issue #595 in xbim.essentials 6.0.493
-            var properties = mat.HasProperties.SelectMany(a => a.Properties).ToArray(); 
+            var properties = mat.HasProperties.SelectMany(a => a.Properties).ToArray();
+            Assert.AreEqual(7, properties.Length);
             properties.ForEach(Assert.IsNotNull);
 
-            model.SaveAs("test_Material.ifc");
+            // the associated material is found through the layer set usage
+            var collected = new List<IFCMaterial>();
+            IFCParser.GetAssociatedMaterials(model.Instances.OfType<IIfcRelAssociatesMaterial>().First().RelatingMaterial, collected);
+            Assert.AreEqual(1, collected.Count);
+            Assert.AreEqual("Carbon", collected[0].Name);
+
+            model.SaveAs(TestUtils.OutputPath("test_Material.ifc"));
         }
 
         [Test]
         public static void GridPlacementTest()
         {
-            using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
-            model.CreateMinimalProject();
+            using var model = TestUtils.CreateModel();
 
             var mesh = PolyMeshPrimitives.Box(new Box3d(V3d.Zero, new V3d(100, 100, 1000.0)), C4b.Yellow);
 
@@ -713,7 +1127,11 @@ namespace Aardvark.Data.Tests.Ifc
 
             Assert.IsEmpty(model.ValidateModel());
 
-            model.SaveAs("test_GridPlacement.ifc");
+            // 3 x 3 columns placed locally and the same number placed on the grid intersections
+            Assert.AreEqual(9, model.Instances.OfType<IIfcColumn>().Count(c => c.Name == "col_calc"));
+            Assert.AreEqual(9, model.Instances.OfType<IIfcColumn>().Count(c => c.Name == "col_grid"));
+
+            model.SaveAs(TestUtils.OutputPath("test_GridPlacement.ifc"));
         }
 
         [Test]
@@ -751,9 +1169,7 @@ namespace Aardvark.Data.Tests.Ifc
                 });
             }
 
-            using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
-            
-            model.CreateMinimalProject();
+            using var model = TestUtils.CreateModel();
 
             using (var txn = model.BeginTransaction("Create Grid with Annotations"))
             {
@@ -823,15 +1239,13 @@ namespace Aardvark.Data.Tests.Ifc
             Assert.IsEmpty(model.ValidateModel());
 
             // Save the IFC file
-            model.SaveAs("test_AnnotationGrid.ifc");
+            model.SaveAs(TestUtils.OutputPath("test_AnnotationGrid.ifc"));
         }
 
         [Test]
         public static void AxisRepresentation()
         {
-            using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
-
-            model.CreateMinimalProject();
+            using var model = TestUtils.CreateModel();
 
             IIfcBuildingElementProxy withBody;
             IIfcBuildingElementProxy axisOnly;
@@ -911,7 +1325,7 @@ namespace Aardvark.Data.Tests.Ifc
             Assert.AreSame(withBodyReps[1].ContextOfItems, withGapReps[0].ContextOfItems);
             Assert.AreEqual(1, model.Instances.OfType<IIfcGeometricRepresentationSubContext>().Count(c => c.ContextIdentifier.ToString() == "Axis"));
 
-            model.SaveAs("test_AxisRepresentation.ifc");
+            model.SaveAs(TestUtils.OutputPath("test_AxisRepresentation.ifc"));
         }
 
         static void AssertAxis(IIfcShapeRepresentation rep, int expectedSegments)
@@ -923,50 +1337,6 @@ namespace Aardvark.Data.Tests.Ifc
             Assert.IsNotNull(curve);
             Assert.IsInstanceOf<IIfcCartesianPointList3D>(curve.Points);
             Assert.AreEqual(expectedSegments, curve.Segments.Count);
-        }
-
-        [Test]
-        public static void AardvarkPrimitivesTest()
-        {
-            using var model = IfcStore.Create(AardvarkTestCredentials, XbimSchemaVersion.Ifc4, XbimStoreType.InMemoryModel);
-
-            model.CreateMinimalProject();
-
-            using (var txn = model.BeginTransaction("Convertsion Test"))
-            {
-                V3d[] input = [V3d.Zero, V3d.One, new V3d(1,-5,30)];
-                var test = model.CreateCartesianPointList3D(input);
-                var output = test.ToV3d().ToArray();
-                Assert.AreEqual(input, output);
-
-                var inputLine = model.CreatePolyLine(input);
-                var outputPoints = inputLine.ToV3d();
-                Assert.AreEqual(input, outputPoints);
-
-                var inputBox = Box3d.Unit;
-                var ifcBox = model.Factory().BoundingBox(b => b.Set(inputBox));
-                var outputBox = ifcBox.ToBox3d();
-                Assert.AreEqual(inputBox, outputBox);
-
-                var inputTrafo = Trafo3d.Translation(new V3d(10, 15, 20)) * Trafo3d.RotationXInDegrees(45);
-                var ifcTrafo = model.CreateAxis2Placement3D(inputTrafo.Forward.GetModelOrigin(), inputTrafo.Forward.C0.XYZ, inputTrafo.Forward.C2.XYZ);
-                var outputTrafo = ifcTrafo.ToTrafo3d();
-                var ifcTrafo2 = model.CreateAxis2Placement3D(inputTrafo);
-                var outputTrafo2 = ifcTrafo2.ToTrafo3d();
-                Assert.IsTrue(inputTrafo.ApproximateEquals(outputTrafo, 0.000001) && inputTrafo.ApproximateEquals(outputTrafo2, 0.000001));
-
-                var inputVec = new V3d(10, 10, 0);
-                var ifcVec = model.CreateVector(inputVec);
-                var outputVec = ifcVec.ToV3d();
-                Assert.AreEqual(inputVec, outputVec);
-
-                var inputColor = C3f.Azure;
-                var ifcCol = model.CreateColor(inputColor);
-                var outputColor = ifcCol.ToC3f();
-                Assert.AreEqual(inputColor, outputColor);
-            }
-
-            Assert.IsEmpty(model.ValidateModel());
         }
     }
 }

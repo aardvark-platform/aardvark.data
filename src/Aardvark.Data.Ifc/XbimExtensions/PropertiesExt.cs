@@ -9,7 +9,6 @@ using Xbim.Ifc;
 using Xbim.Ifc.Extensions;
 using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.DateTimeResource;
-using Xbim.Ifc4.Kernel;
 using Xbim.Ifc4.MeasureResource;
 
 namespace Aardvark.Data.Ifc
@@ -21,7 +20,7 @@ namespace Aardvark.Data.Ifc
 
         public static IEnumerable<IIfcPropertySingleValue> GetProperties(this IIfcObject o)
         {
-            // TODO: misses to query for Ifc2x3 IsDefinedByProperties
+            // xBIM's cross-schema interface maps IsDefinedBy to IfcRelDefinesByProperties for all schemas, so this also covers IFC2x3
             return o.IsDefinedBy.Where(r => r.RelatingPropertyDefinition is IIfcPropertySet)
                     .SelectMany(r => ((IIfcPropertySet)r.RelatingPropertyDefinition).HasProperties)
                     .OfType<IIfcPropertySingleValue>();
@@ -69,37 +68,25 @@ namespace Aardvark.Data.Ifc
             return o.GetPropertyFromType(name);
         }
 
-        public static IIfcValue GetArea(this IfcObject o)
+        /// <summary>
+        /// All quantities of all element quantity sets attached to the object.
+        /// </summary>
+        public static IEnumerable<IIfcPhysicalQuantity> GetQuantities(this IIfcObject o)
         {
-            // short-cut
-            var area = o.PhysicalSimpleQuantities.OfType<IIfcQuantityArea>().FirstOrDefault()?.AreaValue; //.TryGetSimpleValue(out double areaValue);
+            return o.IsDefinedBy
+                    .SelectMany(r => r.RelatingPropertyDefinition.PropertySetDefinitions)
+                    .OfType<IIfcElementQuantity>()
+                    .SelectMany(qset => qset.Quantities);
+        }
 
-            ////try to get the value from quantities first
-            //var area =
-            //    //get all relations which can define property and quantity sets
-            //    obj.IsDefinedBy
-
-            //    //Search across all property and quantity sets. 
-            //    //You might also want to search in a specific quantity set by name
-            //    .SelectMany(r => r.RelatingPropertyDefinition.PropertySetDefinitions)
-
-            //    //Only consider quantity sets in this case.
-            //    .OfType<IIfcElementQuantity>()
-
-            //    //Get all quantities from all quantity sets
-            //    .SelectMany(qset => qset.Quantities)
-
-            //    //We are only interested in areas 
-            //    .OfType<IIfcQuantityArea>()
-
-            //    //We will take the first one. There might obviously be more than one area properties
-            //    //so you might want to check the name. But we will keep it simple for this example.
-            //    .FirstOrDefault()?.AreaValue;
-
+        public static IIfcValue GetArea(this IIfcObject o)
+        {
+            // quantities first, there might be more than one area so the first one is taken
+            var area = o.GetQuantities().OfType<IIfcQuantityArea>().FirstOrDefault()?.AreaValue;
             if (area != null) return area;
 
-            //try to get the value from properties
-            return GetProperty(o, "Area"); // .TryGetSimpleValue(out double areaValue2);
+            // otherwise try to get the value from properties
+            return GetProperty(o, "Area");
         }
 
         #region Property-Value
@@ -248,7 +235,7 @@ namespace Aardvark.Data.Ifc
                 return false;
             }
 
-            if (targetType == typeof(int) || targetType == typeof(int?) || targetType == typeof(long) || targetType == typeof(long?))
+            if (targetType == typeof(int) || targetType == typeof(int?))
             {
                 try
                 {
@@ -259,8 +246,31 @@ namespace Aardvark.Data.Ifc
                 {
                     if (ex is NullReferenceException || ex is ArgumentNullException)
                     {
+                        if (targetType == typeof(int?))
+                        {
+                            result = default;
+                            return true;
+                        }
+                    }
+                }
 
-                        if (targetType == typeof(int?) || targetType == typeof(long?))
+                result = default;
+                return false;
+            }
+
+            if (targetType == typeof(long) || targetType == typeof(long?))
+            {
+                // unboxing a boxed int as long throws, so the conversion has to target long explicitly
+                try
+                {
+                    result = (T)(object)Convert.ToInt64(ifcValue.Value);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    if (ex is NullReferenceException || ex is ArgumentNullException)
+                    {
+                        if (targetType == typeof(long?))
                         {
                             result = default;
                             return true;
@@ -449,7 +459,10 @@ namespace Aardvark.Data.Ifc
             return set;
         }
 
-        public static void PurgePropertySingleValue(this IfcObject o, string pSetName, string propertyName)
+        private static IIfcRelDefinesByProperties GetDefiningRelation(this IIfcObject o, string pSetName)
+            => o.IsDefinedBy.FirstOrDefault(r => r.RelatingPropertyDefinition.PropertySetDefinitions.Any(a => a.Name == pSetName));
+
+        public static void PurgePropertySingleValue(this IIfcObject o, string pSetName, string propertyName)
         {
             // removes property and in case of single-propset resulting empty set globally
             // CAUTION: affects all objects re-using it
@@ -469,7 +482,7 @@ namespace Aardvark.Data.Ifc
                 if (propertySet.HasProperties.IsEmpty())
                 {
                     // remove reference of empty set and object
-                    var rel = o.IsDefinedBy.FirstOrDefault((IfcRelDefinesByProperties r) => r.RelatingPropertyDefinition.PropertySetDefinitions.FirstOrDefault(a => a.Name == pSetName) != null);
+                    var rel = o.GetDefiningRelation(pSetName);
                     if (rel != null) o.Model.Delete(rel);
 
                     // remove empty set from model
@@ -478,7 +491,7 @@ namespace Aardvark.Data.Ifc
             }
         }
 
-        public static void PurgePropertySet(this IfcObject o, string pSetName)
+        public static void PurgePropertySet(this IIfcObject o, string pSetName)
         {
             // removes set and all its properties globally
             // CAUTION: affects all objects re-using it
@@ -492,11 +505,11 @@ namespace Aardvark.Data.Ifc
                 // release properties from set
                 propertySet.HasProperties.Clear();
 
-                // detlete properties from model
+                // delete properties from model
                 temp.ForEach(o.Model.Delete);
 
                 // remove reference of empty set and object
-                var rel = o.IsDefinedBy.FirstOrDefault((IfcRelDefinesByProperties r) => r.RelatingPropertyDefinition.PropertySetDefinitions.FirstOrDefault(a => a.Name == pSetName) != null);
+                var rel = o.GetDefiningRelation(pSetName);
                 if (rel != null) o.Model.Delete(rel);
 
                 // remove empty set from model

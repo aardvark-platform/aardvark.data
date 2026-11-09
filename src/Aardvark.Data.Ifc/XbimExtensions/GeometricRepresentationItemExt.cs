@@ -102,12 +102,22 @@ namespace Aardvark.Data.Ifc
         #region Axis2Placement3D
         public static Trafo3d ToTrafo3d(this IIfcAxis2Placement3D p)
         {
-            if (p.RefDirection == null || p.Axis == null) return Trafo3d.Translation(p.Location.ToV3d());
-            
-            var xAxis = p.RefDirection == null ? V3d.XAxis : p.RefDirection.ToV3d();
-            var zAxis = p.Axis == null ? V3d.ZAxis : p.Axis.ToV3d();
+            var location = p.Location.ToV3d();
+            if ((p.RefDirection == null) && (p.Axis == null))
+                return Trafo3d.Translation(location);
+
+            // IFC defaults: a missing Axis is +Z, a missing RefDirection is +X unless Axis is parallel to it, then +Y (IfcBuildAxes / IfcFirstProjAxis)
+            var zAxis = (p.Axis == null) ? V3d.ZAxis : p.Axis.ToV3d().Normalized;
+            V3d xAxis;
+            if (p.RefDirection != null)
+                xAxis = p.RefDirection.ToV3d();
+            else
+                xAxis = (zAxis.Cross(V3d.XAxis).LengthSquared < 1e-12) ? V3d.YAxis : V3d.XAxis;
+
+            // RefDirection only has to be non-parallel to Axis, so project it to get an orthonormal frame
+            xAxis = (xAxis - zAxis * zAxis.Dot(xAxis)).Normalized;
             var yAxis = zAxis.Cross(xAxis);
-            return Trafo3d.FromBasis(xAxis, yAxis, zAxis, p.Location.ToV3d());
+            return Trafo3d.FromBasis(xAxis, yAxis, zAxis, location);
         }
 
         public static Trafo3d ToTrafo3d(this IIfcAxis2Placement3D p, ConcurrentDictionary<int, object> maps = null)
@@ -146,8 +156,10 @@ namespace Aardvark.Data.Ifc
 
             if (obj.RefDirection != null)
             {
-                var dir = obj.RefDirection.ToV2d();
-                transform = Trafo2d.FromBasis(dir.XY, dir.YX, obj.Location.ToV2d());
+                // the y axis is the x axis rotated by 90 degrees, swapping the components would give a reflection
+                var xAxis = obj.RefDirection.ToV2d().Normalized;
+                var yAxis = new V2d(-xAxis.Y, xAxis.X);
+                transform = Trafo2d.FromBasis(xAxis, yAxis, obj.Location.ToV2d());
             }
             else
                 transform = Trafo2d.Translation(obj.Location.ToV2d());

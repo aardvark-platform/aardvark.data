@@ -250,20 +250,24 @@ IFCData IFCParser.PreprocessIFC(
     string filePath,
     XbimEditorCredentials editor = null,
     XGeometryEngineVersion geometryEngine = XGeometryEngineVersion.V6,
-    bool singleThreading = true)
+    bool singleThreading = true,
+    bool enableCaching = true)   // xBIM caches for fast queries; blocks transactions until EndCaching()
 ```
 
 ### Key Types
 
 **IFCData:**
 ```csharp
-class IFCData
+class IFCData : IDisposable
 {
-    IfcStore Model { get; }
-    Dict<IfcGloballyUniqueId, IFCContent> Content { get; }
+    IfcStore IfcStore { get; }
+    Dict<IfcGloballyUniqueId, IFCContent> Content { get; }   // one entry per shape instance, keyed by product GUID
+    IFCNode Hierarchy { get; }                                // project -> spatial structure -> products
     Dictionary<string, IFCMaterial> Materials { get; }
-    double ProjectScale { get; }
-    // Caching handles, hierarchy, etc.
+    double UnitScale { get; }                                 // length unit to metres, e.g. 0.001 for mm
+    IIfcProject Project { get; }
+    bool IsCaching { get; }
+    void EndCaching();                                        // required before IfcStore.BeginTransaction
 }
 ```
 
@@ -271,11 +275,13 @@ class IFCData
 ```csharp
 class IFCContent
 {
-    IIfcObject IfcObject { get; }
-    PolyMesh Geometry { get; }
-    Trafo3d Trafo { get; }
+    IIfcObject IFCObject { get; }
+    PolyMesh Mesh { get; }                                    // local coordinates in model units
+    Trafo3d Trafo { get; }                                    // instance transformation (placement)
     IFCMaterial Material { get; }
-    string RepresentationType { get; }
+    XbimGeometryRepresentationType RepresentationType { get; }
+    string Name { get; }
+    string ExpressType { get; }
 }
 ```
 
@@ -284,10 +290,10 @@ class IFCContent
 class IFCMaterial
 {
     string Name { get; }
-    XbimTexture Texture { get; }
-    double? ThermalConductivity { get; }
-    double? SpecificHeatCapacity { get; }
-    double? MassDensity { get; }
+    XbimTexture Texture { get; }       // null for materials without visual representation
+    double ThermalConductivity { get; }  // 0.0 when not defined
+    double SpecificHeatCapacity { get; }
+    double MassDensity { get; }
 }
 ```
 
@@ -297,7 +303,7 @@ class IFCMaterial
 var ifcData = IFCParser.PreprocessIFC(@"C:\buildings\model.ifc", singleThreading: true);
 
 // Access scale
-double scale = ifcData.ProjectScale; // Typically 1e-3 for mm units
+double scale = ifcData.UnitScale; // Typically 1e-3 for mm units
 
 // Iterate geometry
 foreach (var kvp in ifcData.Content)
@@ -305,16 +311,26 @@ foreach (var kvp in ifcData.Content)
     var guid = kvp.Key;
     var content = kvp.Value;
 
-    var ifcObject = content.IfcObject;
-    var name = ifcObject.Name?.ToString() ?? "Unnamed";
-    var type = ifcObject.GetType().Name;
+    var ifcObject = content.IFCObject;
+    var name = content.Name ?? "Unnamed";
+    var type = content.ExpressType;
 
-    var mesh = content.Geometry;
+    var mesh = content.Mesh;
     var trafo = content.Trafo;
     var material = content.Material;
 
     Report.Line($"{type}: {name} - {mesh.VertexCount} vertices");
 }
+
+// Edit the imported model (xBIM forbids transactions while caching)
+ifcData.EndCaching();
+using (var txn = ifcData.IfcStore.BeginTransaction("edit"))
+{
+    var wall = ifcData.IfcStore.Instances.OfType<IIfcWall>().First();
+    wall.CreateAttachPropertySet("MySet", new Dictionary<string, object> { { "checked", true } });
+    txn.Commit();
+}
+ifcData.IfcStore.SaveAs(@"C:\buildings\model_edited.ifc");
 
 // Dispose properly
 ifcData.Dispose();
@@ -346,9 +362,10 @@ IFC loader returns `PolyMesh` per building element:
 ```csharp
 var ifc = IFCParser.PreprocessIFC(path, singleThreading: true);
 
-foreach (var (guid, content) in ifc.Content)
+foreach (var kvp in ifc.Content)
 {
-    PolyMesh mesh = content.Geometry;
+    var content = kvp.Value;
+    PolyMesh mesh = content.Mesh;
 
     // Clean up mesh (remove degenerate triangles, merge vertices)
     mesh = mesh.WithCompactedVertices;
@@ -356,9 +373,9 @@ foreach (var (guid, content) in ifc.Content)
     // Optional: cluster nearby vertices
     // mesh = mesh.WithClusteredVertices(1e-3);
 
-    // Access material
+    // Access material (Texture is null for name-only materials)
     var material = content.Material;
-    var color = material?.Texture?.Color ?? C4f.White;
+    var texture = material?.Texture;
 }
 ```
 
@@ -377,12 +394,13 @@ var ifc = IFCParser.PreprocessIFC(path, singleThreading: true);
 
 // Group by building storey for spatial organization
 var byStorey = ifc.Content
-    .GroupBy(kvp => GetStoreyName(kvp.Value.IfcObject))
+    .GroupBy(kvp => GetStoreyName(kvp.Value.IFCObject))
     .ToDictionary(g => g.Key, g => g.ToList());
 
 // Process one storey at a time, dispose early
-foreach (var (storey, elements) in byStorey)
+foreach (var kvp in byStorey)
 {
+    var (storey, elements) = (kvp.Key, kvp.Value);
     ProcessStorey(storey, elements);
     // Allow GC between storeys
 }
@@ -396,18 +414,29 @@ ifc.Dispose();  // Always dispose when done
 class IFCMaterial
 {
     string Name;
-    XbimTexture Texture;           // Contains Color (C4f)
-    double? ThermalConductivity;   // Physical properties
-    double? SpecificHeatCapacity;
-    double? MassDensity;
+    XbimTexture Texture;          // xBIM surface style (colour map), null for name-only materials
+    double ThermalConductivity;   // Physical properties, 0.0 when not defined
+    double SpecificHeatCapacity;
+    double MassDensity;
 }
 
-// Convert to rendering material
-var renderMaterial = new PbrMaterial {
-    BaseColor = ifcMaterial.Texture?.Color ?? C4f.Gray,
-    Roughness = 0.8f,  // IFC doesn't provide PBR params
-    Metallic = 0.0f
-};
+// Material names: "Style-<IfcSurfaceStyle.Name>" for styled shapes,
+// "DefMat-<IfcType>" for xBIM's per-type default colour, otherwise the IfcMaterial name
+```
+
+**Edit After Import:**
+```csharp
+// xBIM forbids transactions while its inverse cache is active
+var ifc = IFCParser.PreprocessIFC(path, enableCaching: false);   // or call ifc.EndCaching() later
+using (var txn = ifc.IfcStore.BeginTransaction("edit"))
+{
+    // IIfcObject / IIfcProduct extension helpers, no casts to a concrete schema needed
+    var wall = ifc.IfcStore.Instances.OfType<IIfcWall>().First();
+    wall.CreateAttachPropertySet("Pset_Custom", new Dictionary<string, object> { { "Checked", true } });
+    wall.PurgePropertySet("Pset_Obsolete");
+    txn.Commit();
+}
+ifc.IfcStore.SaveAs(outPath);
 ```
 
 ---

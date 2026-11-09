@@ -42,11 +42,12 @@ foreach (var fs in obj.FaceSets)
 
 // IFC (building models) - always use singleThreading!
 var ifc = IFCParser.PreprocessIFC("building.ifc", singleThreading: true);
-foreach (var (guid, content) in ifc.Content)
+foreach (var kvp in ifc.Content)
 {
-    PolyMesh mesh = content.Geometry;
-    Trafo3d trafo = content.Trafo;
+    PolyMesh mesh = kvp.Value.Mesh;    // local coordinates
+    Trafo3d trafo = kvp.Value.Trafo;   // instance placement
 }
+ifc.EndCaching();                      // required before IfcStore.BeginTransaction (xBIM forbids transactions while caching)
 
 // VRML97
 var scene = SceneLoader.Load("scene.wrl");

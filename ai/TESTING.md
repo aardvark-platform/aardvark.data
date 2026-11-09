@@ -136,7 +136,7 @@ let ``GLTF.roundtrip GLB``() =
 ### IfcTests (NUnit)
 **Location**: `src/Tests/IfcTests/`
 **Framework**: NUnit
-**Target**: .NET Framework 4.7.2 + .NET 8.0 (multi-targeting)
+**Target**: .NET Framework 4.7.2 + .NET 10.0 (multi-targeting), Windows only in CI (needs the xBIM geometry engine)
 
 **Structure**:
 - `IfcTests.cs` - IFC (Industry Foundation Classes) loading and export tests
@@ -144,10 +144,11 @@ let ``GLTF.roundtrip GLB``() =
   - `simple_scene.ifc`, `slab.ifc`, `surface-model.ifc`, `test_Material.ifc`, `Viadotto Acerno_ifc43.ifc`, `wall.ifc`
 
 **Patterns**:
-- `LoadEmbeddedData` helper extracts embedded resources to temp files
-- Test fixtures: `LoadingTest` and `ExportTest`
+- `TestUtils.LoadEmbeddedData` extracts embedded resources to temp files, `TestUtils.CreateModel` builds an in-memory store with a minimal project
+- `TestUtils.AssertConsistent` checks mesh, material and hierarchy of every parsed product
+- Test fixtures: `LoadingTest` (import, edit after import), `RoundTripTest` (export then import), `ConversionTest` (Aardvark <-> IFC primitives), `ExportTest` (model creation, validated with xBIM's validator)
+- Exported models are written to `ifc-output/` in the test work directory for inspection in a BIM viewer
 - Static test methods
-- Tests create IFC models programmatically and validate against schema
 
 **Example**:
 ```csharp
@@ -157,8 +158,9 @@ public static class LoadingTest
     [Test]
     public static void LoadPrimitive()
     {
-        LoadEmbeddedData(@"data\surface-model.ifc", (filePath) => {
-            var parsed = IFCParser.PreprocessIFC(filePath);
+        TestUtils.LoadEmbeddedData(@"data\surface-model.ifc", (filePath) => {
+            using var parsed = IFCParser.PreprocessIFC(filePath);
+            TestUtils.AssertConsistent(parsed);
             Assert.AreEqual(1, parsed.Materials.Count);
         });
     }
@@ -400,7 +402,7 @@ use stream = asm.GetManifestResourceStream(name)
 5. **Property-based tests**:
    - Can be slow with default iteration count
    - Use `[<Property(MaxTest = 10)>]` to limit iterations during development
-6. **Multi-targeting (IfcTests)**: Tests run on both .NET Framework 4.7.2 and .NET 8.0
+6. **Multi-targeting (IfcTests)**: Tests run on both .NET Framework 4.7.2 and .NET 10.0
 7. **Benchmarks need Release mode**: `dotnet run -c Release` for accurate results
 8. **FsCheck generators**: Must be provided via `Arbitrary` parameter, not auto-discovered
 9. **Test data paths**: Use `Path.Combine` or `Path.combine` (F#), never hardcoded `\` or `/`

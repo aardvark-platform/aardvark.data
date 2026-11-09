@@ -12,9 +12,9 @@ namespace Aardvark.Data.Ifc
     {
         private readonly IfcStore m_model;
 
-        private readonly IInverseCache m_inversCache;
+        private IInverseCache m_inverseCache;
 
-        private readonly IEntityCache m_entityCache;
+        private IEntityCache m_entityCache;
 
         public IfcStore IfcStore { get { return m_model; } }
         public Dict<IfcGloballyUniqueId, IFCContent> Content { get; private set; }
@@ -24,9 +24,15 @@ namespace Aardvark.Data.Ifc
         public IIfcProject Project { get { return GeneralExt.GetProject(IfcStore); } }
         public string ProjectName { get { return Project.LongName; } }
 
-        internal IFCData(IfcStore model, IInverseCache inversCache, IEntityCache entityCache, Dict<IfcGloballyUniqueId, IFCContent> content, Dictionary<string, IFCMaterial> materials, IFCNode hierarchy)
+        /// <summary>
+        /// True while xBIM's inverse and entity caches are alive.
+        /// xBIM does not allow transactions while the inverse cache is active, see EndCaching.
+        /// </summary>
+        public bool IsCaching { get { return m_inverseCache != null; } }
+
+        internal IFCData(IfcStore model, IInverseCache inverseCache, IEntityCache entityCache, Dict<IfcGloballyUniqueId, IFCContent> content, Dictionary<string, IFCMaterial> materials, IFCNode hierarchy)
         {
-            m_inversCache = inversCache;
+            m_inverseCache = inverseCache;
             m_entityCache = entityCache;
             m_model = model;
             Content = content;
@@ -34,10 +40,34 @@ namespace Aardvark.Data.Ifc
             Materials = materials;
         }
 
+        /// <summary>
+        /// Stops xBIM's inverse and entity caching so the store accepts IfcStore.BeginTransaction again.
+        /// Queries get slower afterwards, so call this right before editing the model.
+        /// </summary>
+        public void EndCaching()
+        {
+            if (!IsCaching)
+                return;
+
+            DisposeCaches();
+
+            // xBIM only keeps a weak reference to the inverse cache and checks it when a transaction is opened,
+            // so the collection is forced to make the model forget the cache deterministically
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        }
+
+        private void DisposeCaches()
+        {
+            m_entityCache?.Dispose();
+            m_inverseCache?.Dispose();
+            m_entityCache = null;
+            m_inverseCache = null;
+        }
+
         public void Dispose()
         {
-            m_entityCache.Dispose();
-            m_inversCache.Dispose();
+            DisposeCaches();
             m_model.Dispose();
         }
     }

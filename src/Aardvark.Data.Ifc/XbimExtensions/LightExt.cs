@@ -232,24 +232,8 @@ namespace Aardvark.Data.Ifc
             return light;
         }
 
-        public static IIfcFlowTerminal CreateLightGoniometricDistributionIFC2x3(this IModel model, LightMeasurementData data)
-        {
-            // TODO: resolve symmetry modes from light measurment data 
-            // TODO: convert intensities to candela per lumen
-
-            throw new NotImplementedException();
-
-            //IEnumerable<IFCHelper.LightIntensityDistributionData> lightData = [
-            //    // Main plane-angle and its secondary-plane-angles     
-            //    new IFCHelper.LightIntensityDistributionData(0, [new IFCHelper.AngleAndIntensity(0.0, 100.0), new IFCHelper.AngleAndIntensity(90.0, 200.0), new IFCHelper.AngleAndIntensity(180.0, 100.0)]),
-            //    new IFCHelper.LightIntensityDistributionData(180, [new IFCHelper.AngleAndIntensity(0.0, 10.0), new IFCHelper.AngleAndIntensity(45.0, 15.0), new IFCHelper.AngleAndIntensity(90.0, 20.0), new IFCHelper.AngleAndIntensity(135.0, 15.0), new IFCHelper.AngleAndIntensity(180.0, 10.0)])
-            //];
-
-            //return model.CreateLightIntensityDistribution(IfcLightDistributionCurveEnum.TYPE_C, lightData);
-        }
-
         public static IIfcFlowTerminal CreateLightGoniometricIFC2x3(this IModel model, string name, C3d color, V3d position, double colourTemperature, double luminousFlux, LightMeasurementData data, IIfcObjectPlacement placement, IIfcShapeRepresentation lightShape)
-            => CreateLightGoniometric(model, name, color, position, colourTemperature, luminousFlux, CreateLightGoniometricDistribution(model, data), placement, lightShape);
+            => CreateLightGoniometricIFC2x3(model, name, color, position, colourTemperature, luminousFlux, CreateLightGoniometricDistribution(model, data), placement, lightShape);
 
         public static IIfcFlowTerminal CreateLightGoniometricIFC2x3(this IModel model, string name, C3d color, V3d position, double colourTemperature, double luminousFlux, IIfcLightIntensityDistribution distribution, IIfcObjectPlacement placement, IIfcShapeRepresentation lightShape)
         {

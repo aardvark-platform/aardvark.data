@@ -11,6 +11,7 @@
 7. **Run tests per-project**: `dotnet test src/Tests/<Project>`
 8. **OPC workflows**: Validate folder structure before loading (`Patches/`, `Images/`, `PatchHierarchy.xml`)
 9. **IFC threading**: Always use `singleThreading: true` to avoid Xbim deadlocks
+10. **IFC editing after import**: Call `IFCData.EndCaching()` (or load with `enableCaching: false`) before `IfcStore.BeginTransaction`, xBIM refuses transactions while its inverse cache is active
 10. **Multi-format apps**: See plugin loader pattern in QUICK_REF.md
 
 ## AI Documentation Index

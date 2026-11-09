@@ -355,10 +355,9 @@ namespace Aardvark.Data.Ifc
         #region Surface
         public static IIfcShapeRepresentation CreateShapeRepresentationSurface(this IModel model, Plane3d plane, Polygon2d poly, IIfcPresentationLayerAssignment layer = null)
         {
+            // work on a copy, Polygon2d.Reverse would flip the caller's point array in place
             if (!poly.IsCcw())
-            {
-                poly.Reverse();
-            }
+                poly = new Polygon2d(Enumerable.Reverse(poly.Points).ToArray());
 
             IIfcGeometricRepresentationItem item = model.CreateCurveBoundedPlane(plane, poly);
             layer?.AssignedItems.Add(item);
