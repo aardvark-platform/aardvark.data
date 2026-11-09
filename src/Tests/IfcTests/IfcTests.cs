@@ -263,6 +263,8 @@ namespace Aardvark.Data.Tests.Ifc
             });
         }
 
+        // NOTE: the edit tests use slab.ifc (schema IFC4), wall.ifc is IFC4x1 and xBIM's EntityCreator only supports Ifc2X3, Ifc4 and Ifc4x3
+
         [Test]
         public static void EditAfterImportWithoutCaching()
         {
@@ -270,14 +272,14 @@ namespace Aardvark.Data.Tests.Ifc
             var outPath = TestUtils.TempIfcPath();
             try
             {
-                TestUtils.LoadEmbeddedData(@"data\wall.ifc", (filePath) => {
+                TestUtils.LoadEmbeddedData(@"data\slab.ifc", (filePath) => {
                     using var parsed = IFCParser.PreprocessIFC(filePath, enableCaching: false);
                     Assert.IsFalse(parsed.IsCaching);
 
                     using (var txn = parsed.IfcStore.BeginTransaction("Edit imported model"))
                     {
-                        var wall = parsed.IfcStore.Instances.OfType<IIfcWall>().First();
-                        wall.CreateAttachPropertySet("Edited", new Dictionary<string, object> { { "touched", true } });
+                        var slab = parsed.IfcStore.Instances.OfType<IIfcSlab>().First();
+                        slab.CreateAttachPropertySet("Edited", new Dictionary<string, object> { { "touched", true } });
                         txn.Commit();
                     }
 
@@ -286,7 +288,7 @@ namespace Aardvark.Data.Tests.Ifc
                 });
 
                 using var reloaded = IfcStore.Open(outPath);
-                var pset = reloaded.Instances.OfType<IIfcWall>().First().GetPropertySet("Edited");
+                var pset = reloaded.Instances.OfType<IIfcSlab>().First().GetPropertySet("Edited");
                 Assert.IsNotNull(pset);
                 Assert.AreEqual("touched", pset.HasProperties.Single().Name.ToString());
             }
@@ -300,7 +302,7 @@ namespace Aardvark.Data.Tests.Ifc
         [Test]
         public static void EndCachingAllowsEditing()
         {
-            TestUtils.LoadEmbeddedData(@"data\wall.ifc", (filePath) => {
+            TestUtils.LoadEmbeddedData(@"data\slab.ifc", (filePath) => {
                 using var parsed = IFCParser.PreprocessIFC(filePath);
                 Assert.IsTrue(parsed.IsCaching);
 
@@ -309,12 +311,12 @@ namespace Aardvark.Data.Tests.Ifc
 
                 using (var txn = parsed.IfcStore.BeginTransaction("Edit after caching"))
                 {
-                    var wall = parsed.IfcStore.Instances.OfType<IIfcWall>().First();
-                    wall.CreateAttachPropertySet("Edited", new Dictionary<string, object> { { "touched", true } });
+                    var slab = parsed.IfcStore.Instances.OfType<IIfcSlab>().First();
+                    slab.CreateAttachPropertySet("Edited", new Dictionary<string, object> { { "touched", true } });
                     txn.Commit();
                 }
 
-                Assert.IsNotNull(parsed.IfcStore.Instances.OfType<IIfcWall>().First().GetPropertySet("Edited"));
+                Assert.IsNotNull(parsed.IfcStore.Instances.OfType<IIfcSlab>().First().GetPropertySet("Edited"));
             });
         }
     }
@@ -336,12 +338,12 @@ namespace Aardvark.Data.Tests.Ifc
                     using (var txn = model.BeginTransaction("Create round trip scene"))
                     {
                         var factory = model.Factory();
-                        var site = model.Instances.OfType<IIfcSite>().First();
+                        var testSite = model.Instances.OfType<IIfcSite>().First();
                         var mesh = PolyMeshPrimitives.Box(box, C4b.Red);
                         var redStyle = model.CreateSurfaceStyle(C3d.Red, name: "RoundTripRed");
 
-                        site.AddElement(factory.Wall(w => w.Name = "RoundTripWall").CreateAttachRepresentation(V3d.Zero, mesh, null, redStyle));
-                        site.AddElement(factory.Slab(s => s.Name = "RoundTripSlab").CreateAttachRepresentation(offset, mesh, null, redStyle));
+                        testSite.AddElement(factory.Wall(w => w.Name = "RoundTripWall").CreateAttachRepresentation(V3d.Zero, mesh, null, redStyle));
+                        testSite.AddElement(factory.Slab(s => s.Name = "RoundTripSlab").CreateAttachRepresentation(offset, mesh, null, redStyle));
 
                         txn.Commit();
                     }

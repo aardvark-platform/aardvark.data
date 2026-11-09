@@ -427,6 +427,7 @@ class IFCMaterial
 **Edit After Import:**
 ```csharp
 // xBIM forbids transactions while its inverse cache is active
+// NOTE: model.Factory() (xBIM EntityCreator) throws NotSupportedException for IFC4x1 files, only Ifc2X3, Ifc4 and Ifc4x3 are supported
 var ifc = IFCParser.PreprocessIFC(path, enableCaching: false);   // or call ifc.EndCaching() later
 using (var txn = ifc.IfcStore.BeginTransaction("edit"))
 {
