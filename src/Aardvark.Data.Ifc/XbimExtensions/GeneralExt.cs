@@ -36,8 +36,38 @@ namespace Aardvark.Data.Ifc
         public static IIfcProject GetProject(this IfcStore model)
             => model.Instances.FirstOrDefault<IIfcProject>();
 
+        /// <summary>
+        /// The whole this object is a part of, otherwise the spatial structure an element is contained in (the counterpart of GetChildren).
+        /// </summary>
         public static IIfcObjectDefinition GetParent(this IIfcObjectDefinition o)
-            => o.Decomposes.Select(r => r.RelatingObject).FirstOrDefault();
+        {
+            var whole = o.Decomposes.Select(r => r.RelatingObject).FirstOrDefault();
+            if ((whole == null) && (o is IIfcElement element))
+                return element.ContainedInStructure.Select(r => r.RelatingStructure).FirstOrDefault();
+            return whole;
+        }
+
+        /// <summary>
+        /// Parent, grandparent and so on up to the project, nearest first.
+        /// </summary>
+        public static IEnumerable<IIfcObjectDefinition> GetAncestors(this IIfcObjectDefinition o)
+        {
+            for (var parent = o.GetParent(); parent != null; parent = parent.GetParent())
+                yield return parent;
+        }
+
+        /// <summary>
+        /// Children, grandchildren and so on, depth first.
+        /// </summary>
+        public static IEnumerable<IIfcObjectDefinition> GetDescendants(this IIfcObjectDefinition o)
+        {
+            foreach (var child in o.GetChildren())
+            {
+                yield return child;
+                foreach (var descendant in child.GetDescendants())
+                    yield return descendant;
+            }
+        }
 
         public static IEnumerable<IIfcObjectDefinition> GetSiblings(this IIfcObjectDefinition o)
             => o.Decomposes.SelectMany(r => r.RelatedObjects).Where(x => !o.Equals(x));

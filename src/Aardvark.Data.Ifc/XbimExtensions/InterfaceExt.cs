@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Xbim.Ifc4.Interfaces;
 
 namespace Aardvark.Data.Ifc
@@ -20,6 +21,28 @@ namespace Aardvark.Data.Ifc
             {
                 spatialStructure.RelatedElements.Add(product);
             }
+        }
+
+        public static void AddElements(this IIfcSpatialStructureElement spat, IEnumerable<IIfcProduct> products)
+        {
+            foreach (var product in products)
+                spat.AddElement(product);
+        }
+
+        /// <summary>
+        /// Makes the parts components of the whole (IfcRelAggregates), reusing the existing decomposition of the whole.
+        /// Nest the calls to build deeper hierarchies, e.g. fixture -> base -> arm -> head.
+        /// </summary>
+        public static IIfcRelAggregates AddParts(this IIfcObjectDefinition whole, params IIfcObjectDefinition[] parts)
+            => whole.AddParts((string)null, parts);
+
+        public static IIfcRelAggregates AddParts(this IIfcObjectDefinition whole, string name, params IIfcObjectDefinition[] parts)
+        {
+            var decomposition = whole.IsDecomposedBy.FirstOrDefault() ?? whole.Model.Factory().RelAggregates(rel => rel.RelatingObject = whole);
+            if (name != null)
+                decomposition.Name = name;
+            decomposition.RelatedObjects.AddRange(parts);
+            return decomposition;
         }
 
         public static void AddRelAggregates(this IIfcObjectDefinition obj, IIfcObjectDefinition relatingObject)

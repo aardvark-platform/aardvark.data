@@ -67,6 +67,19 @@ namespace Aardvark.Data.Ifc
             return product.LinkToType(objectType);
         }
 
+        public static IIfcAnnotation CreateAnnotation(this IModel model, string name, IIfcObjectPlacement placement, IIfcShapeRepresentation representation, string objectType = null)
+        {
+            var factory = model.Factory();
+            return factory.Annotation(a =>
+            {
+                a.Name = name;
+                if (objectType != null)
+                    a.ObjectType = objectType;
+                a.ObjectPlacement = placement;
+                a.Representation = factory.ProductDefinitionShape(r => r.Representations.Add(representation));
+            });
+        }
+
         public static IIfcProduct AddRepresentation(this IIfcProduct product, IIfcShapeRepresentation representation)
         {
             if (product.Representation == null)

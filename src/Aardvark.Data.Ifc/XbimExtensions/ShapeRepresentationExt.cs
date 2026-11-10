@@ -94,6 +94,24 @@ namespace Aardvark.Data.Ifc
             return content.CreateShapeRepresentationAnnotation3d();
         }
 
+        /// <summary>
+        /// Annotation holding a set of curves, e.g. the axis of a track as a selectable line.
+        /// Viewers show it, unlike an 'Axis' representation, and the curves can be shared with other representations.
+        /// </summary>
+        public static IIfcShapeRepresentation CreateShapeRepresentationAnnotation3dCurveSet(this IModel model, IEnumerable<IIfcCurve> curves, IIfcPresentationLayerAssignment layer = null)
+        {
+            var set = model.Factory().GeometricCurveSet(s => s.Elements.AddRange(curves));
+            layer?.AssignedItems.Add(set);
+
+            return model.Factory().ShapeRepresentation(r =>
+            {
+                r.RepresentationIdentifier = "Annotation";
+                r.RepresentationType = "GeometricCurveSet";
+                r.Items.Add(set);
+                r.ContextOfItems = model.GetGeometricRepresentationContextModel();
+            });
+        }
+
         public static IIfcShapeRepresentation CreateShapeRepresentationAnnotation3dCross(this IModel model, V3d origin, V3d normal, double angleInDegree, double scale, IIfcPresentationLayerWithStyle layer = null)
         {
             //var crossPoints = new V3d[] {

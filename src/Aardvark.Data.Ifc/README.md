@@ -23,6 +23,7 @@ Check the [quick start guide](https://docs.xbim.net/quick-start.html) to gain an
 	- Hierarchy provides a node based project description to build your scene graph.
 3. Edit existing Ifc-Object or attach new Ifc-Object
 	- Use the xBIM toolkit or any of our [extension functions](https://github.com/aardvark-platform/aardvark.data/tree/master/src/Aardvark.Data.Ifc/XbimExtensions).
+	- Assemblies of selectable parts, placement chains and snap positions (on a curve or at grid intersections) are covered by ```AssemblyExt```, ```AddParts```, ```CreateRelativePlacement``` and ```GridExt```, see ```ExportTest.TrackAndTowerTest```.
 	- Don't forget to use *Transactions* while manipulating the IfcStore.
 	- Pass *XbimEditorCredentials* to ```PreprocessIFC``` when you intend to edit, xBIM uses them for the owner history of new entities.
 	- xBIM refuses to open a transaction while its inverse cache is active. Call ```IFCData.EndCaching()``` before editing an imported model, or load it with ```PreprocessIFC(filepath, enableCaching: false)```.

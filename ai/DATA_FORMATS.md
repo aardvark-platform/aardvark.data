@@ -441,6 +441,36 @@ using (var txn = ifc.IfcStore.BeginTransaction("edit"))
 ifc.IfcStore.SaveAs(outPath);
 ```
 
+**Assemblies, Part Hierarchies and Snap Positions:**
+```csharp
+// parts are products of their own (selectable in viewers) aggregated below their parent, placements chain along the hierarchy
+var assembly = model.CreateElementAssembly("Track system", model.CreateLocalPlacement(origin), objectType: "LightTrack");
+var baseType = model.CreateDiscreteAccessoryType(IfcDiscreteAccessoryTypeEnum.BRACKET, [bodyShape.CreateRepresentationMap()], name: "Spot base");
+var light = model.CreateLightEmpty("Light A", rail.CreateRelativePlacement(new V3d(50, 0, -3)), lightingShape);
+var mount = baseType.Instantiate("Light A base", light.CreateRelativePlacement(V3d.Zero), Trafo3d.Identity);
+var arm = armType.Instantiate("Light A arm", mount.CreateRelativePlacement(Trafo3d.RotationYInDegrees(25)), Trafo3d.Identity); // joint angle lives in the placement
+light.AddParts("Mounting", mount);
+mount.AddParts("Pivot", arm);
+assembly.AddParts(rail, light);
+site.AddElement(assembly);
+
+// continuous snap: IfcRelConnectsElements with a point on the axis curve of the rail (parameter 0..1 per segment of an IfcIndexedPolyCurve)
+rail.ConnectAtPointOnCurve(light, axisCurve, 0.25);
+foreach (var (element, curve, t) in rail.GetElementsConnectedOnCurve()) { /* ... */ }
+
+// discrete snap: a slot product at every axis intersection of a grid (IfcGridPlacement is not resolved by IfcOpenShell and many viewers)
+var grid = model.CreateGrid("Headframe", ["R1", "R2"], [0.0, 60.0], ["C1", "C2"], [-30.0, 30.0], framePlacement, overhang: 20).AddFootPrintRepresentation();
+foreach (var (u, v, position) in grid.GetAxisIntersections())
+    slotType.Instantiate($"Slot {u.AxisTag}{v.AxisTag}", grid.CreateRelativePlacement(position.XYO), Trafo3d.Identity);
+
+// an 'Axis' representation is hidden by viewers, an annotation with a curve set gives a selectable line
+var axis = model.CreateAnnotation("Rail axis", rail.CreateRelativePlacement(V3d.Zero), model.CreateShapeRepresentationAnnotation3dCurveSet([axisCurve]));
+
+// navigation and the world transformation of a placement chain
+var levels = head.GetAncestors();              // arm, base, light, assembly, site, project
+var world = head.ObjectPlacement.ToTrafo3d();  // IfcLocalPlacement chains only
+```
+
 ---
 
 ## OPC Loader

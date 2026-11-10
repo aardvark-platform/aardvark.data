@@ -1335,6 +1335,165 @@ namespace Aardvark.Data.Tests.Ifc
             model.SaveAs(TestUtils.OutputPath("test_AxisRepresentation.ifc"));
         }
 
+        [Test]
+        public static void TrackAndTowerTest()
+        {
+            // a light is a chain of parts, fixture -> base -> arm -> head, each part placed relative to its parent so the joint angles live in the placements
+            // the track snaps lights to a parameter on its axis curve, the tower offers discrete slots at the intersections of a grid
+            using var model = TestUtils.CreateModel();
+
+            var railLength = 200.0;
+            var armLength = 12.0;
+            var mastHeight = 600.0;
+            var trackOrigin = new V3d(100, 200, 280);
+            var towerOrigin = new V3d(600, 200, 0);
+
+            IIfcCableSegment rail;
+            IIfcIndexedPolyCurve axisCurve;
+            IIfcLightFixture lightA;
+            IIfcLightFixture lightB;
+            IIfcLightFixtureType lightType;
+            IIfcGrid headframe;
+            var towerLights = new List<IIfcLightFixture>();
+            var slots = new List<IIfcDiscreteAccessory>();
+
+            using (var txn = model.BeginTransaction("Create track and tower"))
+            {
+                var factory = model.Factory();
+                var site = model.Instances.OfType<IIfcSite>().First();
+                var metal = model.CreateSurfaceStyle(C3d.Gray, name: "Metal");
+                var lens = model.CreateSurfaceStyle(C3d.Yellow, name: "Lens");
+                var anthracite = model.CreateSurfaceStyle(C3d.Black, name: "Anthracite");
+
+                IIfcRepresentationMap BoxMap(Box3d box, IIfcSurfaceStyle style)
+                    => model.CreateShapeRepresentationCompatibleStyled(PolyMeshPrimitives.Box(box, C4b.White), null, style).CreateRepresentationMap();
+
+                // shared part geometry, the origin of each part is where it mounts on its parent
+                var baseType = model.CreateDiscreteAccessoryType(IfcDiscreteAccessoryTypeEnum.BRACKET, [BoxMap(new Box3d(new V3d(-3, -2, 0), new V3d(3, 2, 2)), metal)], name: "Spot base");
+                var armType = model.CreateDiscreteAccessoryType(IfcDiscreteAccessoryTypeEnum.BRACKET, [BoxMap(new Box3d(new V3d(-1, -1, -armLength), new V3d(1, 1, 0)), metal)], name: "Spot arm");
+                var headType = model.CreateDiscreteAccessoryType(IfcDiscreteAccessoryTypeEnum.USERDEFINED, [BoxMap(new Box3d(new V3d(-3, -3, -8), new V3d(3, 3, 0)), lens)], name: "Spot head", elementType: "LuminaireHead");
+                var slotType = model.CreateDiscreteAccessoryType(IfcDiscreteAccessoryTypeEnum.ANCHORPLATE, [BoxMap(new Box3d(new V3d(-4, -2.5, 0), new V3d(4, 2.5, 0.5)), metal)], name: "Mounting slot");
+                lightType = model.CreateLightType(IfcLightFixtureTypeEnum.DIRECTIONSOURCE, [], [model.Pset_LightFixtureTypeCommon("TrackSpot", 1, 12, 1, 0, 0, 0.5, "working", "track", "surface")], "Track spot");
+
+                IIfcLightFixture CreateSpot(string name, IIfcObjectPlacement placement, Trafo3d armRotation, double panDegrees)
+                {
+                    // the fixture itself only carries the light source, its parts are products of their own so they are selectable
+                    var spot = model.CreateShapeRepresentationLightingSpot(C3d.White, new V3d(0, 0, -armLength), -V3d.ZAxis, 300, 1, 0, 0, 0.5, 0.3);
+                    var fixture = model.CreateLightEmpty(name, placement, spot, IfcLightFixtureTypeEnum.DIRECTIONSOURCE).LinkToType(lightType);
+
+                    var mount = baseType.Instantiate($"{name} base", fixture.CreateRelativePlacement(V3d.Zero), Trafo3d.Identity);
+                    var arm = armType.Instantiate($"{name} arm", mount.CreateRelativePlacement(armRotation), Trafo3d.Identity);
+                    var head = headType.Instantiate($"{name} head", arm.CreateRelativePlacement(Trafo3d.RotationZInDegrees(panDegrees) * Trafo3d.Translation(new V3d(0, 0, -armLength))), Trafo3d.Identity);
+
+                    fixture.AddParts("Mounting", mount);
+                    mount.AddParts("Pivot", arm);
+                    arm.AddParts("Joint", head);
+                    return fixture;
+                }
+
+                // track: a rail with a body and an axis, the axis once more as a selectable annotation, two lights snapped to parameters on the axis
+                var trackSystem = model.CreateElementAssembly("Track system 1", model.CreateLocalPlacement(trackOrigin), objectType: "LightTrack");
+                axisCurve = model.CreateIndexedPolyCurve([V3d.Zero, new V3d(railLength, 0, 0)]);
+                rail = factory.CableSegment(c =>
+                {
+                    c.Name = "Rail";
+                    c.PredefinedType = IfcCableSegmentTypeEnum.BUSBARSEGMENT;
+                });
+                rail.CreateAttachRepresentation(trackSystem.CreateRelativePlacement(V3d.Zero), PolyMeshPrimitives.Box(new Box3d(new V3d(0, -1.75, -3), new V3d(railLength, 1.75, 0)), C4b.White), null, anthracite)
+                    .AddRepresentation(axisCurve.CreateShapeRepresentationAxis3d());
+                var railAxis = model.CreateAnnotation("Rail axis", rail.CreateRelativePlacement(V3d.Zero), model.CreateShapeRepresentationAnnotation3dCurveSet([axisCurve]), "TrackAxis");
+
+                lightA = CreateSpot("Light A", rail.CreateRelativePlacement(new V3d(0.25 * railLength, 0, -3)), Trafo3d.RotationYInDegrees(25), 40);
+                lightB = CreateSpot("Light B", rail.CreateRelativePlacement(new V3d(0.75 * railLength, 0, -3)), Trafo3d.RotationYInDegrees(-25), 0);
+                rail.ConnectAtPointOnCurve(lightA, axisCurve, 0.25, "Snapped to rail");
+                rail.ConnectAtPointOnCurve(lightB, axisCurve, 0.75, "Snapped to rail");
+
+                trackSystem.AddParts("Rail, its axis and attached lights", rail, railAxis, lightA, lightB);
+                site.AddElement(trackSystem);
+
+                // tower: a mast with a vertical headframe grid on top (grid x = world x, grid y = world -z, grid z = world y), a mounting slot at every axis intersection, lights on five of the eight slots
+                var tower = model.CreateElementAssembly("Light tower 1", model.CreateLocalPlacement(towerOrigin), objectType: "LightTower");
+                var mast = factory.Column(c => c.Name = "Mast").CreateAttachRepresentation(tower.CreateRelativePlacement(V3d.Zero), PolyMeshPrimitives.Box(new Box3d(new V3d(-15, -15, 0), new V3d(15, 15, mastHeight)), C4b.White), null, metal);
+                var framePlacement = tower.CreateRelativePlacement(Trafo3d.FromBasis(V3d.XAxis, -V3d.ZAxis, V3d.YAxis, new V3d(0, 0, mastHeight)));
+                headframe = model.CreateGrid("Headframe", ["R1", "R2"], [0.0, 60.0], ["C1", "C2", "C3", "C4"], [-90.0, -30.0, 30.0, 90.0], framePlacement, overhang: 20).AddFootPrintRepresentation();
+                headframe.ObjectType = "MountingGrid";
+
+                string[] occupied = ["R1C1", "R1C2", "R1C3", "R1C4", "R2C2"];
+                foreach (var (u, v, position) in headframe.GetAxisIntersections())
+                {
+                    var tag = $"{u.AxisTag}{v.AxisTag}";
+                    var slot = slotType.Instantiate($"Slot {tag}", headframe.CreateRelativePlacement(position.XYO), Trafo3d.Identity);
+                    slots.Add(slot);
+
+                    if (occupied.Contains(tag))
+                    {
+                        // the fixture hangs on the field side of the pad, the arm turned about x so the head points down and towards the field
+                        var light = CreateSpot($"Light T{towerLights.Count + 1}", slot.CreateRelativePlacement(new V3d(0, 0, -2)), Trafo3d.RotationXInDegrees(60), 0);
+                        slot.AddParts("Mounted light", light);
+                        towerLights.Add(light);
+                    }
+                }
+
+                tower.AddParts("Mast, headframe and mounting slots", [mast, headframe, .. slots]);
+                headframe.CreateAttachPropertySet("Pset_MountingGrid", new Dictionary<string, object> { { "SlotCount", slots.Count }, { "SlotsOccupied", towerLights.Count } });
+                site.AddElement(tower);
+
+                txn.Commit();
+            }
+
+            Assert.IsEmpty(model.ValidateModel());
+
+            // levels: project -> site -> assembly -> light -> base -> arm -> head, one IfcRelAggregates per level
+            var headA = model.Instances.OfType<IIfcDiscreteAccessory>().Single(p => p.Name == "Light A head");
+            Assert.AreEqual("Light A arm > Light A base > Light A > Track system 1 > Site > Project", string.Join(" > ", headA.GetAncestors().Select(a => a.Name.ToString())));
+            Assert.AreEqual(3, lightA.GetDescendants().Count());
+
+            // every part is a product with a body of its own, so it is selectable in a viewer, and all parts of a kind share one type
+            var parts = model.Instances.OfType<IIfcDiscreteAccessory>().ToArray();
+            Assert.AreEqual(7 * 3 + 8, parts.Length);
+            Assert.IsTrue(parts.All(p => p.Representation.Representations.Any(r => r.RepresentationIdentifier == "Body")));
+            Assert.AreEqual(4, model.Instances.OfType<IIfcDiscreteAccessoryType>().Count());
+            Assert.AreEqual(7, parts.Count(p => p.ObjectType == "LuminaireHead"));
+            Assert.AreEqual(7, lightType.Types.SelectMany(t => t.RelatedObjects).Count());
+
+            // the placement chain mirrors the hierarchy: the head of light B sits at the end of its arm, which is tilted by -25 degrees about y
+            var headB = model.Instances.OfType<IIfcDiscreteAccessory>().Single(p => p.Name == "Light B head");
+            var expectedHeadB = trackOrigin + new V3d(0.75 * railLength, 0, -3) + Trafo3d.RotationYInDegrees(-25).Forward.TransformPos(new V3d(0, 0, -armLength));
+            var actualHeadB = headB.ObjectPlacement.ToTrafo3d().Forward.C3.XYZ;
+            Assert.IsTrue(actualHeadB.ApproximateEquals(expectedHeadB, 1e-9), $"head of light B at {actualHeadB} instead of {expectedHeadB}");
+
+            // continuous positions: both lights are connected to a parameter on the axis curve, which the annotation shares
+            var snapped = rail.GetElementsConnectedOnCurve().OrderBy(s => s.Parameter).ToArray();
+            Assert.AreEqual(2, snapped.Length);
+            Assert.AreSame(lightA, snapped[0].Element);
+            Assert.AreEqual(0.25, snapped[0].Parameter, 1e-12);
+            Assert.AreSame(lightB, snapped[1].Element);
+            Assert.AreEqual(0.75, snapped[1].Parameter, 1e-12);
+            Assert.AreSame(axisCurve, snapped[0].Curve);
+            var curveSet = model.Instances.OfType<IIfcAnnotation>().Single().Representation.Representations.Single().Items.OfType<IIfcGeometricCurveSet>().Single();
+            Assert.AreSame(axisCurve, curveSet.Elements.Single());
+
+            // discrete positions: one slot per axis intersection, slot R2C2 is at grid (-30, 60) which hangs below the top of the mast
+            Assert.AreEqual(8, headframe.GetAxisIntersections().Count());
+            Assert.AreEqual(5, slots.Count(s => s.GetChildren().Any()));
+            var slotR2C2 = slots.Single(s => s.Name == "Slot R2C2");
+            var expectedSlot = towerOrigin + new V3d(-30, 0, mastHeight - 60);
+            var actualSlot = slotR2C2.ObjectPlacement.ToTrafo3d().Forward.C3.XYZ;
+            Assert.IsTrue(actualSlot.ApproximateEquals(expectedSlot, 1e-9), $"slot R2C2 at {actualSlot} instead of {expectedSlot}");
+            Assert.AreEqual(1, headframe.Representation.Representations.Count(r => r.RepresentationIdentifier == "FootPrint"));
+
+            var path = TestUtils.OutputPath("test_TrackAndTower.ifc");
+            model.SaveAs(path);
+
+            // import: every part comes back as a mesh of its own and the nesting survives the file
+            using var parsed = IFCParser.PreprocessIFC(path, singleThreading: true);
+            TestUtils.AssertConsistent(parsed);
+            foreach (var part in parts)
+                Assert.IsTrue(parsed.Content.TryGetValue(part.GlobalId, out _), $"{part.Name} has no geometry after import");
+            var importedHead = TestUtils.Flatten(parsed.Hierarchy).Single(n => n.MetaData is IIfcDiscreteAccessory p && p.Name == "Light A head");
+            Assert.AreEqual(6, importedHead.MetaData.GetAncestors().Count());
+        }
+
         static void AssertAxis(IIfcShapeRepresentation rep, int expectedSegments)
         {
             Assert.AreEqual("Axis", rep.RepresentationIdentifier.ToString());

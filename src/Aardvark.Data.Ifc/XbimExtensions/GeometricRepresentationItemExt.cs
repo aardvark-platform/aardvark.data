@@ -200,6 +200,45 @@ namespace Aardvark.Data.Ifc
 
         public static IIfcLocalPlacement CreateLocalPlacement(this IModel model, V3d shift)
             => model.Factory().LocalPlacement(p => p.RelativePlacement = model.CreateAxis2Placement3D(shift));
+
+        /// <summary>
+        /// Placement from a rigid transformation, relative to another placement when one is given.
+        /// A placement chain that mirrors the part hierarchy moves all parts along with their parent.
+        /// </summary>
+        public static IIfcLocalPlacement CreateLocalPlacement(this IModel model, Trafo3d trafo, IIfcObjectPlacement relativeTo = null)
+        {
+            return model.Factory().LocalPlacement(p =>
+            {
+                p.PlacementRelTo = relativeTo;
+                p.RelativePlacement = model.CreateAxis2Placement3D(trafo);
+            });
+        }
+
+        public static IIfcLocalPlacement CreateLocalPlacement(this IModel model, V3d shift, IIfcObjectPlacement relativeTo)
+            => model.CreateLocalPlacement(Trafo3d.Translation(shift), relativeTo);
+
+        /// <summary>
+        /// Placement relative to the placement of the parent product, for parts that move with their parent (joint angles go into the transformation).
+        /// </summary>
+        public static IIfcLocalPlacement CreateRelativePlacement(this IIfcProduct parent, Trafo3d trafo)
+            => parent.Model.CreateLocalPlacement(trafo, parent.ObjectPlacement);
+
+        public static IIfcLocalPlacement CreateRelativePlacement(this IIfcProduct parent, V3d shift)
+            => parent.Model.CreateLocalPlacement(Trafo3d.Translation(shift), parent.ObjectPlacement);
+
+        /// <summary>
+        /// Resolves a chain of local placements to the transformation from the product frame to world coordinates.
+        /// </summary>
+        public static Trafo3d ToTrafo3d(this IIfcObjectPlacement placement)
+        {
+            return placement switch
+            {
+                null => Trafo3d.Identity,
+                // the own placement applies first, then the one it is relative to
+                IIfcLocalPlacement local => local.RelativePlacement.ToTrafo3d() * local.PlacementRelTo.ToTrafo3d(),
+                _ => throw new NotSupportedException($"Only chains of IfcLocalPlacement can be resolved, not {placement.GetType().Name}")
+            };
+        }
         #endregion
 
         #region Line and Curve
