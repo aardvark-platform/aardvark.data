@@ -1,3 +1,8 @@
+### 1.1.3
+- Fixed placement conversions and TryGetSimpleValue<long>
+- Added enableCaching / EndCaching to allow editing imported models
+- Extensions work on cross-schema interfaces
+
 ### 1.1.2
 - Extended polylines
 - Added axis shapes representations
