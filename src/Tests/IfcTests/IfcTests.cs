@@ -1456,7 +1456,7 @@ namespace Aardvark.Data.Tests.Ifc
                 // track: a rail with a body and an axis, the axis once more as a selectable annotation, two lights snapped to parameters on the axis
                 var trackSystem = model.CreateElementAssembly("Track system 1", model.CreateLocalPlacement(trackOrigin), objectType: "LightTrack");
                 axisCurve = model.CreateIndexedPolyCurve([V3d.Zero, new V3d(railLength, 0, 0)]);
-                rail = factory.CableSegment(c =>
+                rail = model.CableSegmentFactory(c =>
                 {
                     c.Name = "Rail";
                     c.PredefinedType = IfcCableSegmentTypeEnum.BUSBARSEGMENT;
@@ -1579,6 +1579,166 @@ namespace Aardvark.Data.Tests.Ifc
             // xBIM also tessellates the grid axes as thin solids, so the headframe has a mesh entry next to its footprint lines
             var headframeLines = parsed.GetContent(headframe.GlobalId).Single(c => c.HasLineSet);
             TestUtils.AssertBoxEquals(new Box3d(towerOrigin + new V3d(-110, 0, mastHeight - 80), towerOrigin + new V3d(110, 0, mastHeight + 20)), TestUtils.WorldBounds(headframeLines), 1e-9);
+        }
+
+        [Test]
+        public static void TrackProductTest()
+        {
+            // tracks are IfcCableSegment products (BUSBARSEGMENT) with a shared type, lights and sub-tracks are parts snapped to the 'Axis' curve of their track
+            using var model = TestUtils.CreateModel();
+
+            var railLength = 200.0;
+            var trackOrigin = new V3d(100, 200, 280);
+            var subTrackOffset = new V3d(0.8 * railLength, 0, -3);
+
+            IIfcCableSegmentType trackType;
+            IIfcCableSegment track;
+            IIfcCableSegment subTrack;
+            IIfcCableSegment untyped;
+            IIfcLightFixture light;
+            IIfcLightFixture subLight;
+            IIfcLightFixture portLight;
+            IIfcLightFixture originLight;
+            IIfcDistributionPort slotA;
+            IIfcDistributionPort slotB;
+            IIfcDistributionPort mount;
+            var slotFrame = Trafo3d.RotationXInDegrees(30) * Trafo3d.Translation(new V3d(50, 0, -3));
+
+            using (var txn = model.BeginTransaction("Create tracks"))
+            {
+                var site = model.Instances.OfType<IIfcSite>().First();
+                var anthracite = model.CreateSurfaceStyle(C3d.Black, name: "Anthracite");
+                var railBox = new Box3d(new V3d(0, -1.75, -3), new V3d(railLength, 1.75, 0));
+                var railMap = model.CreateShapeRepresentationCompatibleStyled(PolyMeshPrimitives.Box(railBox, C4b.White), null, anthracite).CreateRepresentationMap();
+
+                IIfcLightFixture CreateSpot(string name, IIfcObjectPlacement placement)
+                {
+                    var spot = model.CreateShapeRepresentationLightingSpot(C3d.White, V3d.Zero, -V3d.ZAxis, 300, 1, 0, 0, 0.5, 0.3);
+                    return model.CreateLightEmpty(name, placement, spot, IfcLightFixtureTypeEnum.DIRECTIONSOURCE);
+                }
+
+                trackType = model.CreateTrackType([railMap], name: "Track 2 m", elementType: "LightTrack");
+
+                track = trackType.Instantiate("Track 1", model.CreateLocalPlacement(trackOrigin), Trafo3d.Identity, model.CreateIndexedPolyCurve([V3d.Zero, new V3d(railLength, 0, 0)]));
+                site.AddElement(track);
+
+                light = CreateSpot("Light 1", track.CreateRelativePlacement(new V3d(0.3 * railLength, 0, -3)));
+                track.AttachToTrack(light, 0.3, "Snapped to track 1");
+
+                // a second track hangs below the first one at 0.8 and carries a light of its own
+                subTrack = trackType.Instantiate("Track 2", track.CreateRelativePlacement(subTrackOffset), Trafo3d.Identity, model.CreateIndexedPolyCurve([V3d.Zero, new V3d(railLength, 0, 0)]));
+                track.AttachToTrack(subTrack, 0.8, "Snapped to track 1");
+                subLight = CreateSpot("Light 2", subTrack.CreateRelativePlacement(new V3d(0.5 * railLength, 0, -3)));
+                subTrack.AttachToTrack(subLight, 0.5, "Snapped to track 2");
+
+                // a track without type, body and curve given directly
+                untyped = model.CreateTrack("Track 3", model.CreateLocalPlacement(trackOrigin + new V3d(0, 50, 0)), model.CreateIndexedPolyCurve([V3d.Zero, new V3d(railLength, 0, 0)]),
+                    model.CreateShapeRepresentationCompatibleStyled(PolyMeshPrimitives.Box(railBox, C4b.White), null, anthracite), objectType: "LightTrack");
+                site.AddElement(untyped);
+
+                // oriented mounting points without a curve: ports on track 3, slot A pitched by 30 degrees about x
+                slotA = untyped.CreatePort("Slot A", slotFrame, markerSize: 10);
+                slotB = untyped.CreatePort("Slot B", Trafo3d.Translation(new V3d(150, 0, -3)));
+
+                // light 3 mounts with its own port 2 above its origin, light 4 with its origin
+                portLight = CreateSpot("Light 3", model.CreateLocalPlacement(V3d.Zero));
+                mount = portLight.CreatePort("Mount", Trafo3d.Translation(new V3d(0, 0, 2)), IfcFlowDirectionEnum.SINK);
+                slotA.MountAtPort(portLight, mount, "Mounted at slot A");
+                originLight = CreateSpot("Light 4", model.CreateLocalPlacement(V3d.Zero));
+                slotB.MountAtPort(originLight);
+
+                txn.Commit();
+            }
+
+            Assert.IsEmpty(model.ValidateModel());
+
+            // tracks are found by kind, lights are not tracks, instances are counted per type
+            Assert.AreEqual(3, model.GetTracks().Count());
+            Assert.IsTrue(track.IsTrack());
+            Assert.IsTrue(untyped.IsTrack());
+            Assert.IsFalse(light.IsTrack());
+            Assert.AreEqual(2, trackType.Types.SelectMany(t => t.RelatedObjects).Count());
+            Assert.AreEqual(IfcCableSegmentTypeEnum.BUSBARSEGMENT, subTrack.PredefinedType);
+            Assert.AreEqual("LightTrack", subTrack.ObjectType.ToString());
+
+            // the hierarchy: light 2 hangs on track 2, which hangs on track 1
+            Assert.AreEqual("Track 2 > Track 1 > Site > Project", string.Join(" > ", subLight.GetAncestors().Select(a => a.Name.ToString())));
+            Assert.AreEqual(3, track.GetDescendants().Count());
+
+            // snap positions on the axis curve of each track
+            var snapped = track.GetElementsConnectedOnCurve().OrderBy(s => s.Parameter).ToArray();
+            Assert.AreEqual(2, snapped.Length);
+            Assert.AreSame(light, snapped[0].Element);
+            Assert.AreEqual(0.3, snapped[0].Parameter, 1e-12);
+            Assert.AreSame(subTrack, snapped[1].Element);
+            Assert.AreSame(track.GetSnapCurve(), snapped[1].Curve);
+            Assert.AreSame(subLight, subTrack.GetElementsConnectedOnCurve().Single().Element);
+            Assert.IsNotNull(untyped.GetSnapCurve());
+            Assert.IsNull(light.GetSnapCurve());
+
+            // the body of the type comes first, the axis behind it
+            var representations = track.Representation.Representations.OfType<IIfcShapeRepresentation>().Select(r => r.RepresentationIdentifier.ToString()).ToArray();
+            Assert.AreEqual(new[] { "Body", "Axis" }, representations);
+
+            // ports: nested in their element, connected pairwise, the mounted lights are parts of track 3
+            Assert.AreEqual(2, untyped.GetPorts().Count());
+            Assert.AreSame(untyped, slotA.GetElement());
+            Assert.AreSame(slotA, mount.GetConnectedPorts().Single());
+            Assert.AreSame(mount, slotA.GetConnectedPorts().Single());
+            Assert.AreSame(originLight, originLight.GetPorts().Single().GetElement());
+            Assert.AreEqual("Track 3 > Site > Project", string.Join(" > ", portLight.GetAncestors().Select(a => a.Name.ToString())));
+            Assert.AreEqual(3, untyped.GetChildren().Count());
+
+            // the mount port of light 3 falls onto slot A, frame included, so the light hangs 2 below the slot along the pitched axis
+            var slotAWorld = slotA.ObjectPlacement.ToTrafo3d();
+            var expectedSlotA = slotFrame * untyped.ObjectPlacement.ToTrafo3d();
+            Assert.IsTrue(slotAWorld.Forward.C3.XYZ.ApproximateEquals(expectedSlotA.Forward.C3.XYZ, 1e-9), $"slot A at {slotAWorld.Forward.C3.XYZ}");
+            var mountWorld = mount.ObjectPlacement.ToTrafo3d();
+            Assert.IsTrue(mountWorld.Forward.C3.XYZ.ApproximateEquals(slotAWorld.Forward.C3.XYZ, 1e-9), $"mount at {mountWorld.Forward.C3.XYZ} instead of {slotAWorld.Forward.C3.XYZ}");
+            Assert.IsTrue(mountWorld.Forward.TransformDir(V3d.ZAxis).ApproximateEquals(slotAWorld.Forward.TransformDir(V3d.ZAxis), 1e-9), "mount is not aligned with slot A");
+            var lightWorld = portLight.ObjectPlacement.ToTrafo3d().Forward.C3.XYZ;
+            Assert.IsTrue(lightWorld.ApproximateEquals(slotAWorld.Forward.TransformPos(new V3d(0, 0, -2)), 1e-9), $"light 3 at {lightWorld}");
+            Assert.IsTrue(originLight.ObjectPlacement.ToTrafo3d().Forward.C3.XYZ.ApproximateEquals(slotB.ObjectPlacement.ToTrafo3d().Forward.C3.XYZ, 1e-9), "light 4 is not at slot B");
+
+            // the marker of slot A is an annotation product below track 3, placed on the port, ports themselves stay without geometry
+            Assert.IsNull(slotA.Representation);
+            var markerProduct = model.Instances.OfType<IIfcAnnotation>().Single();
+            Assert.AreEqual("PortMarker", markerProduct.ObjectType.ToString());
+            Assert.AreSame(untyped, markerProduct.GetParent());
+            Assert.IsTrue(markerProduct.ObjectPlacement.ToTrafo3d().Forward.C3.XYZ.ApproximateEquals(slotAWorld.Forward.C3.XYZ, 1e-9), "marker is not on slot A");
+            Assert.AreEqual(1, markerProduct.Representation.Representations.Count);
+
+            var path = TestUtils.OutputPath("test_TrackProduct.ifc");
+            model.SaveAs(path);
+
+            // import: every track has a mesh and its axis, the axis of the sub-track sits where its placement puts it
+            using var parsed = IFCParser.PreprocessIFC(path, singleThreading: true);
+            TestUtils.AssertConsistent(parsed);
+            foreach (var t in new[] { track, subTrack, untyped })
+            {
+                var entries = parsed.GetContent(t.GlobalId).ToArray();
+                Assert.AreEqual(1, entries.Count(c => c.HasMesh), $"{t.Name} has no mesh");
+                Assert.AreEqual(1, parsed.GetLineSets(t.GlobalId, "Axis").Count(), $"{t.Name} has no axis");
+            }
+            Assert.IsFalse(parsed.HasLineSet(light.GlobalId));
+
+            var subAxis = parsed.GetContent(subTrack.GlobalId).Single(c => c.HasLineSet);
+            var subAxisPoints = subAxis.LineSet.Transformed(subAxis.Trafo).GetPolyLine(0).ToArray();
+            Assert.IsTrue(subAxisPoints[0].ApproximateEquals(trackOrigin + subTrackOffset, 1e-9), $"sub-track axis starts at {subAxisPoints[0]}");
+            Assert.IsTrue(subAxisPoints[1].ApproximateEquals(trackOrigin + subTrackOffset + new V3d(railLength, 0, 0), 1e-9), $"sub-track axis ends at {subAxisPoints[1]}");
+            Assert.IsTrue(parsed.IfcStore.GetTracks().Select(t => t.GlobalId).Contains(subTrack.GlobalId));
+
+            // the frame marker of slot A comes back as three polylines, the z line ends along the pitched axis of the slot
+            var marker = parsed.GetContent(markerProduct.GlobalId).Single();
+            Assert.AreEqual("Annotation", marker.RepresentationIdentifier);
+            Assert.AreEqual(3, marker.LineSet.PolyLineCount);
+            var markerZ = marker.LineSet.Transformed(marker.Trafo).GetPolyLine(2).ToArray();
+            Assert.IsTrue(markerZ[0].ApproximateEquals(slotAWorld.Forward.C3.XYZ, 1e-9), $"marker starts at {markerZ[0]}");
+            Assert.IsTrue(markerZ[1].ApproximateEquals(slotAWorld.Forward.TransformPos(new V3d(0, 0, 10)), 1e-9), $"marker z ends at {markerZ[1]}");
+            Assert.AreEqual(new[] { C4b.Red, new C4b(0, 255, 0), C4b.Blue }, (C4b[])marker.LineSet.LineAttributes[PolyLineSet.Property.Colors]);
+            Assert.IsEmpty(parsed.GetContent(slotA.GlobalId));
+            Assert.IsFalse(parsed.GetLineSets(untyped.GlobalId, "Axis").Single().LineAttributes.ContainsKey(PolyLineSet.Property.Colors));
+            Assert.IsFalse(parsed.HasLineSet(slotB.GlobalId));
         }
 
         /// <summary>

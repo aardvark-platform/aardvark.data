@@ -362,6 +362,7 @@ Curves come back as `PolyLineSet` entries (`Aardvark.Geometry.PolyMesh` package)
 - `FirstIndexArray` / `VertexIndexArray` - polyline runs like PolyMesh faces, a gap in an indexed poly curve is a separate polyline
 - `IfcPolyline`, `IfcIndexedPolyCurve` (arcs sampled every `CurveExt.ArcSampleAngleInDegrees`), `IfcCompositeCurve` and trimmed `IfcLine` are evaluated, other curve types are reported once and skipped
 - `IfcMappedItem` and `IfcGeometricCurveSet` items are expanded, the mapping transformation is applied to the vertices
+- `LineAttributes[Colors]` (`C4b[]`, one per polyline) when any curve carries an `IfcCurveStyle`, white for unstyled polylines; `IFCContent.Material` stays the first style of the representation
 - `IfcShapeRepresentation.ToPolyLineSet()` and `IIfcCurve.ToPolyLines()` (`CurveExt`) do the same for single entities
 
 ### Supported Features
@@ -484,12 +485,49 @@ var grid = model.CreateGrid("Headframe", ["R1", "R2"], [0.0, 60.0], ["C1", "C2"]
 foreach (var (u, v, position) in grid.GetAxisIntersections())
     slotType.Instantiate($"Slot {u.AxisTag}{v.AxisTag}", grid.CreateRelativePlacement(position.XYO), Trafo3d.Identity);
 
-// an 'Axis' representation is hidden by viewers, an annotation with a curve set gives a selectable line
+// BIMvision draws the curve set of an IfcAnnotation product (selectable line) and 'Axis' curves of elements (yellow), but not an 'Annotation' representation next to a 'Body' on an element
 var axis = model.CreateAnnotation("Rail axis", rail.CreateRelativePlacement(V3d.Zero), model.CreateShapeRepresentationAnnotation3dCurveSet([axisCurve]));
 
 // navigation and the world transformation of a placement chain
 var levels = head.GetAncestors();              // arm, base, light, assembly, site, project
 var world = head.ObjectPlacement.ToTrafo3d();  // IfcLocalPlacement chains only
+```
+
+**Tracks as Products (TrackExt, IFC4+):**
+```csharp
+// a track is an IfcCableSegment with PredefinedType BUSBARSEGMENT, optionally of an IfcCableSegmentType sharing the body; the snap curve is its 'Axis' representation
+var trackType = model.CreateTrackType([railShape.CreateRepresentationMap()], name: "Track 2 m", elementType: "LightTrack");
+var track = trackType.Instantiate("Track 1", model.CreateLocalPlacement(origin), Trafo3d.Identity, model.CreateIndexedPolyCurve([V3d.Zero, new V3d(length, 0, 0)]));
+var loose = model.CreateTrack("Track 3", placement, snapCurve, bodyShape, objectType: "LightTrack");   // no type
+
+// lights and sub-tracks become parts of the track (IfcRelAggregates) snapped to a parameter on its axis
+var light = model.CreateLightEmpty("Light 1", track.CreateRelativePlacement(new V3d(0.3 * length, 0, -3)), spotShape);
+track.AttachToTrack(light, 0.3);
+track.AttachToTrack(subTrack, 0.8);
+
+// reading side
+var tracks = model.GetTracks();                 // busbar segments, directly or through their type
+var curve = track.GetSnapCurve();               // first curve of the 'Axis' representation
+var count = trackType.Types.SelectMany(t => t.RelatedObjects).Count();
+foreach (var (element, _, t) in track.GetElementsConnectedOnCurve()) { /* ... */ }
+
+// after import the axis is a line-set entry of the track
+var axis = ifcData.GetLineSets(track.GlobalId, "Axis").Single().Transformed(ifcData.GetContent(track.GlobalId).Single(c => c.HasLineSet).Trafo);
+```
+
+**Mounting Points with Orientation (PortExt, IFC4+):**
+```csharp
+// a port is a product nested in its element with a full frame (IfcDistributionPort + IfcRelNests), the oriented alternative to a parameter on a curve
+var slot = track.CreatePort("Slot A", Trafo3d.RotationXInDegrees(30) * Trafo3d.Translation(new V3d(50, 0, -3)), markerSize: 10);   // marker: a "PortMarker" annotation under the track with red x, green y, blue z lines, for debugging only
+var mount = light.CreatePort("Mount", Trafo3d.Translation(new V3d(0, 0, 2)), IfcFlowDirectionEnum.SINK);
+slot.MountAtPort(light, mount);                 // moves the light so both ports coincide, makes it a part of the track, IfcRelConnectsPorts
+slot.MountAtPort(otherLight);                   // without a port on the light its origin goes onto the slot
+
+// reading side
+var ports = track.GetPorts();                   // nested ports
+var frame = slot.GetLocalFrame();               // in track coordinates
+var carrier = slot.GetElement();                // the track
+var mounted = slot.GetConnectedPorts().Select(p => p.GetElement());
 ```
 
 ---

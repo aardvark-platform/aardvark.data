@@ -95,8 +95,9 @@ namespace Aardvark.Data.Ifc
         }
 
         /// <summary>
-        /// Annotation holding a set of curves, e.g. the axis of a track as a selectable line.
-        /// Viewers show it, unlike an 'Axis' representation, and the curves can be shared with other representations.
+        /// Annotation holding a set of curves, e.g. the axis of a track as a selectable line; the curves can be shared with other representations.
+        /// NOTE: BIMvision draws it on an IfcAnnotation product (and 'Axis' curves of elements, in yellow), but not as a second representation next to a 'Body' on an element; the import reads all of them.
+        /// A curve style width is drawn as a solid of that thickness, so keep it tiny or leave it out (see PortExt.CreateFrameMarkerLines).
         /// </summary>
         public static IIfcShapeRepresentation CreateShapeRepresentationAnnotation3dCurveSet(this IModel model, IEnumerable<IIfcCurve> curves, IIfcPresentationLayerAssignment layer = null)
         {

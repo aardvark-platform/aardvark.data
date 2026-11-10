@@ -42,6 +42,28 @@ namespace Aardvark.Data.Ifc
             };
         }
 
+        public static IIfcCableSegment CableSegmentFactory(this IModel model, Action<IIfcCableSegment> init = null)
+        {
+            return model.SchemaVersion switch
+            {
+                // IfcCableSegment Not supported in 2x3 (IfcFlowSegment there)
+                XbimSchemaVersion.Ifc4 => model.Instances.New<Xbim.Ifc4.ElectricalDomain.IfcCableSegment>(init),
+                XbimSchemaVersion.Ifc4x3 => model.Instances.New<Xbim.Ifc4x3.ElectricalDomain.IfcCableSegment>(init),
+                _ => throw new NotSupportedException($"Type IfcCableSegment is not supported in schema {model.SchemaVersion}")
+            };
+        }
+
+        public static IIfcCableSegmentType CableSegmentTypeFactory(this IModel model, Action<IIfcCableSegmentType> init = null)
+        {
+            return model.SchemaVersion switch
+            {
+                // IfcCableSegmentType Not supported in 2x3
+                XbimSchemaVersion.Ifc4 => model.Instances.New<Xbim.Ifc4.ElectricalDomain.IfcCableSegmentType>(init),
+                XbimSchemaVersion.Ifc4x3 => model.Instances.New<Xbim.Ifc4x3.ElectricalDomain.IfcCableSegmentType>(init),
+                _ => throw new NotSupportedException($"Type IfcCableSegmentType is not supported in schema {model.SchemaVersion}")
+            };
+        }
+
         public static IIfcCartesianPointList2D CartesianPointList2DFactory(this IModel model, Action<@IIfcCartesianPointList2D> init = null)
         {
             return model.SchemaVersion switch
