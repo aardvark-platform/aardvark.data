@@ -177,7 +177,7 @@ namespace Aardvark.Data.Vrml97
             };
 
             // NOTE: the shape is added unconditionally, so it also ends up in the hierarchy if its geometry turns out
-            //       to be empty (e.g. an IndexedLineSet without any valid polyline -> VrmlLineSet with null arrays).
+            //       to be empty (e.g. an IndexedLineSet without any valid polyline -> VrmlLineSet with LineSet null).
             //       Consumers must therefore handle geometries that do not produce anything renderable.
             trav.PerNameVisitors[Vrml97NodeName.Shape] = (map, visit) =>
             {
@@ -213,8 +213,8 @@ namespace Aardvark.Data.Vrml97
                 return returnFunc(map, visit);
             };
 
-            // NOTE: the Coordinate/Color child nodes have no visitors of their own, VrmlLineSet.Init reads them
-            //       directly from the sub-maps. A USEd Coordinate node is shared, but each IndexedLineSet map is
+            // NOTE: the Coordinate/Color child nodes have no visitors of their own, PolyLineSetFromVrml97.CreateFromIls
+            //       reads them directly from the sub-maps. A USEd Coordinate node is shared, but each IndexedLineSet map is
             //       distinct, so every line set still gets its own VrmlLineSet.
             trav.PerNameVisitors[Vrml97NodeName.IndexedLineSet] = (map, visit) =>
             {

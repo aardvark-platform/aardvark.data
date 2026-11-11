@@ -362,7 +362,7 @@ Curves come back as `PolyLineSet` entries (`Aardvark.Geometry.PolyMesh` package)
 - `FirstIndexArray` / `VertexIndexArray` - polyline runs like PolyMesh faces, a gap in an indexed poly curve is a separate polyline
 - `IfcPolyline`, `IfcIndexedPolyCurve` (arcs sampled every `CurveExt.ArcSampleAngleInDegrees`), `IfcCompositeCurve` and trimmed `IfcLine` are evaluated, other curve types are reported once and skipped
 - `IfcMappedItem` and `IfcGeometricCurveSet` items are expanded, the mapping transformation is applied to the vertices
-- `LineAttributes[Colors]` (`C4b[]`, one per polyline) when any curve carries an `IfcCurveStyle`, white for unstyled polylines; `IFCContent.Material` stays the first style of the representation
+- `LineAttributes[Colors]` (`C4b[]`, one per polyline) when any curve carries an `IfcCurveStyle`, white for unstyled polylines; `IFCContent.Material` stays the first style of the representation; render with `GetIndexedGeometry(resolveLineAttributes: true)` to get them as vertex colours
 - `IfcShapeRepresentation.ToPolyLineSet()` and `IIfcCurve.ToPolyLines()` (`CurveExt`) do the same for single entities
 
 ### Supported Features
@@ -863,6 +863,15 @@ class VrmlMesh : VrmlGeometry
 }
 ```
 
+**VrmlLineSet** (IndexedLineSet):
+```csharp
+class VrmlLineSet : VrmlGeometry
+{
+    PolyLineSet LineSet;   // the shared line type (Aardvark.Geometry.PolyMesh), null for a node that draws nothing
+}
+```
+`PolyLineSetFromVrml97.CreateFromIls(map)` builds it, the line counterpart of `PolyMeshFromVrml97.CreateFromIfs`: V3d vertices, polylines packed like PolyMesh faces (`FirstIndexArray` / `VertexIndexArray`, -1 markers stripped), the Vrml97 colour table and `colorIndex` resolved into `LineAttributes[Colors]` (`colorPerVertex FALSE`, one `C4b` per polyline) or `LineVertexAttributes[Colors]` (`colorPerVertex TRUE`, one per polyline vertex). Degenerate polylines and polylines with an index outside the Coordinate node are dropped, unrepairable spec violations throw. `VrmlGeometry.GetIndexedGeometry()` renders it through `PolyLineSet.GetIndexedGeometry(resolveLineAttributes: true)`: an indexed LineList where only a vertex shared by polylines of different colours is split.
+
 ### Usage
 ```csharp
 // Load VRML97 scene
@@ -927,6 +936,7 @@ var mesh = PolyMeshFromVrml97.CreateFromIfs(ifsNode,
 | Feature | Supported | Notes |
 |---------|-----------|-------|
 | IndexedFaceSet | ✓ | Primary geometry |
+| IndexedLineSet | ✓ | `VrmlLineSet.LineSet`, a `PolyLineSet` with colours per vertex or polyline |
 | Box, Sphere, Cone, Cylinder | ✓ | Procedural geometry |
 | Transform | ✓ | Translation, rotation, scale |
 | Group, Collision | ✓ | Grouping nodes |

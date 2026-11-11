@@ -1,5 +1,5 @@
 #VRML V2.0 utf8
-# Test cases for VrmlLineSet - none of these appear in "00 Tracks".
+# Test cases for VrmlLineSet / PolyLineSetFromVrml97 - none of these appear in "00 Tracks".
 
 Group {
   children [
@@ -241,6 +241,15 @@ Group {
       colorPerVertex FALSE
       coordIndex [ 0x0 0x1 -1 0x2 0x3 -1 ]
       colorIndex [ 0X2 0x0 ]
+    } },
+
+    # 30) vertex shared by two polylines of different colours -> the renderable geometry
+    #     must split that vertex, the line set itself keeps it shared
+    Shape { geometry IndexedLineSet {
+      coord Coordinate { point [ 0 0 0, 1 0 0, 2 0 0 ] }
+      color Color { color [ 1 0 0, 0 0 1 ] }
+      colorPerVertex FALSE
+      coordIndex [ 0 1 -1 1 2 -1 ]
     } }
 
   ]

@@ -11,8 +11,8 @@ For one-liner APIs, see [QUICK_REF.md](QUICK_REF.md) (~100 lines).
 | Workflow | Document | Section | Key APIs |
 |----------|----------|---------|----------|
 | Load single 3D file | DATA_FORMATS.md | varies | `GLTF.load`, `ColladaImporter.Load`, `ObjParser.Load` |
-| Load point cloud hierarchy | DATA_FORMATS.md | 534-689 | `PatchHierarchy.load`, `Aara.fromFile` |
-| Process IFC building | DATA_FORMATS.md | 234-533 | `IFCParser.PreprocessIFC`, `PolyMesh`, `EndCaching` |
+| Load point cloud hierarchy | DATA_FORMATS.md | 535-690 | `PatchHierarchy.load`, `Aara.fromFile` |
+| Process IFC building | DATA_FORMATS.md | 234-534 | `IFCParser.PreprocessIFC`, `PolyMesh`, `EndCaching` |
 | Multi-format loader | QUICK_REF.md | 86-100 | Plugin pattern |
 | Texture loading | PIXIMAGE_LOADERS.md | 22-65 | `PixImageMipMap.Load`, backend selection |
 | Choose image loader | PIXIMAGE_LOADERS.md | 22-65 | Decision tree |
@@ -22,7 +22,7 @@ For one-liner APIs, see [QUICK_REF.md](QUICK_REF.md) (~100 lines).
 | Task | Document | Lines | Keywords |
 |------|----------|-------|----------|
 | Image loading | [PIXIMAGE_LOADERS.md](PIXIMAGE_LOADERS.md) | 1-526 | PNG, JPEG, TIFF, BMP, DDS, TGA, WebP, EXR, HDR |
-| 3D formats | [DATA_FORMATS.md](DATA_FORMATS.md) | 1-1478 | COLLADA, glTF, OBJ, VRML, IFC, mesh, scene |
+| 3D formats | [DATA_FORMATS.md](DATA_FORMATS.md) | 1-1489 | COLLADA, glTF, OBJ, VRML, IFC, mesh, scene |
 | Testing | [TESTING.md](TESTING.md) | 1-418 | NUnit, Expecto, FsCheck, benchmark |
 
 ## By Loader (with line ranges)
@@ -49,14 +49,14 @@ For one-liner APIs, see [QUICK_REF.md](QUICK_REF.md) (~100 lines).
 | Overview + comparison | 1-21 | which format, comparison |
 | COLLADA | 22-95 | .dae, scene graph, materials, lights |
 | glTF 2.0 | 96-233 | .gltf, .glb, PBR, modern |
-| IFC | 234-533 | .ifc, building, BIM, Xbim, caching, edit after import, assemblies, snap positions, curves, PolyLineSet, tracks, ports |
-| OPC | 534-689 | point cloud, .aara, hierarchy |
-| Wavefront OBJ | 690-797 | .obj, .mtl, simple mesh |
-| VRML97 | 798-943 | .wrl, legacy, animation |
-| DGM | 944-1029 | heightfield, terrain, elevation |
-| Photometry | 1030-1151 | .ies, .ldt, light measurement |
-| Usage patterns | 1152-1290 | traverse, flatten, convert |
-| Gotchas | 1291-1466 | Xbim version, F# interop, coordinates |
+| IFC | 234-534 | .ifc, building, BIM, Xbim, caching, edit after import, assemblies, snap positions, curves, PolyLineSet, tracks, ports |
+| OPC | 535-690 | point cloud, .aara, hierarchy |
+| Wavefront OBJ | 691-798 | .obj, .mtl, simple mesh |
+| VRML97 | 799-954 | .wrl, legacy, animation, IndexedLineSet, PolyLineSet, PolyLineSetFromVrml97, line colours |
+| DGM | 955-1040 | heightfield, terrain, elevation |
+| Photometry | 1041-1162 | .ies, .ldt, light measurement |
+| Usage patterns | 1163-1301 | traverse, flatten, convert |
+| Gotchas | 1302-1477 | Xbim version, F# interop, coordinates |
 
 ### Testing ([TESTING.md](TESTING.md))
 

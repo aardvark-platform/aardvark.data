@@ -14,7 +14,7 @@ nuget Aardvark.Base.Tensors                                 ~> 5.3.27
 nuget Aardvark.Rendering.Common                             >= 5.6.1 lowest_matching: true
 
 // Aardvark Algodat
-nuget Aardvark.Geometry.PolyMesh                            ~> 5.6.5
+nuget Aardvark.Geometry.PolyMesh                            ~> 5.6.6
 
 nuget DevILSharp                                            ~> 0.2.20
 nuget SixLabors.ImageSharp                                  ~> 3.1.11

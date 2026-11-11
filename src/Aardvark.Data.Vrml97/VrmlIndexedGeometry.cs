@@ -28,52 +28,12 @@ namespace Aardvark.Data.Vrml97
         }
 
         /// <summary>
-        /// Builds a renderable IndexedGeometry with IndexedGeometryMode.LineList.
+        /// Indexed LineList of the line set with the polyline colours resolved to the vertices: a vertex shared by polylines of different
+        /// colours is split by PolyLineSet.WithResolvedLineAttributes, everything else stays shared. Null for a line set that draws nothing.
         /// NOTE: LineList (and not LineStrip) because a single IndexedLineSet holds multiple disjoint PolyLines and
         ///       because the thickLine shader of Aardvark.Rendering expects a line list as input topology.
-        ///       The PolyLines are expanded into individual segments, so no IndexArray is needed and each vertex
-        ///       can carry its own color (a vertex shared by two PolyLines may have two different colors).
         /// </summary>
         public static IndexedGeometry GetIndexedGeometry(this VrmlLineSet lineSet)
-        {
-            if (lineSet.PolyLineCount == 0)
-            {
-                return null;
-            }
-
-            var segmentCount = lineSet.SegmentCount;
-            var positions = new V3f[segmentCount * 2];
-            var colors = lineSet.ColorArray != null ? new C4b[segmentCount * 2] : null;
-
-            var vi = 0;
-            for (int pi = 0; pi < lineSet.PolyLineCount; pi++)
-            {
-                for (int i = lineSet.FirstIndexArray[pi]; i < lineSet.FirstIndexArray[pi + 1] - 1; i++)
-                {
-                    positions[vi] = lineSet.VertexArray[lineSet.VertexIndexArray[i]];
-                    positions[vi + 1] = lineSet.VertexArray[lineSet.VertexIndexArray[i + 1]];
-
-                    if (colors != null)
-                    {
-                        colors[vi] = lineSet.GetColor(pi, i);
-                        colors[vi + 1] = lineSet.GetColor(pi, i + 1);
-                    }
-
-                    vi += 2;
-                }
-            }
-
-            var attributes = new SymbolDict<Array>() { { DefaultSemantic.Positions, positions } };
-            if (colors != null)
-            {
-                attributes[DefaultSemantic.Colors] = colors;
-            }
-
-            return new IndexedGeometry()
-            {
-                Mode = IndexedGeometryMode.LineList,
-                IndexedAttributes = attributes
-            };
-        }
+            => lineSet.LineSet?.GetIndexedGeometry(resolveLineAttributes: true);
     }
 }
