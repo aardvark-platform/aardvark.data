@@ -34,6 +34,9 @@ namespace Aardvark.Data.Ifc
         public static C3f ToC3f(this IIfcColourRgb col)
             => col.ToC3d().ToC3f();
 
+        public static C3b ToC3b(this IIfcColourRgb col)
+            => new(Col.DoubleToByteClamped(col.Red), Col.DoubleToByteClamped(col.Green), Col.DoubleToByteClamped(col.Blue));
+
         public static IIfcColourRgb CreateColor(this IModel model, C3f colour)
             => model.Factory().ColourRgb(x => x.Set(colour));
 
@@ -278,14 +281,18 @@ namespace Aardvark.Data.Ifc
         #endregion
 
         #region Curve Styling
-        public static IIfcCurveStyle CreateCurveStyle(this IModel model, C3d color, double width, double visibleLengh = 0, double invisibleLength = 0, bool modelOrDraughting = true)
+        /// <summary>
+        /// Curve style with a colour; a width above zero is a model-space width, which viewers like BIMvision draw as a solid of that thickness, zero leaves it unset for a plain line.
+        /// </summary>
+        public static IIfcCurveStyle CreateCurveStyle(this IModel model, C3d color, double width = 0, double visibleLengh = 0, double invisibleLength = 0, bool modelOrDraughting = true)
         {
             var factory = model.Factory();
             return factory.CurveStyle(c =>
             {
                 c.ModelOrDraughting = modelOrDraughting;
                 c.CurveColour = model.CreateColor(color);
-                c.CurveWidth = (IfcPositiveLengthMeasure) width;
+                if (width > 0)
+                    c.CurveWidth = (IfcPositiveLengthMeasure) width;
                 if (visibleLengh > 0)
                 {
                     c.CurveFont = factory.CurveStyleFont(f =>

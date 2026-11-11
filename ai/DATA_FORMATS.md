@@ -261,13 +261,16 @@ IFCData IFCParser.PreprocessIFC(
 class IFCData : IDisposable
 {
     IfcStore IfcStore { get; }
-    Dict<IfcGloballyUniqueId, IFCContent> Content { get; }   // one entry per shape instance, keyed by product GUID
+    Dict<IfcGloballyUniqueId, IFCContent> Content { get; }   // one entry per geometry (mesh or line set), keyed by product GUID, duplicates stacked
     IFCNode Hierarchy { get; }                                // project -> spatial structure -> products
     Dictionary<string, IFCMaterial> Materials { get; }
     double UnitScale { get; }                                 // length unit to metres, e.g. 0.001 for mm
     IIfcProject Project { get; }
     bool IsCaching { get; }
     void EndCaching();                                        // required before IfcStore.BeginTransaction
+    IEnumerable<IFCContent> GetContent(IfcGloballyUniqueId guid);   // all entries of a product
+    IEnumerable<PolyLineSet> GetLineSets(IfcGloballyUniqueId guid, string representationIdentifier = null); // its curve representations, e.g. only "Axis"
+    bool HasLineSet(IfcGloballyUniqueId guid);
 }
 ```
 
@@ -276,10 +279,14 @@ class IFCData : IDisposable
 class IFCContent
 {
     IIfcObject IFCObject { get; }
-    PolyMesh Mesh { get; }                                    // local coordinates in model units
-    Trafo3d Trafo { get; }                                    // instance transformation (placement)
+    PolyMesh Mesh { get; }                                    // local coordinates in model units, null for a line-set entry
+    PolyLineSet LineSet { get; }                              // curves of one 'Axis', 'Annotation', 'FootPrint' or 'Body' representation, null for a mesh entry
+    bool HasMesh { get; }
+    bool HasLineSet { get; }
+    Trafo3d Trafo { get; }                                    // instance transformation of a mesh, product placement of a line set
     IFCMaterial Material { get; }
-    XbimGeometryRepresentationType RepresentationType { get; }
+    XbimGeometryRepresentationType RepresentationType { get; }  // xBIM's opening handling, OpeningsAndAdditionsIncluded for a line set
+    string RepresentationIdentifier { get; }                  // "Axis", "Annotation", "FootPrint", ... for a line set, null for a mesh
     string Name { get; }
     string ExpressType { get; }
 }
@@ -315,12 +322,18 @@ foreach (var kvp in ifcData.Content)
     var name = content.Name ?? "Unnamed";
     var type = content.ExpressType;
 
-    var mesh = content.Mesh;
     var trafo = content.Trafo;
     var material = content.Material;
 
-    Report.Line($"{type}: {name} - {mesh.VertexCount} vertices");
+    if (content.HasMesh)
+        Report.Line($"{type}: {name} - {content.Mesh.VertexCount} vertices");
+    else
+        Report.Line($"{type}: {name} - {content.LineSet.PolyLineCount} polylines, {content.LineSet.SegmentCount} segments");
 }
+
+// the curves of one product, e.g. the snap axis of a track, in model coordinates
+foreach (var lineSet in ifcData.GetLineSets(track.GlobalId, "Axis"))
+    foreach (var segment in lineSet.Transformed(trafo).Segments) { /* ... */ }
 
 // Edit the imported model (xBIM forbids transactions while caching)
 ifcData.EndCaching();
@@ -344,6 +357,13 @@ IFC loader returns `PolyMesh` per building element:
 - `FaceVertexAttributes[Normals]` - Normal indices
 - `FaceVertexAttributes[-Normals]` - Normal vectors (V3f)
 
+Curves come back as `PolyLineSet` entries (`Aardvark.Geometry.PolyMesh` package), one per shape representation, under the same GUID as the meshes of the product:
+- `VertexArray` - V3d vertices in product coordinates, curves on one `IfcCartesianPointList` share them
+- `FirstIndexArray` / `VertexIndexArray` - polyline runs like PolyMesh faces, a gap in an indexed poly curve is a separate polyline
+- `IfcPolyline`, `IfcIndexedPolyCurve` (arcs sampled every `CurveExt.ArcSampleAngleInDegrees`), `IfcCompositeCurve` and trimmed `IfcLine` are evaluated, other curve types are reported once and skipped
+- `IfcMappedItem` and `IfcGeometricCurveSet` items are expanded, the mapping transformation is applied to the vertices
+- `IfcShapeRepresentation.ToPolyLineSet()` and `IIfcCurve.ToPolyLines()` (`CurveExt`) do the same for single entities
+
 ### Supported Features
 | Feature | Supported | Notes |
 |---------|-----------|-------|
@@ -351,7 +371,8 @@ IFC loader returns `PolyMesh` per building element:
 | IFC4 | ✓ | Via Xbim |
 | IFC4x3 | ✓ | Via Xbim |
 | Geometry tessellation | ✓ | Xbim geometry engine required |
-| Materials | ✓ | Surface styles + associated materials |
+| Materials | ✓ | Surface styles + associated materials, curve styles for line sets |
+| Curves | ✓ | 'Axis', 'Annotation', 'FootPrint' and curve items of a 'Body' as `PolyLineSet` entries |
 | Hierarchical structure | ✓ | Via HierarchyExt |
 | Spaces | Configurable | Can exclude via DefaultExclusions |
 | Feature elements | ✗ | Excluded by default (openings, etc.) |

@@ -16,6 +16,7 @@ using Xbim.Ifc;
 using Xbim.Ifc4.GeometryResource;
 using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc4.MeasureResource;
+using Xbim.Ifc4.UtilityResource;
 using Xbim.IO;
 
 namespace Aardvark.Data.Tests.Ifc
@@ -83,7 +84,7 @@ namespace Aardvark.Data.Tests.Ifc
         }
 
         /// <summary>
-        /// Every parsed product must carry a mesh with faces, a material and a transformation, and the hierarchy must start at the project.
+        /// Every parsed entry must carry a mesh with positions or a line set with polylines, a material and a transformation, and the hierarchy must start at the project.
         /// </summary>
         public static void AssertConsistent(IFCData parsed)
         {
@@ -94,8 +95,11 @@ namespace Aardvark.Data.Tests.Ifc
             foreach (var content in parsed.Content.Values)
             {
                 Assert.IsNotNull(content.IFCObject);
-                Assert.IsNotNull(content.Mesh, $"{content.Name} has no mesh");
-                Assert.IsNotNull(content.Mesh.PositionArray, $"{content.Name} has no positions");
+                Assert.IsTrue(content.HasMesh || content.HasLineSet, $"{content.Name} has neither mesh nor line set");
+                if (content.HasMesh)
+                    Assert.IsNotNull(content.Mesh.PositionArray, $"{content.Name} has no positions");
+                if (content.HasLineSet)
+                    Assert.Greater(content.LineSet.PolyLineCount, 0, $"{content.Name} has an empty line set");
                 Assert.IsNotNull(content.Material, $"{content.Name} has no material");
                 Assert.IsTrue(parsed.Materials.ContainsKey(content.Material.Name), $"material {content.Material.Name} is not listed");
                 Assert.IsFalse(double.IsNaN(content.Trafo.Forward.M00), $"{content.Name} has an invalid transformation");
@@ -109,10 +113,14 @@ namespace Aardvark.Data.Tests.Ifc
             => [node, .. node.SubNodes.SelectMany(Flatten)];
 
         /// <summary>
-        /// Bounding box of the mesh in model coordinates, i.e. with the instance transformation applied.
+        /// Bounding box of the mesh or line set in model coordinates, i.e. with the instance transformation applied.
         /// </summary>
         public static Box3d WorldBounds(IFCContent content)
-            => new(content.Mesh.PositionArray.Select(p => content.Trafo.Forward.TransformPos(p)));
+        {
+            if (content.HasLineSet)
+                return content.LineSet.Transformed(content.Trafo).BoundingBox3d;
+            return new(content.Mesh.PositionArray.Select(p => content.Trafo.Forward.TransformPos(p)));
+        }
 
         public static void AssertBoxEquals(Box3d expected, Box3d actual, double tolerance)
         {
@@ -148,9 +156,13 @@ namespace Aardvark.Data.Tests.Ifc
 
                 // the wall has no surface style, so the first layer of its material layer set is used
                 // the layer materials carry no representation and are listed by name only
-                var wall = parsed.Content.Values.Single();
+                var wall = parsed.Content.Values.Single(c => c.HasMesh);
                 Assert.IsInstanceOf<IIfcWall>(wall.IFCObject);
                 Assert.Greater(wall.Mesh.FaceCount, 0);
+
+                // the 'Axis' representation of the wall is a line-set entry under the same guid
+                Assert.AreEqual(2, parsed.Content.Count);
+                Assert.AreEqual(1, parsed.GetLineSets(wall.IFCObject.GlobalId).Single().PolyLineCount);
                 Assert.AreEqual("Masonry - Brick - Brown", wall.Material.Name);
                 Assert.IsNull(wall.Material.Texture);
                 Assert.IsTrue(parsed.Materials.ContainsKey("DefMat-IfcWall"));
@@ -214,8 +226,10 @@ namespace Aardvark.Data.Tests.Ifc
                 using var parsed = IFCParser.PreprocessIFC(filePath);
                 TestUtils.AssertConsistent(parsed);
 
-                // slab, covering and wall
-                Assert.AreEqual(3, parsed.Content.Count);
+                // slab, covering and wall, plus the axis of the wall as a line set
+                Assert.AreEqual(4, parsed.Content.Count);
+                Assert.AreEqual(3, parsed.Content.Values.Count(c => c.HasMesh));
+                Assert.IsInstanceOf<IIfcWall>(parsed.Content.Values.Single(c => c.HasLineSet).IFCObject);
                 var slab = parsed.Content.Values.Single(c => c.IFCObject is IIfcSlab);
                 Assert.IsTrue(parsed.Content.Values.Any(c => c.IFCObject is IIfcCovering));
                 Assert.IsTrue(parsed.Content.Values.Any(c => c.IFCObject is IIfcWall));
@@ -395,6 +409,67 @@ namespace Aardvark.Data.Tests.Ifc
     }
 
     [TestFixture]
+    public static class ImportTest
+    {
+        [Test]
+        public static void AxisRepresentationRoundTrip()
+        {
+            var path = TestUtils.OutputPath("test_AxisRepresentationRoundTrip.ifc");
+            IfcGloballyUniqueId withBodyId, axisOnlyId, withGapId;
+            using (var model = TestUtils.CreateModel())
+            {
+                var (withBody, axisOnly, withGap) = ExportTest.CreateAxisProducts(model);
+                withBodyId = withBody.GlobalId;
+                axisOnlyId = axisOnly.GlobalId;
+                withGapId = withGap.GlobalId;
+                model.SaveAs(path);
+            }
+
+            using var parsed = IFCParser.PreprocessIFC(path, singleThreading: true);
+            TestUtils.AssertConsistent(parsed);
+            Assert.AreEqual(4, parsed.Content.Count);
+
+            // the body and the axis are separate entries under one guid
+            var withBodyEntries = parsed.GetContent(withBodyId).ToArray();
+            Assert.AreEqual(2, withBodyEntries.Length);
+            Assert.Greater(withBodyEntries.Single(c => c.HasMesh).Mesh.FaceCount, 0);
+            var withBodyAxis = withBodyEntries.Single(c => c.HasLineSet);
+            Assert.AreEqual("Axis", withBodyAxis.RepresentationIdentifier);
+            Assert.AreSame(withBodyAxis.LineSet, parsed.GetLineSets(withBodyId, "Axis").Single());
+            Assert.IsEmpty(parsed.GetLineSets(withBodyId, "FootPrint"));
+            Assert.AreEqual(1, withBodyAxis.LineSet.PolyLineCount);
+            Assert.AreEqual(1, withBodyAxis.LineSet.SegmentCount);
+            TestUtils.AssertBoxEquals(new Box3d(V3d.Zero, new V3d(4000, 0, 0)), TestUtils.WorldBounds(withBodyAxis), 1e-9);
+
+            // a line followed by an arc that continues at its end is one polyline
+            var axisOnlyEntries = parsed.GetContent(axisOnlyId).ToArray();
+            Assert.AreEqual(1, axisOnlyEntries.Length);
+            Assert.IsFalse(axisOnlyEntries[0].HasMesh);
+            var axisOnlyPoints = axisOnlyEntries[0].LineSet.GetPolyLine(0).ToArray();
+            Assert.AreEqual(1, axisOnlyEntries[0].LineSet.PolyLineCount);
+            Assert.Greater(axisOnlyPoints.Length, 3);
+            Assert.IsTrue(axisOnlyPoints[0].ApproximateEquals(new V3d(0, 500, 0), 1e-9));
+            Assert.IsTrue(axisOnlyPoints[1].ApproximateEquals(new V3d(1000, 500, 0), 1e-9));
+            Assert.IsTrue(axisOnlyPoints[axisOnlyPoints.Length - 1].ApproximateEquals(new V3d(1000, 1500, 0), 1e-9));
+
+            // the gap: two polylines on one shared point list, the arc sampled on the circle of radius 500 around (2000, 2500)
+            var gap = parsed.GetLineSets(withGapId).Single();
+            Assert.AreEqual(2, gap.PolyLineCount);
+            Assert.AreEqual(1, gap.GetSegmentCount(0));
+            Assert.IsTrue(gap.GetPolyLine(0).First().ApproximateEquals(new V3d(0, 2500, 0), 1e-9));
+            Assert.IsTrue(gap.GetPolyLine(0).Last().ApproximateEquals(new V3d(1000, 2500, 0), 1e-9));
+            var arc = gap.GetPolyLine(1).ToArray();
+            Assert.IsTrue(arc[0].ApproximateEquals(new V3d(1500, 2500, 0), 1e-9));
+            Assert.IsTrue(arc[arc.Length - 1].ApproximateEquals(new V3d(2500, 2500, 0), 1e-9));
+            Assert.IsTrue(arc.All(p => (p - new V3d(2000, 2500, 0)).Length.ApproximateEquals(500, 1e-6)), "a sample is off the circle");
+            Assert.IsTrue(arc.All(p => p.Y >= 2500 - 1e-6), "the arc does not pass over the top");
+            Assert.AreEqual(5 + arc.Length - 2, gap.VertexCount);
+            Assert.AreEqual(2, gap.VertexIndexArray[2]);
+            Assert.AreEqual(4, gap.VertexIndexArray[gap.VertexIndexArray.Length - 1]);
+        }
+    }
+
+    [TestFixture]
     public static class ConversionTest
     {
         [Test]
@@ -460,6 +535,37 @@ namespace Aardvark.Data.Tests.Ifc
             Assert.IsTrue(new IfcReal(2.5).TryGetSimpleValue(out double d) && d == 2.5);
             Assert.IsTrue(new IfcBoolean(true).TryGetSimpleValue(out bool b) && b);
             Assert.IsTrue(new IfcLengthMeasure(12.5).TryGetSimpleValue(out double length) && length == 12.5);
+        }
+
+        [Test]
+        public static void IndexedPolyCurveToPolyLines()
+        {
+            using var model = TestUtils.CreateModel();
+            using var txn = model.BeginTransaction("Create curves");
+
+            // quarter circle of radius 1 around the origin, from (1, 0) over 45 degrees to (0, 1)
+            var arc = model.CreateIndexedPolyCurve([V3d.IOO, new V3d(Math.Sqrt(0.5), Math.Sqrt(0.5), 0), V3d.OIO], [[1, 2, 3]]);
+            var points = arc.ToPolyLines().Single();
+            Assert.AreEqual(1 + (int)Math.Ceiling(90.0 / CurveExt.ArcSampleAngleInDegrees), points.Length);
+            Assert.AreEqual(V3d.IOO, points[0]);
+            Assert.IsTrue(points[points.Length - 1].ApproximateEquals(V3d.OIO, 1e-12), $"arc ends at {points[points.Length - 1]}");
+            Assert.IsTrue(points.All(p => p.Length.ApproximateEquals(1.0, 1e-9)), "a sample is off the circle");
+            Assert.IsTrue(points.All(p => (p.X >= -1e-12) && (p.Y >= -1e-12)), "a sample is outside the quadrant");
+
+            // collinear points give no circle, the arc falls back to its two chords
+            var straight = model.CreateIndexedPolyCurve([V3d.Zero, V3d.IOO, new V3d(2, 0, 0)], [[1, 2, 3]]).ToPolyLines().Single();
+            Assert.AreEqual(3, straight.Length);
+
+            // a line then an arc that continues at its end is one polyline, a segment starting elsewhere opens a second one
+            V3d[] bent = [V3d.Zero, V3d.IOO, new V3d(2, 1, 0), new V3d(1, 2, 0), new V3d(5, 5, 0), new V3d(6, 5, 0)];
+            var polyLines = model.CreateIndexedPolyCurve(bent, [[1, 2], [2, 3, 4], [5, 6]]).ToPolyLines().ToArray();
+            Assert.AreEqual(2, polyLines.Length);
+            Assert.AreEqual(V3d.Zero, polyLines[0][0]);
+            Assert.IsTrue(polyLines[0][polyLines[0].Length - 1].ApproximateEquals(new V3d(1, 2, 0), 1e-12));
+            Assert.AreEqual(new[] { new V3d(5, 5, 0), new V3d(6, 5, 0) }, polyLines[1]);
+
+            // without segments the point list is one polyline
+            Assert.AreEqual(6, model.CreateIndexedPolyCurve(bent).ToPolyLines().Single().Length);
         }
 
         [Test]
@@ -1253,52 +1359,7 @@ namespace Aardvark.Data.Tests.Ifc
         public static void AxisRepresentation()
         {
             using var model = TestUtils.CreateModel();
-
-            IIfcBuildingElementProxy withBody;
-            IIfcBuildingElementProxy axisOnly;
-            IIfcBuildingElementProxy withGap;
-
-            using (var txn = model.BeginTransaction("Create products with axis"))
-            {
-                var factory = model.Factory();
-                var site = model.Instances.OfType<IIfcSite>().First();
-
-                // track along x, 2 m long, 50 mm cross section, axis runs through the centre of the body and sticks out the far end so it is visible
-                var length = 2000.0;
-                var body = PolyMeshPrimitives.Box(new Box3d(new V3d(0, -25, -25), new V3d(length, 25, 25)), C4b.Gray);
-
-                withBody = factory.BuildingElementProxy(p => p.Name = "Track with body");
-                withBody.CreateAttachRepresentation(model.CreateLocalPlacement(V3d.Zero), body, C4d.Gray)
-                        .AddRepresentation(model.CreateIndexedPolyCurve([V3d.Zero, new V3d(2 * length, 0, 0)]).CreateShapeRepresentationAxis3d());
-                site.AddElement(withBody);
-
-                // no body here, so AddRepresentation has to create the product shape itself
-                V3d[] bent = [new V3d(0, 500, 0), new V3d(1000, 500, 0), new V3d(1500, 1000, 0), new V3d(1000, 1500, 0)];
-                axisOnly = factory.BuildingElementProxy(p =>
-                {
-                    p.Name = "Track axis only";
-                    p.ObjectPlacement = model.CreateLocalPlacement(V3d.Zero);
-                });
-                axisOnly.AddRepresentation(model.CreateIndexedPolyCurve(bent, [[1, 2], [2, 3, 4]]).CreateShapeRepresentationAxis3d());
-                site.AddElement(axisOnly);
-
-                // one axis with a gap: two curves on a shared point list, a line from 1 to 2, then an arc from 3 over 4 to 5
-                var gapPoints = model.CreateCartesianPointList3D(
-                    new V3d(0, 2500, 0), new V3d(1000, 2500, 0),
-                    new V3d(1500, 2500, 0), new V3d(2000, 3000, 0), new V3d(2500, 2500, 0));
-                withGap = factory.BuildingElementProxy(p =>
-                {
-                    p.Name = "Track with gap";
-                    p.ObjectPlacement = model.CreateLocalPlacement(V3d.Zero);
-                });
-                withGap.AddRepresentation(model.CreateShapeRepresentationAxis3d([
-                    model.CreateIndexedPolyCurve(gapPoints, [[1, 2]]),
-                    model.CreateIndexedPolyCurve(gapPoints, [[3, 4, 5]]),
-                ]));
-                site.AddElement(withGap);
-
-                txn.Commit();
-            }
+            var (withBody, axisOnly, withGap) = CreateAxisProducts(model);
 
             Assert.IsEmpty(model.ValidateModel());
 
@@ -1350,6 +1411,7 @@ namespace Aardvark.Data.Tests.Ifc
 
             IIfcCableSegment rail;
             IIfcIndexedPolyCurve axisCurve;
+            IIfcAnnotation railAxis;
             IIfcLightFixture lightA;
             IIfcLightFixture lightB;
             IIfcLightFixtureType lightType;
@@ -1401,7 +1463,7 @@ namespace Aardvark.Data.Tests.Ifc
                 });
                 rail.CreateAttachRepresentation(trackSystem.CreateRelativePlacement(V3d.Zero), PolyMeshPrimitives.Box(new Box3d(new V3d(0, -1.75, -3), new V3d(railLength, 1.75, 0)), C4b.White), null, anthracite)
                     .AddRepresentation(axisCurve.CreateShapeRepresentationAxis3d());
-                var railAxis = model.CreateAnnotation("Rail axis", rail.CreateRelativePlacement(V3d.Zero), model.CreateShapeRepresentationAnnotation3dCurveSet([axisCurve]), "TrackAxis");
+                railAxis = model.CreateAnnotation("Rail axis", rail.CreateRelativePlacement(V3d.Zero), model.CreateShapeRepresentationAnnotation3dCurveSet([axisCurve]), "TrackAxis");
 
                 lightA = CreateSpot("Light A", rail.CreateRelativePlacement(new V3d(0.25 * railLength, 0, -3)), Trafo3d.RotationYInDegrees(25), 40);
                 lightB = CreateSpot("Light B", rail.CreateRelativePlacement(new V3d(0.75 * railLength, 0, -3)), Trafo3d.RotationYInDegrees(-25), 0);
@@ -1492,6 +1554,85 @@ namespace Aardvark.Data.Tests.Ifc
                 Assert.IsTrue(parsed.Content.TryGetValue(part.GlobalId, out _), $"{part.Name} has no geometry after import");
             var importedHead = TestUtils.Flatten(parsed.Hierarchy).Single(n => n.MetaData is IIfcDiscreteAccessory p && p.Name == "Light A head");
             Assert.AreEqual(6, importedHead.MetaData.GetAncestors().Count());
+
+            // curves: the rail has its mesh and its axis as separate entries, the annotation its curve set, the headframe its footprint, the lights nothing
+            var railEntries = parsed.GetContent(rail.GlobalId).ToArray();
+            Assert.AreEqual(2, railEntries.Length);
+            var railMesh = railEntries.Single(c => c.HasMesh);
+            var railAxisEntry = railEntries.Single(c => c.HasLineSet);
+            Assert.AreEqual("Axis", railAxisEntry.RepresentationIdentifier);
+            Assert.IsNull(railMesh.RepresentationIdentifier);
+            var railAxisPoints = railAxisEntry.LineSet.Transformed(railAxisEntry.Trafo).GetPolyLine(0).ToArray();
+            Assert.AreEqual(2, railAxisPoints.Length);
+            Assert.IsTrue(railAxisPoints[0].ApproximateEquals(trackOrigin, 1e-9), $"rail axis starts at {railAxisPoints[0]}");
+            Assert.IsTrue(railAxisPoints[1].ApproximateEquals(trackOrigin + new V3d(railLength, 0, 0), 1e-9), $"rail axis ends at {railAxisPoints[1]}");
+
+            // the mesh sits where the axis says, so xBIM did not shift the meshes against the raw placements of the line sets
+            TestUtils.AssertBoxEquals(new Box3d(trackOrigin + new V3d(0, -1.75, -3), trackOrigin + new V3d(railLength, 1.75, 0)), TestUtils.WorldBounds(railMesh), 1e-3);
+
+            Assert.IsTrue(parsed.HasLineSet(rail.GlobalId));
+            Assert.IsTrue(parsed.HasLineSet(railAxis.GlobalId));
+            Assert.IsFalse(parsed.HasLineSet(lightA.GlobalId));
+            Assert.AreEqual(1, parsed.GetLineSets(railAxis.GlobalId, "Annotation").Single().PolyLineCount);
+            Assert.AreEqual(6, parsed.GetLineSets(headframe.GlobalId, "FootPrint").Single().PolyLineCount);
+
+            // xBIM also tessellates the grid axes as thin solids, so the headframe has a mesh entry next to its footprint lines
+            var headframeLines = parsed.GetContent(headframe.GlobalId).Single(c => c.HasLineSet);
+            TestUtils.AssertBoxEquals(new Box3d(towerOrigin + new V3d(-110, 0, mastHeight - 80), towerOrigin + new V3d(110, 0, mastHeight + 20)), TestUtils.WorldBounds(headframeLines), 1e-9);
+        }
+
+        /// <summary>
+        /// Three proxies with 'Axis' representations: a box with a straight axis, an axis of a line and an arc without body, and an axis with a gap (two curves on one point list).
+        /// </summary>
+        internal static (IIfcBuildingElementProxy WithBody, IIfcBuildingElementProxy AxisOnly, IIfcBuildingElementProxy WithGap) CreateAxisProducts(IfcStore model)
+        {
+            IIfcBuildingElementProxy withBody;
+            IIfcBuildingElementProxy axisOnly;
+            IIfcBuildingElementProxy withGap;
+
+            using (var txn = model.BeginTransaction("Create products with axis"))
+            {
+                var factory = model.Factory();
+                var site = model.Instances.OfType<IIfcSite>().First();
+
+                // track along x, 2 m long, 50 mm cross section, axis runs through the centre of the body and sticks out the far end so it is visible
+                var length = 2000.0;
+                var body = PolyMeshPrimitives.Box(new Box3d(new V3d(0, -25, -25), new V3d(length, 25, 25)), C4b.Gray);
+
+                withBody = factory.BuildingElementProxy(p => p.Name = "Track with body");
+                withBody.CreateAttachRepresentation(model.CreateLocalPlacement(V3d.Zero), body, C4d.Gray)
+                        .AddRepresentation(model.CreateIndexedPolyCurve([V3d.Zero, new V3d(2 * length, 0, 0)]).CreateShapeRepresentationAxis3d());
+                site.AddElement(withBody);
+
+                // no body here, so AddRepresentation has to create the product shape itself
+                V3d[] bent = [new V3d(0, 500, 0), new V3d(1000, 500, 0), new V3d(1500, 1000, 0), new V3d(1000, 1500, 0)];
+                axisOnly = factory.BuildingElementProxy(p =>
+                {
+                    p.Name = "Track axis only";
+                    p.ObjectPlacement = model.CreateLocalPlacement(V3d.Zero);
+                });
+                axisOnly.AddRepresentation(model.CreateIndexedPolyCurve(bent, [[1, 2], [2, 3, 4]]).CreateShapeRepresentationAxis3d());
+                site.AddElement(axisOnly);
+
+                // one axis with a gap: two curves on a shared point list, a line from 1 to 2, then an arc from 3 over 4 to 5
+                var gapPoints = model.CreateCartesianPointList3D(
+                    new V3d(0, 2500, 0), new V3d(1000, 2500, 0),
+                    new V3d(1500, 2500, 0), new V3d(2000, 3000, 0), new V3d(2500, 2500, 0));
+                withGap = factory.BuildingElementProxy(p =>
+                {
+                    p.Name = "Track with gap";
+                    p.ObjectPlacement = model.CreateLocalPlacement(V3d.Zero);
+                });
+                withGap.AddRepresentation(model.CreateShapeRepresentationAxis3d([
+                    model.CreateIndexedPolyCurve(gapPoints, [[1, 2]]),
+                    model.CreateIndexedPolyCurve(gapPoints, [[3, 4, 5]]),
+                ]));
+                site.AddElement(withGap);
+
+                txn.Commit();
+            }
+
+            return (withBody, axisOnly, withGap);
         }
 
         static void AssertAxis(IIfcShapeRepresentation rep, int expectedSegments)

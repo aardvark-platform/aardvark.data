@@ -19,6 +19,7 @@ Check the [quick start guide](https://docs.xbim.net/quick-start.html) to gain an
 2. Load your IFC file via ```IFCParser.PreprocessIFC (filepath)```.
 	- The herby generated IFCData holds a cache-optimized version of the xBIM-Model to enable efficient query operations. 
 	- Geometries are wrapped to our [PolyMesh](https://github.com/aardvark-platform/aardvark.algodat) data structure. 
+	- Curves ('Axis', 'Annotation', 'FootPrint' representations) are wrapped to ```PolyLineSet``` entries under the same GUID, see ```IFCData.GetLineSets``` and ```CurveExt```.
 	- Materials are retrieved to enable quick rendering.
 	- Hierarchy provides a node based project description to build your scene graph.
 3. Edit existing Ifc-Object or attach new Ifc-Object

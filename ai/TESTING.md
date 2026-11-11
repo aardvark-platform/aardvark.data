@@ -145,9 +145,9 @@ let ``GLTF.roundtrip GLB``() =
 
 **Patterns**:
 - `TestUtils.LoadEmbeddedData` extracts embedded resources to temp files, `TestUtils.CreateModel` builds an in-memory store with a minimal project
-- `TestUtils.AssertConsistent` checks mesh, material and hierarchy of every parsed product
-- Test fixtures: `LoadingTest` (import, edit after import), `RoundTripTest` (export then import), `ConversionTest` (Aardvark <-> IFC primitives), `ExportTest` (model creation, validated with xBIM's validator)
-- `ExportTest.TrackAndTowerTest` covers assemblies with nested parts, relative placements, snap positions on a curve and on a grid, and re-imports the file
+- `TestUtils.AssertConsistent` checks mesh or line set, material and hierarchy of every parsed entry, `TestUtils.WorldBounds` handles both kinds
+- Test fixtures: `LoadingTest` (import, edit after import), `RoundTripTest` (export then import), `ImportTest` (curve representations after a round trip), `ConversionTest` (Aardvark <-> IFC primitives, curve evaluation), `ExportTest` (model creation, validated with xBIM's validator)
+- `ExportTest.TrackAndTowerTest` covers assemblies with nested parts, relative placements, snap positions on a curve and on a grid, and re-imports the file including its axis, annotation and footprint curves
 - Exported models are written to `ifc-output/` in the test work directory for inspection in a BIM viewer
 - Static test methods
 

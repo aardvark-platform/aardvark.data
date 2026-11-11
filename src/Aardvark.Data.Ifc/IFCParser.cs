@@ -178,7 +178,94 @@ namespace Aardvark.Data.Ifc
                     output.Add(guid, new IFCContent(ifcObject, polyMesh, instanceTrafo, material, representationType));
                 }
             }
+
+            ParseCurves(model, output, materialsByName, materialsByStyleId, excludedTypes);
+
             return (output, materialsByName);
+        }
+
+        /// <summary>
+        /// Adds the curves of the products' shape representations as line-set entries, one per representation.
+        /// xBIM's Xbim3DModelContext only writes polyhedra ('Body', 'Facetation', 'MappedRepresentation' and the axes of an IfcGrid as thin
+        /// solids), so the curves of 'Axis', 'Annotation' and 'FootPrint' representations and curve items in a 'Body' are read from the entities (see CurveExt).
+        /// NOTE: the meshes come from CreateContext with adjustWcs: true, which may shift a model whose coordinate system is far from the
+        /// origin, while the line sets use the raw placements; ExportTest.TrackAndTowerTest compares the two for a model near the origin.
+        /// </summary>
+        private static void ParseCurves(IModel model, Dict<IfcGloballyUniqueId, IFCContent> output, Dictionary<string, IFCMaterial> materialsByName, Dictionary<int, IFCMaterial> materialsByStyleId, HashSet<short> excludedTypes)
+        {
+            foreach (var product in model.Instances.OfType<IIfcProduct>())
+            {
+                if (product.Representation == null || excludedTypes.Contains(product.ExpressType.TypeId))
+                    continue;
+
+                foreach (var representation in product.Representation.Representations.OfType<IIfcShapeRepresentation>())
+                {
+                    PolyLineSet lineSet;
+                    Trafo3d placement;
+                    try
+                    {
+                        lineSet = representation.ToPolyLineSet();
+                        if (lineSet == null)
+                            continue;
+                        placement = product.ObjectPlacement.ToTrafo3d();
+                    }
+                    catch (Exception e)
+                    {
+                        // e.g. an IfcGridPlacement or a schema the curve evaluation does not understand, the product keeps its meshes
+                        Report.Warn("Reading the curves of #{0} {1} failed, skipping! {2}", product.EntityLabel, product.Name, e.Message);
+                        continue;
+                    }
+
+                    var material = GetCurveMaterial(model, representation, product, materialsByName, materialsByStyleId);
+                    var identifier = representation.RepresentationIdentifier.HasValue ? representation.RepresentationIdentifier.ToString() : null;
+                    output.Add(product.GlobalId, new IFCContent(product, lineSet, placement, material, identifier));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Material of a curve representation: a surface or curve style on one of its items, otherwise xBIM's default colour of the product type like for meshes.
+        /// </summary>
+        private static IFCMaterial GetCurveMaterial(IModel model, IIfcShapeRepresentation representation, IIfcProduct product, Dictionary<string, IFCMaterial> materialsByName, Dictionary<int, IFCMaterial> materialsByStyleId)
+        {
+            IFCMaterial Register(IFCMaterial material)
+                => materialsByName.GetCreate(material.Name, name => material);
+
+            foreach (var style in representation.Items.SelectMany(GetStyles))
+            {
+                if (style is IIfcSurfaceStyle surfaceStyle)
+                    return Register(materialsByStyleId.GetCreate(surfaceStyle.EntityLabel, label => GetMaterialByStyle(model, label)));
+
+                if (style is IIfcCurveStyle curveStyle && curveStyle.CurveColour is IIfcColourRgb colour)
+                {
+                    return Register(materialsByStyleId.GetCreate(curveStyle.EntityLabel, label =>
+                    {
+                        var name = "Style-" + (curveStyle.Name.HasValue ? curveStyle.Name.ToString() : label.ToString());
+                        var texture = XbimTexture.Create(new XbimColour(name, (float)colour.Red, (float)colour.Green, (float)colour.Blue, 1.0f));
+                        texture.DefinedObjectId = label;
+                        return new IFCMaterial(name, texture);
+                    }));
+                }
+            }
+
+            var typeId = product.ExpressType.TypeId;
+            return Register(materialsByStyleId.GetCreate(-typeId, id => GetMaterialByExpressType(model, typeId)));
+        }
+
+        private static IEnumerable<IIfcPresentationStyle> GetStyles(IIfcRepresentationItem item)
+        {
+            foreach (var style in item.GetPresentationStyles())
+                yield return style;
+
+            // the style may sit on the curves of a set or on the mapped representation instead of the item itself
+            IEnumerable<IIfcRepresentationItem> children = item switch
+            {
+                IIfcGeometricSet set => set.Elements.OfType<IIfcRepresentationItem>(),
+                IIfcMappedItem mapped => mapped.MappingSource.MappedRepresentation.Items,
+                _ => [],
+            };
+            foreach (var style in children.SelectMany(GetStyles))
+                yield return style;
         }
 
         private static HashSet<short> DefaultExclusions(IModel model)
