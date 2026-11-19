@@ -1,3 +1,11 @@
+### 1.1.4
+- Added assembly extensions: part hierarchies via IfcRelAggregates, snap positions via IfcRelConnectsElements and IfcPointOnCurve
+- Import curve representations ('Axis', 'Annotation', 'FootPrint', curve items in 'Body') as PolyLineSet entries (IFCContent.LineSet, IFCData.GetLineSets); curve style colours in LineAttributes[Colors]
+- Added tracks as IfcCableSegment (BUSBARSEGMENT) with IfcCableSegmentType, snap curve as 'Axis', AttachToTrack by curve parameter (TrackExt)
+- Added oriented mounting points as IfcDistributionPort with MountAtPort and an optional frame marker annotation (PortExt)
+- IfcColourRgb converts to C3b
+- Requires Aardvark.Geometry.PolyMesh 5.6.6
+
 ### 1.1.3
 - Fixed placement conversions and TryGetSimpleValue<long>
 - Added enableCaching / EndCaching to allow editing imported models

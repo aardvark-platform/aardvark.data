@@ -1,3 +1,9 @@
+### 5.2.36
+- VrmlLineSet holds a PolyLineSet (LineSet) built by PolyLineSetFromVrml97.CreateFromIls, colours resolved into LineAttributes or LineVertexAttributes
+- Rendering of line sets through PolyLineSet.GetIndexedGeometry(resolveLineAttributes: true), indexed, only vertices shared by differently coloured polylines are split
+- BREAKING: removed the array, colour and segment members of VrmlLineSet, ToPolyLineSet and the segment helpers of VrmlHelpers; the binary layout of VrmlLineSet changed
+- Requires Aardvark.Geometry.PolyMesh 5.6.6
+
 ### 5.2.35
 - Update to Aardvark.Geometry.PolyMesh 5.6
 
