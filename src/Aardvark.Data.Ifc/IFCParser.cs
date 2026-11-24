@@ -144,7 +144,10 @@ namespace Aardvark.Data.Ifc
                             continue;
                         try
                         {
-                            polyMesh = CreatePolyMeshFromIFC(shapeGeom.ShapeData);
+                            // the kernel mesh works for every kind of geometry; a tessellated item also holds its exact faces, which are preferred
+                            // when they pass the checks against the kernel mesh (null otherwise, see CreatePolyMeshFromTessellation)
+                            var kernelMesh = CreatePolyMeshFromIFC(shapeGeom.ShapeData);
+                            polyMesh = CreatePolyMeshFromTessellation(model, ifcObject, shapeGeom.IfcShapeLabel, kernelMesh) ?? kernelMesh;
                         }
                         catch (Exception e)
                         {
@@ -557,6 +560,105 @@ namespace Aardvark.Data.Ifc
                 polymesh.FaceVertexAttributes[-PolyMesh.Property.Normals] = faceVertexNormalArray.SubRange(0, faceVertexNormalIndexIter).ToArray();
             }
             return polymesh;
+        }
+
+        /// <summary>
+        /// The mesh of a tessellated item (IfcTriangulatedFaceSet, IfcPolygonalFaceSet) read from the entity instead of the geometry kernel:
+        /// the kernel is free to reorient faces, which reverses open meshes such as a single glass pane, and it splits shared vertices.
+        /// Polygons are triangulated and get one normal per triangle, the layout the kernel meshes have.
+        /// Returns null where the kernel mesh has to be used: the shape is not a tessellation, the product has openings cut into it, a face
+        /// has voids, or the entity does not match the kernel mesh (bounding boxes differ, e.g. a transformation baked into the kernel mesh).
+        /// </summary>
+        private static PolyMesh CreatePolyMeshFromTessellation(IModel model, IIfcObject product, int shapeLabel, PolyMesh kernelMesh)
+        {
+            if (model.Instances[shapeLabel] is not IIfcTessellatedFaceSet faceSet || faceSet.Coordinates == null)
+                return null;
+
+            if (product is IIfcElement element && element.HasOpenings.Any())
+                return null;
+
+            static int[] Indices(System.Collections.IEnumerable list)
+            {
+                var indices = new List<int>();
+                foreach (var item in list)
+                    indices.Add((int)Convert.ToInt64(item is IExpressValueType value ? value.Value : item) - 1);   // 1-based in IFC
+                return [.. indices];
+            }
+
+            List<int[]> faces = [];
+            int[] pointIndex;   // optional indirection from face indices into the point list
+
+            switch (faceSet)
+            {
+                case IIfcTriangulatedFaceSet triangulated:
+                    pointIndex = Indices(triangulated.PnIndex);
+                    foreach (var triangle in triangulated.CoordIndex)
+                        faces.Add(Indices(triangle));
+                    break;
+
+                case IIfcPolygonalFaceSet polygonal:
+                    pointIndex = Indices(polygonal.PnIndex);
+                    foreach (var face in polygonal.Faces)
+                    {
+                        if (face is IIfcIndexedPolygonalFaceWithVoids)
+                            return null;
+                        faces.Add(Indices(face.CoordIndex));
+                    }
+                    break;
+
+                default:
+                    return null;
+            }
+
+            var positions = faceSet.Coordinates.CoordList.Select(v => new V3d(v[0], v[1], v[2])).ToArray();
+
+            if (pointIndex.Length > 0)
+                faces = faces.Select(f => f.Map(i => (i >= 0 && i < pointIndex.Length) ? pointIndex[i] : -1)).ToList();
+
+            if (faces.Count == 0 || faces.Any(f => f.Length < 3 || f.Any(i => i < 0 || i >= positions.Length)))
+                return null;
+
+            // the entity must describe the same shape in the same coordinates as the kernel mesh (stored in single precision)
+            var expected = new Box3d(kernelMesh.PositionArray);
+            var actual = new Box3d(faces.SelectMany(f => f).Select(i => positions[i]));
+            var tolerance = 1e-4 * Fun.Max(expected.Size.Length, 1.0);
+            if (!expected.Min.ApproximateEquals(actual.Min, tolerance) || !expected.Max.ApproximateEquals(actual.Max, tolerance))
+                return null;
+
+            var firstIndices = new int[faces.Count + 1];
+            for (int i = 0; i < faces.Count; i++)
+                firstIndices[i + 1] = firstIndices[i] + faces[i].Length;
+
+            var mesh = new PolyMesh
+            {
+                PositionArray = positions,
+                FirstIndexArray = firstIndices,
+                VertexIndexArray = [.. faces.SelectMany(f => f)],
+            };
+
+            if (faces.Any(f => f.Length > 3))
+                mesh = mesh.TriangulatedCopy();
+
+            // one normal per triangle, referenced by its three face vertices
+            var p = mesh.PositionArray;
+            var vi = mesh.VertexIndexArray;
+            var fi = mesh.FirstIndexArray;
+            var normals = new V3f[mesh.FaceCount];
+            var normalIndices = new int[mesh.VertexIndexCount];
+
+            for (int f = 0; f < mesh.FaceCount; f++)
+            {
+                var first = fi[f];
+                var normal = (p[vi[first + 1]] - p[vi[first]]).Cross(p[vi[first + 2]] - p[vi[first]]);
+                normals[f] = (normal.LengthSquared > 0) ? (V3f)normal.Normalized : V3f.Zero;   // degenerate triangle
+                for (int k = first; k < fi[f + 1]; k++)
+                    normalIndices[k] = f;
+            }
+
+            mesh.FaceVertexAttributes[PolyMesh.Property.Normals] = normalIndices;
+            mesh.FaceVertexAttributes[-PolyMesh.Property.Normals] = normals;
+
+            return mesh;
         }
 
         /// <summary>

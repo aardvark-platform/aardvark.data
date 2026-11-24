@@ -406,6 +406,75 @@ namespace Aardvark.Data.Tests.Ifc
                     File.Delete(path);
             }
         }
+
+        /// <summary>
+        /// An open mesh keeps its orientation: the geometry kernel is free to reverse a lone face, so tessellations are read from the entity.
+        /// The exported face set must not claim to be closed, the box next to it must.
+        /// </summary>
+        [Test]
+        public static void OpenMeshKeepsOrientation()
+        {
+            var path = TestUtils.TempIfcPath();
+
+            // a single quad, counter-clockwise seen from +z
+            var pane = new PolyMesh
+            {
+                PositionArray = [new V3d(0, 0, 50), new V3d(300, 0, 50), new V3d(300, 200, 50), new V3d(0, 200, 50)],
+                FirstIndexArray = [0, 4],
+                VertexIndexArray = [0, 1, 2, 3],
+            };
+
+            try
+            {
+                using (var model = TestUtils.CreateModel())
+                {
+                    using (var txn = model.BeginTransaction("Create open mesh scene"))
+                    {
+                        var factory = model.Factory();
+                        var site = model.Instances.OfType<IIfcSite>().First();
+                        var style = model.CreateSurfaceStyle(C3d.Red, name: "OpenMeshRed");
+
+                        site.AddElement(factory.Plate(p => p.Name = "Pane").CreateAttachRepresentation(V3d.Zero, pane, null, style));
+                        site.AddElement(factory.Wall(w => w.Name = "Box").CreateAttachRepresentation(V3d.Zero, PolyMeshPrimitives.Box(new Box3d(V3d.Zero, new V3d(100, 100, 100)), C4b.Red), null, style));
+
+                        txn.Commit();
+                    }
+
+                    Assert.IsEmpty(model.ValidateModel());
+                    model.SaveAs(path);
+                }
+
+                using var parsed = IFCParser.PreprocessIFC(path);
+                TestUtils.AssertConsistent(parsed);
+
+                var content = parsed.Content.Values.Single(c => c.IFCObject is IIfcPlate);
+                var mesh = content.Mesh;
+                var p = mesh.PositionArray;
+                var vi = mesh.VertexIndexArray;
+
+                Assert.AreEqual(2, mesh.FaceCount);
+                for (int f = 0; f < mesh.FaceCount; f++)
+                {
+                    var first = mesh.FirstIndexArray[f];
+                    var normal = content.Trafo.Forward.TransformDir((p[vi[first + 1]] - p[vi[first]]).Cross(p[vi[first + 2]] - p[vi[first]])).Normalized;
+                    Assert.IsTrue(normal.ApproximateEquals(V3d.OOI, 1e-9), $"face {f} points to {normal}");
+                }
+
+                var normals = (V3f[])mesh.FaceVertexAttributes[-PolyMesh.Property.Normals];
+                Assert.IsTrue(normals.All(n => n.ApproximateEquals(V3f.OOI, 1e-6f)));
+
+                var faceSets = parsed.IfcStore.Instances.OfType<IIfcTessellatedFaceSet>().ToArray();
+                Assert.AreEqual(2, faceSets.Length);
+                bool? Closed(IIfcTessellatedFaceSet s) => s is IIfcTriangulatedFaceSet t ? (bool?)t.Closed : (bool?)((IIfcPolygonalFaceSet)s).Closed;
+                Assert.AreEqual(1, faceSets.Count(s => Closed(s) == true), "only the box is closed");
+                Assert.AreEqual(1, faceSets.Count(s => Closed(s) == false), "the pane is open");
+            }
+            finally
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+        }
     }
 
     [TestFixture]

@@ -1,3 +1,7 @@
+### 1.1.5
+- Import reads IfcTriangulatedFaceSet and IfcPolygonalFaceSet from the entity instead of the geometry kernel: open meshes keep their orientation and shared vertices (kernel mesh as fallback for products with openings, faces with voids or mismatching bounds)
+- Exported face sets only claim Closed when every edge is shared by two faces
+
 ### 1.1.4
 - Added assembly extensions: part hierarchies via IfcRelAggregates, snap positions via IfcRelConnectsElements and IfcPointOnCurve
 - Import curve representations ('Axis', 'Annotation', 'FootPrint', curve items in 'Body') as PolyLineSet entries (IFCContent.LineSet, IFCData.GetLineSets); curve style colours in LineAttributes[Colors]

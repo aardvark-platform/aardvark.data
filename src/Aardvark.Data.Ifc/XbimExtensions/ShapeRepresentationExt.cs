@@ -1,4 +1,4 @@
-﻿
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Aardvark.Base;
@@ -431,6 +431,23 @@ namespace Aardvark.Data.Ifc
             });
         }
 
+        /// <summary>
+        /// A face set is closed when every edge is shared by exactly two faces. An open mesh (e.g. a single pane) must not claim to be a
+        /// solid, importers may then treat it as one. Meshes with unshared vertices count as open, which is the safe statement.
+        /// </summary>
+        private static bool IsClosed(PolyMesh mesh)
+        {
+            try
+            {
+                var topology = mesh.WithTopology();
+                return (topology.BorderEdgeCount == 0) && (topology.NonManifoldEdgeCount == 0);
+            }
+            catch (Exception)
+            {
+                return false;   // no usable topology
+            }
+        }
+
         private static IIfcTriangulatedFaceSet CreateTriangulatedFaceSet(IModel model, PolyMesh inputMesh)
         {
             // only available in IFC4+
@@ -441,7 +458,7 @@ namespace Aardvark.Data.Ifc
             
             return model.TriangulatedFaceSetFactory(tfs =>
             {
-                tfs.Closed = true;
+                tfs.Closed = IsClosed(triangleMesh);
                 tfs.Coordinates = model.CreateCartesianPointList3D(triangleMesh.PositionArray);
 
                 for (int i = 0; i < triangleMesh.FirstIndexArray.Length - 1; i++)
@@ -468,7 +485,7 @@ namespace Aardvark.Data.Ifc
 
             return model.PolygonalFaceSetFactory(p =>
             {
-                p.Closed = true;
+                p.Closed = IsClosed(inputMesh);
                 p.Coordinates = model.CreateCartesianPointList3D(inputMesh.PositionArray);
                 p.Faces.AddRange(faces);
             });
